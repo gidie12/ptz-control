@@ -234,6 +234,17 @@
   #btnYt.live .ytdot { background: var(--live); box-shadow: 0 0 6px var(--live); animation: padpulse 1s ease-in-out infinite alternate; }
   #btnYt.upcoming .ytdot { background: var(--accent); }
   #btnYt.shown { background: var(--panel2); }
+  #btnYt .caret { font-size: 11px; opacity: .7; }
+  #ytMenu { min-width: 270px; }
+  #ytMenu .ystat { padding: 6px 10px 8px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+  #ytMenu .ystat b { color: var(--live); }
+  #ytMenu .mi .chk { width: 16px; text-align: center; color: var(--ok); font-weight: 700; }
+  #ytMenu .mi[disabled] { opacity: .45; cursor: default; }
+  #ytMenu .ysize { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 14px; }
+  #ytMenu .ysize span.lbl { flex: 1; white-space: nowrap; }
+  #ytMenu .ysize button { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
+  #ytMenu .ysize button.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); font-weight: 600; }
   #ytWin { position: fixed; z-index: 25; width: 360px; left: 16px; top: 80px; background: var(--panel);
     border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); overflow: hidden;
     display: flex; flex-direction: column; min-width: 220px; }
@@ -278,7 +289,10 @@
     <span id="liveDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
     <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
-  <button class="icon" id="btnYt" title="YouTube-livestream tonen of verbergen (toets Y)"><span class="ytdot"></span><span id="ytLbl">YouTube</span></button>
+  <div class="menuwrap" id="ytWrap">
+    <button class="icon" id="btnYt" aria-haspopup="true" aria-expanded="false"><span class="ytdot"></span><span id="ytLbl">YouTube</span> <span class="caret">▾</span></button>
+    <div class="menu" id="ytMenu" hidden role="menu"></div>
+  </div>
   <div class="menuwrap">
     <button class="icon" id="btnPad" title="Menu · geen controller verbonden" aria-haspopup="true" aria-expanded="false"><span class="padico" aria-hidden="true">🎮<i></i></span>Menu <span class="caret">▾</span></button>
     <div class="menu" id="mainMenu" hidden role="menu">
@@ -971,7 +985,7 @@ document.addEventListener("keydown", (e) => {
   else if (k === "h") { moved(); cmd("home"); }
   else if (k === "t" && ctrlCam) toggleTrack(ctrlCam);
   else if (k === "f" && !e.metaKey && !e.ctrlKey) setWall(!document.body.classList.contains("wall"));
-  else if (k === "y" && !e.metaKey && !e.ctrlKey) $("#btnYt").click();
+  else if (k === "y" && !e.metaKey && !e.ctrlKey) ytToggle();
   else if (e.key === " ") { e.preventDefault(); cmd("stop"); cmd("zoom", { dir: "stop" }); }
   else if (e.key === "Escape" && storeMode) setStore(false);
   else if (e.key === "Escape" && document.body.classList.contains("wall")) setWall(false);
@@ -1556,7 +1570,8 @@ function ytRender() {
   $("#ytLbl").textContent = yt.live ? "LIVE" : yt.upcoming ? "Gepland" : "YouTube";
   btn.title = (!yt.channel ? "YouTube: nog geen kanaal ingesteld"
     : yt.live ? "Live: " + (yt.title || "") : yt.upcoming ? "Gepland: " + (yt.title || "") : "Kanaal is niet live")
-    + (yt.error ? "\n" + yt.error : "") + "\nKlik of toets Y = venster tonen/verbergen";
+    + (yt.error ? "\n" + yt.error : "") + "\nKlik = keuzemenu · toets Y = venster tonen/verbergen";
+  if (!$("#ytMenu").hidden) ytMenuRender();
 
   ytWin.classList.toggle("live", !!yt.live);
   ytWin.classList.toggle("upcoming", !yt.live && !!yt.upcoming);
@@ -1608,11 +1623,58 @@ function ytUpdate(ev) {
   if (!yt.live) ytUserClosed = false;
   ytRender();
 }
-$("#btnYt").onclick = () => {
+function ytToggle() {
   if (!yt.channel && ytWin.hidden) return openPrefs();
   ytShow(ytWin.hidden);
   if (ytWin.hidden && yt.live) ytUserClosed = true;
-};
+}
+/* ---- keuzemenu onder de YouTube/LIVE-knop ---- */
+function ytMenuRender() {
+  const g = ytGeom(), chk = (on) => `<span class="chk">${on ? "✓" : ""}</span>`;
+  const stat = !yt.channel ? "Nog geen kanaal ingesteld"
+    : yt.live ? `<b>● LIVE</b> · ${esc(yt.title || "")}`
+    : yt.upcoming ? `Gepland · ${esc(yt.title || "")}`
+    : yt.error ? esc(yt.error) : "Niet live" + (yt.checked ? " · gecontroleerd " + esc(yt.checked) : "");
+  $("#ytMenu").innerHTML = `
+    <div class="ystat" title="${esc(yt.channel || "")}">${stat}</div>
+    <button class="mi" data-y="toggle" role="menuitem">${ytWin.hidden ? "📺 Venster tonen" : "📺 Venster verbergen"} <kbd>Y</kbd></button>
+    <button class="mi" data-y="auto" role="menuitem" title="Zelf een vrije plek naast of onder de tegels zoeken">⌖ Automatisch plaatsen ${chk(g.auto)}</button>
+    <div class="ysize"><span class="lbl">↔ Grootte</span>${[["260", "Klein"], ["360", "Middel"], ["520", "Groot"]]
+      .map(([w, t]) => `<button data-w="${w}" class="${Math.abs(g.w - w) < 2 ? "on" : ""}">${t}</button>`).join("")}</div>
+    <button class="mi" data-y="sound" role="menuitem">🔊 Met geluid starten ${chk(ytOpt.sound)}</button>
+    <button class="mi" data-y="autoopen" role="menuitem">⚡ Automatisch openen bij live ${chk(ytOpt.auto)}</button>
+    <div class="msep"></div>
+    <button class="mi" data-y="check" role="menuitem" ${yt.channel ? "" : "disabled"}>⟳ Nu controleren</button>
+    <button class="mi" data-y="open" role="menuitem" ${yt.channel ? "" : "disabled"}>↗ Openen op YouTube</button>
+    <button class="mi" data-y="prefs" role="menuitem">⚙ Kanaal instellen…${yt.live ? ' <span title="Vergrendeld tijdens een stream">🔒</span>' : ""}</button>`;
+}
+function ytMenuOpen(open) {
+  if (open) { setMenu(false); ytMenuRender(); }
+  $("#ytMenu").hidden = !open;
+  $("#btnYt").setAttribute("aria-expanded", open ? "true" : "false");
+}
+$("#btnYt").onclick = (e) => { e.stopPropagation(); ytMenuOpen($("#ytMenu").hidden); };
+$("#btnPad").addEventListener("click", () => ytMenuOpen(false));
+$("#ytMenu").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const w = e.target.closest("button[data-w]")?.dataset.w;
+  if (w) {   // grootte: menu blijft open
+    store.set("ytGeom", JSON.stringify({ ...ytGeomRaw(), w: +w }));
+    if (!ytWin.hidden) ytPlace();
+    return ytMenuRender();
+  }
+  const a = e.target.closest("button[data-y]:not([disabled])")?.dataset.y; if (!a) return;
+  if (a === "auto") { const g = ytGeomRaw(); store.set("ytGeom", JSON.stringify(g.auto === false ? { w: ytGeom().w } : { ...g, ...(() => { const r = ytWin.getBoundingClientRect(); return ytWin.hidden ? {} : { x: Math.round(r.left), y: Math.round(r.top) }; })(), auto: false })); if (!ytWin.hidden) ytPlace(); return ytMenuRender(); }
+  if (a === "sound") { store.set("ytSound", ytOpt.sound ? "0" : "1"); ytShownVid = "_"; ytRender(); return ytMenuRender(); }
+  if (a === "autoopen") { store.set("ytAuto", ytOpt.auto ? "0" : "1"); return ytMenuRender(); }
+  ytMenuOpen(false);
+  if (a === "toggle") ytToggle();
+  else if (a === "check") { post("/api/youtube/check", {}); toast("YouTube wordt gecontroleerd…", true); }
+  else if (a === "open") $("#ytOpen").click();
+  else if (a === "prefs") openPrefs();
+});
+document.addEventListener("click", (e) => { if (!e.target.closest("#ytWrap")) ytMenuOpen(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#ytMenu").hidden) { e.stopPropagation(); ytMenuOpen(false); } }, true);
 $("#ytClose").onclick = () => { ytShow(false); if (yt.live) ytUserClosed = true; };
 $("#ytOpen").onclick = () => window.open(yt.live && yt.video_id ? `https://www.youtube.com/watch?v=${yt.video_id}` : ytChannelUrl(yt.channel), "_blank", "noopener");
 $("#ytMsg").addEventListener("click", (e) => {
