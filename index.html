@@ -531,7 +531,7 @@
     <div class="small">De app kijkt elke minuut of dit kanaal live is en toont de stream in een klein venster. Alleen kijken:
       starten en stoppen van de stream gebeurt buiten deze app.</div>
     <label class="small" style="display:block;margin-top:10px">Kanaal <span class="muted">(geldt voor alle schermen)</span>
-      <input type="text" id="ytChannel" placeholder="@kerknaam, kanaal-id (UC…) of link naar het kanaal" maxlength="200"></label>
+      <input type="text" id="ytChannel" placeholder="@kerknaam, kanaal-id (UC…), kanaallink of link naar de stream" maxlength="200"></label>
     <div class="small" id="ytPrefStatus" style="margin-top:6px"></div>
     <div class="small" style="margin-top:10px"><b>Venster</b> <span class="muted">· dit apparaat</span></div>
     <label class="chk"><input type="checkbox" id="ytAuto"> Venster automatisch openen als het kanaal live gaat</label>
@@ -1620,11 +1620,17 @@ $("#prefsSave").onclick = async () => {
     const clean = JSON.parse(JSON.stringify(cfg)); clean.cameras.forEach(c => delete c.thumbs);
     const r = await post("/api/config", clean);
     if (r.error) { cfg.youtube = prev; return toast(r.error); }
+    const st = await fetch("/api/youtube").catch(() => null);
+    if (st && st.status === 404) { ytUpdate({ ...yt, channel: chan, error: YT_OLD }); $("#dlgPrefs").close(); return toast(YT_OLD); }
     if (chan) { yt = { ...yt, channel: chan, checked: null, error: null }; ytRender(); }
   }
   $("#dlgPrefs").close(); toast("Opgeslagen", true);
 };
-fetch("/api/youtube").then(r => r.json()).then(ytUpdate).catch(() => {});
+const YT_OLD = "De server draait nog de oude versie zonder YouTube. Sluit het Terminal-venster van PTZ Control en start de app opnieuw.";
+fetch("/api/youtube").then(r => {
+  if (r.status === 404) { ytUpdate({ ...yt, channel: (cfg.youtube || {}).channel || "?", error: YT_OLD }); toast(YT_OLD); return; }
+  return r.json().then(ytUpdate);
+}).catch(() => {});
 ytRender();
 
 /* ================= live events ================= */

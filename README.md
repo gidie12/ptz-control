@@ -124,7 +124,8 @@ De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller 
 Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 
 ## YouTube-livestream bekijken
-Menu → **⚙ Instellingen** → vul bij *YouTube-livestream* het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal).
+Menu → **⚙ Instellingen** → vul bij *YouTube-livestream* het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
+**Na het bijwerken van de app altijd PTZ Control opnieuw starten** (Terminal-venster sluiten, app weer openen), anders draait de server nog de oude versie.
 De app kijkt daarna elke minuut of het kanaal live is. De knop rechtsboven wordt rood (**● LIVE**) zodra er een stream loopt,
 en de stream verschijnt in een **klein venster** (standaard automatisch, zonder geluid).
 

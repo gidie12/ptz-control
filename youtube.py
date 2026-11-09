@@ -10,6 +10,7 @@ Alleen standaardbibliotheek.
 import json
 import os
 import re
+import ssl
 import threading
 import time
 import urllib.error
@@ -28,12 +29,17 @@ POLL_ERROR = 120     # s na een fout
 
 
 def channel_path(raw):
-    """Maak van wat de gebruiker invult een kanaalpad: '/@naam' of '/channel/UC…'.
+    """Maak van wat de gebruiker invult een pad om op te halen.
 
-    Toegestaan: @naam, naam, UC-id, of een volledige YouTube-link (/@, /channel/, /c/, /user/)."""
+    Kanaal: @naam, naam, UC-id, of een kanaallink (/@, /channel/, /c/, /user/) -> '/@naam' enz.
+    Eén video/stream: link met /live/<id>, watch?v=<id>, youtu.be/<id> of /shorts/<id> -> '/watch?v=<id>'."""
     s = (raw or "").strip()
     if not s:
         return ""
+    m = (re.search(r"youtu\.be/([\w-]{11})", s) or re.search(r"[?&]v=([\w-]{11})", s)
+         or re.search(r"youtube\.com/(?:live|shorts|embed)/([\w-]{11})", s, re.I))
+    if m:
+        return "/watch?v=" + m.group(1)
     s = re.sub(r"^(https?://)?(www\.|m\.)?youtube\.com", "", s, flags=re.I)
     s = s.split("?")[0].split("#")[0].strip("/")
     m = re.match(r"^(channel/UC[\w-]{22}|c/[^/]+|user/[^/]+|@[^/]+)", s)
@@ -43,13 +49,30 @@ def channel_path(raw):
         return "/channel/" + s
     if re.fullmatch(r"[\w.\-]{3,100}", s):
         return "/@" + s
-    raise ValueError("Onbekend kanaal. Vul bijv. @kerknaam, een kanaal-id (UC…) of de kanaallink in.")
+    raise ValueError("Onbekend kanaal. Vul bijv. @kerknaam, een kanaal-id (UC…), de kanaallink of een link naar de stream in.")
+
+
+def _ssl_context():
+    """Python van python.org op een Mac heeft vaak geen root-certificaten; dan certifi gebruiken."""
+    ctx = ssl.create_default_context()
+    try:
+        import certifi  # noqa: PLC0415
+        ctx.load_verify_locations(certifi.where())
+    except Exception:  # noqa: BLE001  certifi niet geïnstalleerd: systeemcertificaten
+        pass
+    return ctx
+
+
+_CTX = None
 
 
 def _fetch(url, timeout=10):
+    global _CTX
+    if _CTX is None:
+        _CTX = _ssl_context()
     req = urllib.request.Request(url, headers={
         "User-Agent": UA, "Accept-Language": "nl-NL,nl;q=0.9,en;q=0.8", "Cookie": COOKIES})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with urllib.request.urlopen(req, timeout=timeout, context=_CTX if url.startswith("https") else None) as r:
         return r.read().decode("utf-8", "replace"), r.geturl()
 
 
@@ -103,7 +126,10 @@ def check(raw_channel):
     path = channel_path(raw_channel)
     if not path:
         return {"live": False, "upcoming": False, "video_id": None, "title": None, "start": None}
-    html, final = _fetch(BASE + quote(path, safe="/@") + "/live")
+    if path.startswith("/watch?v="):
+        html, final = _fetch(BASE + path)
+    else:
+        html, final = _fetch(BASE + quote(path, safe="/@") + "/live")
     return parse_live_page(html, final)
 
 
