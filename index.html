@@ -82,9 +82,12 @@
   .trk.warn { background: #3a2a10; border-color: var(--accent); color: var(--accent); }
   .tile .tb { position: absolute; bottom: 38px; right: 6px; background: rgba(18,48,28,.9); color: #7ee2a0;
     font-size: 11px; padding: 1px 6px; border-radius: 4px; }
-  .camrow2 { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
+  .camrow2 { display: grid; grid-template-columns: 2.2fr 1fr 1.2fr 1.1fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
     border-bottom: 1px solid var(--line); align-items: center; }
   .camrow2 label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  input.hk { width: 100%; min-width: 80px; cursor: pointer; text-align: center; caret-color: transparent; }
+  input.hk:focus { border-color: var(--accent); }
+  input.hk.warn { border-color: var(--live); }
   .btn.trackbtn { height: 44px; font-size: 14px; margin-top: 8px; width: 100%; }
   .btn.trackbtn.on { background: #12301c; border-color: var(--ok); color: #7ee2a0; }
   #btnPad.on { color: #7ee2a0; border-color: var(--ok); }
@@ -287,7 +290,7 @@
       <button class="icon" id="btnMap2" style="margin-top:6px">🎮 Knoppenindeling instellen…</button>
     </div>
     <div class="small" style="padding:0 4px">
-      <kbd>1</kbd>–<kbd>9</kbd> preset · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>9</kbd> camera · <kbd>←↑→↓</kbd> bewegen ·
+      <kbd>1</kbd>–<kbd>9</kbd> preset · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>9</kbd> camera (instelbaar) · <kbd>←↑→↓</kbd> bewegen ·
       <kbd>Q</kbd>/<kbd>A</kbd> zoom · <kbd>W</kbd>/<kbd>S</kbd> focus · <kbd>H</kbd> home · <kbd>T</kbd> volgen · <kbd>F</kbd> volledig scherm · <kbd>Spatie</kbd> stop ·
       rechtsklik of lang drukken op een preset = bewerken
     </div>
@@ -319,6 +322,8 @@
   <div class="camrow camhead"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span>VISCA-poort</span><span>Gebruiker</span><span>Wachtwoord</span><span></span></div>
   <div id="camList"></div>
   <button class="icon" id="btnAddCam" style="margin-top:6px">+ Camera toevoegen</button>
+  <p class="small"><b>Sneltoets</b>: hiermee kies je de camera die je bedient (in <i>Alle camera's</i> blijf je in die weergave); daarna roept 1–9 een preset op.
+    Standaard Shift+1, Shift+2, … Klik in het veld en druk bijvoorbeeld F1 of Num 1. Backspace = terug naar standaard.</p>
   <p class="small">Protocol <b>HTTP-CGI</b> werkt op vrijwel alle PTZOptics-camera's (en geeft thumbnails). Kies <b>VISCA (TCP)</b> als HTTP niet reageert.
     Gebruiker/wachtwoord alleen invullen als de camera om inloggen vraagt.</p>
   <div class="actions">
@@ -541,7 +546,7 @@ function renderPresets() {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "");
       const ln = lastPreset[c.id];
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
-        <b>${esc(c.name)}</b><span class="key">Shift+${i + 1}</span>${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}
+        <b>${esc(c.name)}</b>${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⚙ Camera's)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}
         <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
@@ -724,8 +729,63 @@ const sendMove = () => {
   const h = d.includes("left") ? "left" : d.includes("right") ? "right" : "";
   cmd("move", { dir: (h && v) ? h + v : (h || v), pan: sp("#spPan"), tilt: sp("#spTilt") });
 };
+/* ---- sneltoetsen om een camera te kiezen (instelbaar per camera, cfg.cameras[i].hotkey) ---- */
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+// Toetsen die de app al gebruikt (zonder Shift/Alt/Ctrl)
+const USED_KEYS = ["KeyQ", "KeyA", "KeyW", "KeyS", "KeyH", "KeyT", "KeyF", "Space", "Escape",
+  "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => "Digit" + n)];
+function comboOf(e) {
+  if (["Shift", "Alt", "Control", "Meta", "AltGraph"].includes(e.key) || !e.code) return null;
+  return (e.ctrlKey ? "Ctrl+" : "") + (e.altKey ? "Alt+" : "") + (e.shiftKey ? "Shift+" : "") + e.code;
+}
+function keyLabel(k) {
+  return String(k || "").replace("Alt+", IS_MAC ? "⌥+" : "Alt+")
+    .replace(/Digit(\d)$/, "$1").replace(/Key([A-Z])$/, "$1").replace(/Numpad(\d)$/, "Num $1")
+    .replace(/Arrow(Up|Down|Left|Right)$/, (m, d) => ({ Up: "↑", Down: "↓", Left: "←", Right: "→" })[d]).replace("Space", "Spatie");
+}
+function camHotkey(c, i) { return c.hotkey || (i < 9 ? "Shift+Digit" + (i + 1) : ""); }
+function hotkeyProblem(k, input) {
+  if (USED_KEYS.includes(k)) return "Deze toets gebruikt de app al (presets, bewegen, zoom, …).";
+  const rows = $$("#camList .hk");
+  for (let j = 0; j < rows.length; j++) {
+    if (rows[j] === input) continue;
+    if ((rows[j].dataset.key || (j < 9 ? "Shift+Digit" + (j + 1) : "")) === k) return "Deze toets is al gekozen voor een andere camera.";
+  }
+  return "";
+}
+function hotkeyInput(inp) {
+  const show = () => {
+    const k = inp.dataset.key;
+    inp.value = k ? keyLabel(k) : "";
+    const p = k ? hotkeyProblem(k, inp) : "";
+    inp.classList.toggle("warn", !!p); inp.title = p || "Klik en druk een toets. Backspace = standaard.";
+  };
+  inp.addEventListener("focus", () => { inp.value = ""; inp.placeholder = "druk een toets…"; });
+  inp.addEventListener("blur", () => { inp.placeholder = "standaard"; show(); });
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.key === "Escape") return inp.blur();
+    if (e.key === "Backspace" || e.key === "Delete") { inp.dataset.key = ""; return inp.blur(); }
+    const k = comboOf(e); if (!k) return;
+    inp.dataset.key = k; inp.blur();
+    const p = hotkeyProblem(k, inp); if (p) toast(p);
+  });
+  show();
+}
+
 document.addEventListener("keydown", (e) => {
   if (anyDialog() || e.target.matches("input[type=text],input[type=number],input[type=password]")) return;
+  // camera kiezen met de ingestelde sneltoets
+  const combo = comboOf(e);
+  const ci = combo ? cfg.cameras.findIndex((c, i) => camHotkey(c, i) === combo) : -1;
+  if (ci >= 0) {
+    e.preventDefault();
+    if (e.repeat) return;
+    const c = cfg.cameras[ci];
+    if (view === ALL) selectCam(c, "key"); else setView(c.id);
+    return;
+  }
   const k = e.key.toLowerCase();
   if (e.repeat) { if (keyMove[e.key] || "qasw".includes(k)) e.preventDefault(); return; }
   if (keyMove[e.key]) { e.preventDefault(); pressed.add(e.key); moved(); sendMove(); }
@@ -741,17 +801,13 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "Escape" && document.body.classList.contains("wall")) setWall(false);
   else if (/^Digit[1-9]$/.test(e.code)) {
     const n = +e.code.slice(5);
-    if (e.shiftKey) {
-      const c = cfg.cameras[n - 1]; if (!c) return;
-      // in "Alle camera's" blijven: alleen kiezen welke camera bediend wordt; daarna 1–9 = preset op die camera
-      if (view === ALL) selectCam(c, "key"); else setView(c.id);
-    }
-    else if (ctrlCam) presetClick(ctrlCam, n);
+    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;   // camera-sneltoetsen zijn hierboven al afgehandeld
+    if (ctrlCam) presetClick(ctrlCam, n);
   }
 });
 document.addEventListener("keyup", (e) => {
   const k = e.key.toLowerCase();
-  if (keyMove[e.key]) { pressed.delete(e.key); pressed.size ? sendMove() : cmd("stop"); }
+  if (keyMove[e.key]) { if (pressed.delete(e.key)) pressed.size ? sendMove() : cmd("stop"); }   // alleen als dit pijltje echt bewoog
   else if ("qa".includes(k) && k) cmd("zoom", { dir: "stop" });
   else if ("ws".includes(k) && k) cmd("focus", { dir: "stop" });
 });
@@ -802,7 +858,11 @@ function camRow(c) {
     <label>Volg-stream <input type="text" data-f="stream_url" value="${esc(c.stream_url || "")}"
       placeholder="leeg = rtsp://IP:554/2 (substream)"></label>
     <label>Max. volgsnelheid <input type="number" data-f="track_speed" min="1" max="24" value="${c.track_speed || 6}" style="width:64px"></label>
-    <label><input type="checkbox" data-f="track_invert" ${c.track_invert ? "checked" : ""}> Pan omgekeerd (camera ondersteboven)</label>`;
+    <label><input type="checkbox" data-f="track_invert" ${c.track_invert ? "checked" : ""}> Pan omgekeerd (camera ondersteboven)</label>
+    <label title="Klik en druk de toets(combinatie) waarmee je deze camera kiest. Backspace = terug naar standaard.">Sneltoets
+      <input type="text" readonly class="hk" data-f="hotkey" data-key="${esc(c.hotkey || "")}"
+        value="${esc(c.hotkey ? keyLabel(c.hotkey) : "")}" placeholder="standaard"></label>`;
+  hotkeyInput(d2.querySelector(".hk"));
   d.querySelector("button").onclick = () => { d.remove(); d2.remove(); };
   d._extra = d2;
   return d;
@@ -820,7 +880,9 @@ $("#btnSave").onclick = async () => {
     const o = { id: r.dataset.id, presets: old[r.dataset.id]?.presets || {}, track_presets: old[r.dataset.id]?.track_presets || [] };
     const fields = [...r.querySelectorAll("[data-f]"), ...r.nextElementSibling.querySelectorAll("[data-f]")];
     fields.forEach(i => o[i.dataset.f] = i.type === "checkbox" ? i.checked
+      : i.dataset.f === "hotkey" ? i.dataset.key
       : ["visca_port", "track_speed"].includes(i.dataset.f) ? +i.value : i.value.trim());
+    if (!o.hotkey) delete o.hotkey;
     return o;
   }).filter(c => c.host);
   cfg.preset_count = Math.max(1, Math.min(64, +$("#presetCount").value || 12));
