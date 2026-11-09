@@ -490,6 +490,16 @@ function renderTabs() {
   }
 }
 
+// Kies welke camera bediend wordt (pijltjes, 1–9, controller) zonder de weergave "Alle camera's" te verlaten.
+function selectCam(c, origin) {
+  if (!c) return;
+  if (pressed.size) { pressed.clear(); cmd("stop"); }       // geen beweging laten doorlopen op de vorige camera
+  ctrlCam = c.id;
+  if (view !== ALL) view = c.id;
+  render(); toast((origin === "pad" ? "🎮 " : "Camera: ") + c.name, true);
+  post("/api/select", { cam: c.id, origin });
+}
+
 function setView(id) {
   view = id;
   if (id !== ALL) ctrlCam = id;
@@ -725,7 +735,11 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "Escape" && document.body.classList.contains("wall")) setWall(false);
   else if (/^Digit[1-9]$/.test(e.code)) {
     const n = +e.code.slice(5);
-    if (e.shiftKey) { const c = cfg.cameras[n - 1]; if (c) setView(c.id); }
+    if (e.shiftKey) {
+      const c = cfg.cameras[n - 1]; if (!c) return;
+      // in "Alle camera's" blijven: alleen kiezen welke camera bediend wordt; daarna 1–9 = preset op die camera
+      if (view === ALL) selectCam(c, "key"); else setView(c.id);
+    }
     else if (ctrlCam) presetClick(ctrlCam, n);
   }
 });
@@ -934,10 +948,7 @@ function padStopAll() {
 function selectCamByPad(c) {
   if (!c) return;
   padStopAll();
-  ctrlCam = c.id;
-  if (view !== ALL) view = c.id;
-  render(); toast("🎮 " + c.name, true);
-  post("/api/select", { cam: c.id, origin: "pad" });
+  selectCam(c, "pad");
 }
 function selectByPad(delta) {
   if (!cfg.cameras.length) return;

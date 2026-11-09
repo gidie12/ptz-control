@@ -42,7 +42,7 @@ Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (
 
 ## Meerdere camera's tegelijk
 Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de LIVE-preset en alle presettegels.
-Klik op de kopregel van een kolom (of Shift+1/2/3) om te kiezen welke camera de pijltjes/handbediening aanstuurt.
+Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm.
 Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
 
 **⛶ Volledig scherm** (in het menu onder 🎮 rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop rechtsonder.
@@ -115,7 +115,7 @@ De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller 
 Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 
 ## Sneltoetsen
-Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera · H = home · T = volgen · F = volledig scherm · Spatie = stop
+Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen (in Alle camera's blijf je in die weergave) · H = home · T = volgen · F = volledig scherm · Spatie = stop
 
 ## Tip
 Geef de pc met deze app een vast IP-adres (DHCP-reservering), dan blijft het tabletadres hetzelfde.

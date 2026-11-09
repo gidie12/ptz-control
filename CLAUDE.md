@@ -43,6 +43,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Per-apparaat-instellingen (snelheden, tegelgrootte, Xbox-opties) staan in **localStorage**, niet op de server.
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
 - 🧑 **Menu onder de 🎮-statusknop** (`#mainMenu`): Controller-instellingen, Knoppenindeling, Volledig scherm, Back-up, Camera's. De knoppen houden hun oude id's (`btnMap`, `btnWall`, `btnBackup`, `btnSettings`); klik buiten of Esc sluit het menu.
+- 🧑 **Toetsenbord in Alle camera's**: Shift+N kiest alleen de bediende camera (`selectCam`, post `/api/select` met origin `key`) en blijft in Alle camera's/volledig scherm; daarna 1–9 = preset op die camera. In de enkele weergave wisselt Shift+N nog steeds van tabblad.
 - 🧑 **Camerabediening inklapbaar** (klik op de titel; `localStorage.ctrlFolded`).
 - 🧑 **⛶ Volledig scherm** / toets F: `body.wall` verbergt kop en zijbalk, zet weergave op Alle camera's en vraagt browser-fullscreen. Esc / fullscreen verlaten → terug naar vorige weergave.
 - **Scènes** = meerdere camera's tegelijk naar een preset (vergelijkbaar met SuperPresets op een PTZOptics-joystick).
