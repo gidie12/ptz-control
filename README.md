@@ -58,6 +58,16 @@ daarna een naam met ✎. ⚠ De camera's bewegen hierbij: niet tijdens een diens
 **Gereserveerde presets:** PTZOptics gebruikt 90 (home), 95 (OSD-menu) en 91–99 voor vaste functies. De app roept deze nooit op
 en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 100–254.
 
+## Presetaantal testen
+Menu 🎮 → **🧪 Presetaantal testen**. Test per camera hoeveel presets hij echt kan opslaan en oproepen (ca. 1 minuut per
+camera; de camera's bewegen, dus niet tijdens een dienst). Bestaande presets worden daarna exact teruggezet en lege nummers
+weer gewist. Het resultaat (bijv. "max. preset 254 · 244 bruikbaar") blijft bewaard en is later terug te zien.
+
+## Tegels instellen
+Boven het presetraster: **Tegels − 12 +** bepaalt hoeveel presettegels je per camera ziet (90–99 worden overgeslagen),
+**Grootte** de tegelgrootte. Beide worden automatisch opgeslagen en gelden op elk scherm. Staan er presets met een naam of
+foto buiten beeld, dan zie je een melding; klik erop om ze te tonen.
+
 ## Back-up van presets en camera-instellingen
 **💾 Back-up** in het menu onder 🎮 rechtsboven:
 

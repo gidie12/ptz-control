@@ -443,7 +443,7 @@ def _job_update(cam_id, **kw):
 
 
 def start_job(kind, cam_ids, opts):
-    """kind = 'capture' (uit camera lezen), 'apply' (naar camera terugzetten) of 'load' (presets laden vanaf camera)."""
+    """kind = 'capture' (uit camera lezen), 'apply' (terugzetten), 'load' (presets laden) of 'captest' (presetaantal testen)."""
     with JOB_LOCK:
         if JOB["running"]:
             raise RuntimeError("Er loopt al een back-uptaak")
@@ -461,7 +461,23 @@ def start_job(kind, cam_ids, opts):
         stop_tracking(cid, halt=True)
         try:
             prog = lambda m: _job_update(cid, status="bezig", msg=m)  # noqa: E731
-            if kind == "load":
+            if kind == "captest":
+                r = _backup.capacity_test(cam, prog)
+                r["_tested"] = stamp
+                results[cid] = r
+                errs = [f"preset {t['n']}: {t['note']}" for t in r["tested"]
+                        if "LET OP" in t["note"] or (not t["ok"] and t["n"] < r["max"])]
+                left = [t["n"] for t in r["tested"] if t.get("left_test")]
+                msg = (f"hoogste werkende preset: {r['max']} ({r['total']} bruikbaar)" if r["max"] else "geen enkele preset werkte") + \
+                      (f" · testpositie staat nu in: {', '.join(map(str, left))}" if left else "")
+                back = STATE["last_preset"].get(cid)
+                if back:
+                    try:
+                        run_command(cam, "preset_call", {"n": back})
+                    except Exception:  # noqa: BLE001
+                        pass
+                _job_update(cid, capacity=r)
+            elif kind == "load":
                 upto = clamp(opts.get("upto") or preset_count, 1, 254)
                 presets = [n for n in range(1, upto + 1) if _backup.usable(n)]
                 photos = bool(opts.get("thumbs"))
@@ -519,6 +535,14 @@ def start_job(kind, cam_ids, opts):
             t.start()
         for t in threads:
             t.join()
+        if kind == "captest" and results:
+            with LOCK:
+                fresh = json.load(open(CONFIG_PATH, encoding="utf-8"))
+                for cam in fresh.get("cameras", []):
+                    if cam["id"] in results:
+                        cam["preset_capacity"] = results[cam["id"]]
+                _write(fresh)
+            broadcast({"type": "config"})
         if kind in ("capture", "load") and results:
             with LOCK:
                 fresh = json.load(open(CONFIG_PATH, encoding="utf-8"))
@@ -531,8 +555,9 @@ def start_job(kind, cam_ids, opts):
                             top = max([top] + [int(n) for n in pos])
                         if img:
                             cam["saved_image"] = img
-                if kind == "load" and top > int(fresh.get("preset_count") or 12):
-                    fresh["preset_count"] = min(64, top)   # raster groot genoeg voor de gevonden presets
+                need = _backup.count_upto(top) if top else 0
+                if kind == "load" and need > int(fresh.get("preset_count") or 12):
+                    fresh["preset_count"] = min(244, need)   # genoeg tegels om de gevonden presets te tonen
                 _write(fresh)
             broadcast({"type": "config"})
         with JOB_LOCK:
@@ -678,7 +703,7 @@ class Handler(BaseHTTPRequestHandler):
             for cam in body["cameras"]:
                 cam.pop("thumbs", None)
                 # uitgelezen posities/beeld alleen via de back-uptaken wijzigen, nooit via een (mogelijk verouderd) scherm
-                for key in ("saved_positions", "saved_image"):
+                for key in ("saved_positions", "saved_image", "preset_capacity"):
                     cam.pop(key, None)
                     if key in existing.get(cam.get("id"), {}):
                         cam[key] = existing[cam["id"]][key]
@@ -692,9 +717,9 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:  # noqa: BLE001
                 return self._send(400, {"ok": False, "error": str(e)})
 
-        if u.path in ("/api/backup/capture", "/api/backup/apply", "/api/presets/load"):
+        if u.path in ("/api/backup/capture", "/api/backup/apply", "/api/presets/load", "/api/presets/captest"):
             try:
-                kind = "load" if u.path.endswith("load") else "capture" if u.path.endswith("capture") else "apply"
+                kind = {"load": "load", "captest": "captest", "capture": "capture", "apply": "apply"}[u.path.rsplit("/", 1)[1]]
                 start_job(kind, body.get("cams") or [],
                           {"positions": bool(body.get("positions")), "image": bool(body.get("image")),
                            "presets": body.get("presets", "used"), "upto": body.get("upto"),

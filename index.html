@@ -135,6 +135,12 @@
   .bstat.ok { color: #7ee2a0; } .bstat.warn { color: var(--accent); } .bstat.err { color: var(--live); } .bstat.busy { color: var(--accent); }
   .warnbox { background: #3a2a10; border: 1px solid var(--accent); color: #f5d49a; border-radius: 8px; padding: 8px 10px;
     font-size: 13px; margin-top: 8px; }
+  .tilectl { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+  .tilectl input[type=number] { width: 52px; background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 6px; padding: 5px 4px; font: inherit; text-align: center; -moz-appearance: textfield; }
+  .tilectl input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .tbtn { width: 30px; height: 30px; padding: 0; font-size: 16px; line-height: 1; color: var(--text); }
+  .hidden-hint { font-size: 12px; color: var(--accent); margin-top: 6px; cursor: pointer; }
   .camsec { margin-bottom: 18px; }
   .camsec h3 { font-size: 14px; margin: 0 0 8px; display: flex; gap: 8px; align-items: center; }
   .camsec h3 button { font-size: 12px; }
@@ -213,12 +219,12 @@
     <button class="icon" id="btnPad" title="Menu · geen controller verbonden" aria-haspopup="true" aria-expanded="false"><span class="padico" aria-hidden="true">🎮<i></i></span>Menu <span class="caret">▾</span></button>
     <div class="menu" id="mainMenu" hidden role="menu">
       <button class="mi" id="btnPadSet" role="menuitem">🎮 Controller-instellingen</button>
-      <button class="mi" id="btnMap" role="menuitem" title="Knoppenindeling van de Xbox-controller instellen">🕹 Knoppenindeling</button>
       <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen">⌨ Sneltoetsen</button>
       <div class="msep"></div>
       <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm <kbd>F</kbd></button>
       <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
       <button class="mi" id="btnSettings" role="menuitem">⚙ Camera's</button>
+      <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
     </div>
   </div>
 </header>
@@ -229,8 +235,14 @@
     <div class="bar">
       <h2 id="presetTitle">Presets</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <label class="muted" style="display:flex;gap:6px;align-items:center" title="Tegelgrootte">
-          ▫<input type="range" id="tileSize" min="120" max="300" value="170" style="width:90px">◻
+        <div class="tilectl" title="Aantal presettegels per camera (wordt automatisch opgeslagen)">
+          <span>Tegels</span>
+          <button class="icon tbtn" id="tileMinus" aria-label="Minder tegels">−</button>
+          <input type="number" id="tileCount" min="1" max="244" value="12" aria-label="Aantal tegels per camera">
+          <button class="icon tbtn" id="tilePlus" aria-label="Meer tegels">+</button>
+        </div>
+        <label class="tilectl" title="Tegelgrootte (wordt automatisch opgeslagen)">
+          <span>Grootte</span> ▫<input type="range" id="tileSize" min="100" max="320" value="170" style="width:90px">◻
         </label>
         <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset">📥 Laden van camera</button>
         <button class="chip" id="btnStore">＋ Preset opslaan</button>
@@ -332,7 +344,7 @@
     Gebruiker/wachtwoord alleen invullen als de camera om inloggen vraagt.</p>
   <div class="actions">
     <label class="small" style="display:flex;gap:6px;align-items:center">Presets per camera
-      <input type="number" id="presetCount" min="1" max="64" value="12" style="width:70px"></label>
+      <input type="number" id="presetCount" min="1" max="244" value="12" style="width:70px"></label>
     <span style="display:flex;gap:8px"><button class="icon" id="btnCancel">Annuleren</button>
     <button class="primary" id="btnSave">Opslaan</button></span>
   </div>
@@ -447,6 +459,19 @@
 </dialog>
 
 <button class="icon" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
+<dialog id="dlgCap">
+  <h3>🧪 Presetaantal testen</h3>
+  <p class="small">Test per camera hoeveel presets hij echt kan opslaan en oproepen. Voor elk testnummer: preset oproepen,
+    camera iets opzij zetten en opslaan, de andere kant op draaien en de preset terugroepen. Komt de camera precies terug,
+    dan werkt dat nummer. Eerst grenswaarden (1, 32, 64, 89, 100, 128, 150, 200, 254), daarna wordt het precieze maximum gezocht.</p>
+  <div class="warnbox">⚠ De camera's <b>bewegen</b> tijdens de test (ca. 1 minuut). Niet doen tijdens een dienst of livestream.
+    Bestaande presets worden daarna exact teruggezet; lege nummers worden weer gewist. 90–99 worden nooit gebruikt.</div>
+  <table class="bcams" id="capTable"></table>
+  <div class="actions"><span class="small" id="capInfo"></span>
+    <span style="display:flex;gap:8px"><button class="icon" id="capClose">Sluiten</button>
+    <button class="primary" id="capStart">Test starten</button></span></div>
+</dialog>
+
 <div id="toast"></div>
 
 <script>
@@ -490,11 +515,13 @@ async function cmd(action, args = {}, camId = ctrlCam) {
 async function loadConfig() {
   cfg = await (await fetch("/api/config")).json();
   cfg.preset_count ||= 12;
+  if (!cfg.tile_size && store.get("ptzTile")) cfg.tile_size = +store.get("ptzTile");
+  applyTile(cfg.tile_size || 170); $("#tileCount").value = cfg.preset_count;
   cfg.cameras.forEach(c => { c.presets ||= {}; c.thumbs ||= []; });
   if (view === null && cfg.cameras.length > 1) view = ALL;
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
-  render(); renderBackup(); renderPadMap(); renderLoad();
+  render(); renderBackup(); renderPadMap(); renderLoad(); renderCap();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -561,6 +588,22 @@ function tile(c, n) {
   return b;
 }
 
+// Precies cfg.preset_count tegels: de eerste N bruikbare presetnummers (90–99 zijn van PTZOptics zelf).
+const RESERVED = (n) => n >= 90 && n <= 99;
+function presetNums() {
+  const want = Math.max(1, Math.min(244, +cfg.preset_count || 12)), out = [];
+  for (let n = 1; out.length < want && n <= 254; n++) if (!RESERVED(n)) out.push(n);
+  return out;
+}
+function hiddenHint(c, nums) {
+  const shown = new Set(nums);
+  const extra = [...new Set([...Object.keys(c.presets).map(Number), ...c.thumbs])].filter(n => n >= 1 && !shown.has(n) && !RESERVED(n));
+  if (!extra.length) return null;
+  const d = document.createElement("div"); d.className = "hidden-hint";
+  d.textContent = `${extra.length} preset${extra.length > 1 ? "s" : ""} met naam/foto niet zichtbaar (nr. ${extra.sort((a, b) => a - b).join(", ")}): klik om alles te tonen`;
+  d.onclick = () => setTileCount(presetNums().length + extra.filter(n => n > Math.max(...nums)).length + 0, Math.max(...extra));
+  return d;
+}
 function renderPresets() {
   const area = $("#presetArea"); area.innerHTML = "";
   $("#presetCard").classList.toggle("storing", storeMode);
@@ -581,9 +624,11 @@ function renderPresets() {
         ctrlCam = c.id; renderPresets(); renderSide();
       };
       const g = document.createElement("div"); g.className = "grid";
-      const max = Math.max(cfg.preset_count, ...Object.keys(c.presets).map(Number), ...c.thumbs);
-      for (let n = 1; n <= max; n++) g.appendChild(tile(c, n));
-      col.appendChild(g); cols.appendChild(col);
+      const nums = presetNums();
+      nums.forEach(n => g.appendChild(tile(c, n)));
+      col.appendChild(g);
+      const h = hiddenHint(c, nums); if (h) col.appendChild(h);
+      cols.appendChild(col);
     });
     area.appendChild(cols);
     return;
@@ -591,9 +636,10 @@ function renderPresets() {
   const c = camById(view);
   $("#presetTitle").textContent = `Presets · ${c.name}`;
   const g = document.createElement("div"); g.className = "grid";
-  const max = Math.max(cfg.preset_count, ...Object.keys(c.presets).map(Number), ...c.thumbs);
-  for (let n = 1; n <= max; n++) g.appendChild(tile(c, n));
+  const nums = presetNums();
+  nums.forEach(n => g.appendChild(tile(c, n)));
   area.appendChild(g);
+  const h = hiddenHint(c, nums); if (h) area.appendChild(h);
 }
 
 function renderSide() {
@@ -710,10 +756,32 @@ const store = { get: (k) => { try { return localStorage.getItem(k); } catch { re
   $(v).textContent = $(s).value;
   $(s).oninput = () => { $(v).textContent = $(s).value; store.set("ptz" + s, $(s).value); };
 });
-if (store.get("ptzTile")) $("#tileSize").value = store.get("ptzTile");
-const applyTile = () => { document.documentElement.style.setProperty("--tile", $("#tileSize").value + "px");
-  document.documentElement.style.setProperty("--ctile", Math.round($("#tileSize").value * 0.68) + "px"); store.set("ptzTile", $("#tileSize").value); };
-$("#tileSize").oninput = applyTile; applyTile();
+/* ---- tegels: aantal en grootte, automatisch opgeslagen in de app-instellingen (dus op elk scherm gelijk) ---- */
+let tileSaveTimer = null;
+function saveTilesSoon() {
+  clearTimeout(tileSaveTimer);
+  tileSaveTimer = setTimeout(async () => { await saveConfig(); toast("Tegelinstelling opgeslagen", true); }, 600);
+}
+function applyTile(v) {
+  v = Math.max(100, Math.min(320, +v || 170));
+  $("#tileSize").value = v;
+  document.documentElement.style.setProperty("--tile", v + "px");
+  document.documentElement.style.setProperty("--ctile", Math.round(v * 0.68) + "px");
+}
+$("#tileSize").oninput = () => { applyTile($("#tileSize").value); cfg.tile_size = +$("#tileSize").value; saveTilesSoon(); };
+applyTile(store.get("ptzTile") || 170);   // tot de instellingen geladen zijn
+// aantal tegels; reach = optioneel presetnummer dat zichtbaar moet worden
+function setTileCount(v, reach) {
+  if (reach) { v = 0; for (let n = 1; n <= reach; n++) if (!RESERVED(n)) v++; }
+  v = Math.max(1, Math.min(244, Math.round(+v) || 12));
+  $("#tileCount").value = v;
+  if (v === cfg.preset_count) return;
+  cfg.preset_count = v; renderPresets(); saveTilesSoon();
+}
+$("#tileMinus").onclick = () => setTileCount(cfg.preset_count - 1);
+$("#tilePlus").onclick = () => setTileCount(cfg.preset_count + 1);
+$("#tileCount").onchange = () => setTileCount($("#tileCount").value);
+$("#tileCount").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); setTileCount($("#tileCount").value); e.target.blur(); } };
 
 /* ================= toetsenbord ================= */
 const keyMove = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
@@ -894,7 +962,7 @@ $("#btnSave").onclick = async () => {
       : ["visca_port", "track_speed"].includes(i.dataset.f) ? +i.value : i.value.trim());
     return o;
   }).filter(c => c.host);
-  cfg.preset_count = Math.max(1, Math.min(64, +$("#presetCount").value || 12));
+  cfg.preset_count = Math.max(1, Math.min(244, +$("#presetCount").value || 12));
   $("#dlg").close(); await saveConfig(); toast("Opgeslagen", true);
 };
 
@@ -944,7 +1012,8 @@ function padActionOptions() {
   o.push(["home", "Home"], ["track", "Volgen (pan) aan/uit"], ["af", "Autofocus (one-push)"], ["fine", "Fijn-modus aan/uit"],
          ["stopall", "Alles stoppen"]);
   o.push(["shift", "Shift (vasthouden: presets +N)"], ["store", "Opslaan (vasthouden + presetknop)"]);
-  for (let n = 1; n <= Math.max(cfg.preset_count, 8); n++) o.push(["preset:" + n, `Preset ${n}`]);
+  const pn = presetNums(); for (let n = 1; pn.length < 8 && n <= 254; n++) if (!RESERVED(n) && !pn.includes(n)) pn.push(n);
+  pn.forEach(n => o.push(["preset:" + n, `Preset ${n}`]));
   return o;
 }
 function renderPadMap() {
@@ -964,7 +1033,6 @@ async function savePadMap() {
 }
 $("#padShift").onchange = savePadMap;
 const openMap = () => { renderPadMap(); $("#dlgMap").showModal(); };
-$("#btnMap").onclick = openMap;
 $("#btnMap2").onclick = openMap;
 $("#btnMapClose").onclick = () => $("#dlgMap").close();
 function padHit(k) {
@@ -1232,6 +1300,40 @@ $("#ldStart").onclick = async () => {
   if (!r.ok) toast(r.error || "Mislukt");
 };
 
+/* ================= presetaantal testen ================= */
+function renderCap() {
+  if (!$("#dlgCap").open) return;
+  const prev = new Set($$("#capTable input[data-cam]:checked").map(i => i.dataset.cam));
+  const first = !$("#capTable").dataset.init;
+  const mine = job.kind === "captest";
+  $("#capTable").innerHTML = `<tr><th></th><th>Camera</th><th>Resultaat</th></tr>` + cfg.cameras.map(c => {
+    const st = mine ? job.cams[c.id] : null;
+    const cap = st?.capacity || c.preset_capacity;
+    const cls = !st ? "" : st.status === "fout" ? "err" : st.status === "bezig" || st.status === "wachten" ? "busy" : st.errors?.length ? "warn" : "ok";
+    const detail = cap?.tested ? `<div class="small" style="margin-top:3px">${cap.tested.map(t =>
+      `<span title="${esc(t.note || "")}" style="color:${t.ok ? "#7ee2a0" : "var(--live)"}">${t.n}${t.ok ? "✓" : "✗"}</span>`).join(" ")}</div>` : "";
+    const summary = cap ? `<b>${cap.max ? `max. preset ${cap.max}` : "geen werkende preset"}</b> · ${cap.total} bruikbaar` +
+      (cap._tested ? ` <span class="small">(${fmtDate(cap._tested)})</span>` : "") +
+      (cap.gaps?.length ? `<div class="small" style="color:var(--accent)">Let op: lager nummer werkte niet: ${cap.gaps.join(", ")}</div>` : "") : "";
+    return `<tr><td><input type="checkbox" data-cam="${esc(c.id)}" ${first || prev.has(c.id) ? "checked" : ""}></td>
+      <td><b>${esc(c.name)}</b><br><span class="small">${esc(c.host)}</span></td>
+      <td>${st && st.status !== "klaar" && st.status !== "klaar met meldingen" ? `<span class="bstat ${cls}">${esc(st.status + (st.msg ? " · " + st.msg : ""))}</span>` : summary || '<span class="small">nog niet getest</span>'}
+        ${detail}${st?.errors?.length ? `<div class="small" style="color:var(--accent)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
+  }).join("");
+  $("#capTable").dataset.init = "1";
+  $("#capStart").disabled = job.running;
+  $("#capInfo").textContent = job.running ? (mine ? "Bezig met testen…" : "Er loopt een andere taak…") : "";
+}
+$("#btnCap").onclick = () => { $("#capTable").dataset.init = ""; $("#dlgCap").showModal(); renderCap(); };
+$("#capClose").onclick = () => $("#dlgCap").close();
+$("#capStart").onclick = async () => {
+  const cams = $$("#capTable input[data-cam]:checked").map(i => i.dataset.cam);
+  if (!cams.length) return toast("Kies minstens één camera");
+  if (!confirm(`${cams.length} camera('s) bewegen nu ongeveer een minuut voor de presettest.\nNiet doen tijdens een dienst. Doorgaan?`)) return;
+  const r = await post("/api/presets/captest", { cams });
+  if (!r.ok) toast(r.error || "Mislukt");
+};
+
 /* ================= live events ================= */
 function connectEvents() {
   const es = new EventSource("/api/events");
@@ -1265,10 +1367,12 @@ function connectEvents() {
       if (prevStatus !== ev.status || !ev.on) { renderPresets(); renderSide(); } else renderSide();
     } else if (ev.type === "job") {
       const wasRunning = job.running;
-      job = ev; renderBackup(); renderLoad();
+      job = ev; renderBackup(); renderLoad(); renderCap();
       if (wasRunning && !ev.running) {
         const errs = Object.values(ev.cams).filter(c => c.status === "fout").length;
-        const done = ev.kind === "load"
+        const done = ev.kind === "captest"
+          ? "Presettest klaar: " + Object.entries(ev.cams).map(([id, c]) => `${camById(id)?.name || id} max ${c.capacity?.max ?? "?"}`).join(", ")
+          : ev.kind === "load"
           ? "Presets geladen: " + Object.entries(ev.cams).map(([id, c]) => `${camById(id)?.name || id} ${(c.found || []).length}`).join(", ")
           : ev.kind === "capture" ? "Uitlezen klaar" : "Terugzetten klaar";
         toast(errs ? `Klaar, ${errs} camera('s) met fout` : done, !errs);

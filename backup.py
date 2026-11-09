@@ -191,13 +191,23 @@ def apply_image(sock, values):
 
 
 # ---------------------------------------------------------------- taken per camera
+def first_usable(count):
+    """De eerste `count` bruikbare presetnummers (zo telt de interface de tegels)."""
+    return [n for n in range(1, 255) if usable(n)][:max(0, count)]
+
+
+def count_upto(n):
+    """Aantal tegels nodig om preset n te tonen."""
+    return sum(1 for k in range(1, n + 1) if usable(k))
+
+
 def preset_list(cam, preset_count, mode):
     if mode == "all":
-        return [n for n in range(1, preset_count + 1) if usable(n)]
+        return first_usable(preset_count)
     used = set(int(n) for n in (cam.get("presets") or {}).keys())
     used |= set(cam.get("thumbs") or [])
     used |= set(int(n) for n in (cam.get("saved_positions") or {}).keys())
-    return sorted(n for n in used if usable(n)) or [n for n in range(1, preset_count + 1) if usable(n)]
+    return sorted(n for n in used if usable(n)) or first_usable(preset_count)
 
 
 def capture_camera(cam, presets, do_positions, do_image, progress, stamp, on_preset=None):
@@ -261,3 +271,104 @@ def restore_camera(cam, do_positions, do_image, progress):
                 errors.append("niet toegepast (kan normaal zijn in automatische modus): "
                               + ", ".join(IMAGE_LABELS.get(f, f) for f in failed))
     return errors
+
+
+# ---------------------------------------------------------------- presetaantal testen
+CAP_PROBES = [1, 32, 64, 89, 100, 128, 150, 200, 254]
+CAP_TOL = 12          # toegestane afwijking (pan/tilt-eenheden) bij terugkomen
+CAP_OFFSET = 220      # zo ver draait de camera opzij voor de testpositie
+
+
+def _goto_pt(sock, pan, tilt, nibbles, zoom=None):
+    pn, tn = nibbles
+    visca_cmd(sock, f"81 01 06 02 14 12 {to_nib(pan, pn)} {to_nib(tilt, tn)} FF")
+    if zoom is not None:
+        visca_cmd(sock, f"81 01 04 47 {to_nib(zoom, 4)} FF")
+    return wait_still(sock)
+
+
+def test_preset_slot(sock, n):
+    """Test of preset n kan worden opgeslagen en opgeroepen; herstelt een bestaande preset.
+    Geeft dict: ok, note, had_preset, left_test (testpositie blijft staan onder dit nummer)."""
+    res = {"n": n, "ok": False, "note": "", "had_preset": False, "left_test": False}
+    key = lambda p: (p["pan"], p["tilt"], p["zoom"])  # noqa: E731
+    before = read_position(sock)
+    if not visca_cmd(sock, f"81 01 04 3F 02 {n:02x} FF"):
+        res["note"] = "oproepen geweigerd door camera"
+        return res
+    old = wait_still(sock)
+    res["had_preset"] = key(old) != key(before)
+    nib = old.get("pt_nibbles", [4, 4])
+    # 1) testpositie opzij en opslaan
+    target = _goto_pt(sock, old["pan"] + CAP_OFFSET, old["tilt"], nib)
+    if not visca_cmd(sock, f"81 01 04 3F 01 {n:02x} FF"):
+        res["note"] = "opslaan geweigerd door camera"
+        _goto_pt(sock, old["pan"], old["tilt"], nib)
+        return res
+    # 2) andere kant op, dan terugroepen
+    away = _goto_pt(sock, old["pan"] - CAP_OFFSET, old["tilt"], nib)
+    if abs(away["pan"] - target["pan"]) <= 3 * CAP_TOL:
+        away = _goto_pt(sock, old["pan"], old["tilt"] + CAP_OFFSET // 2, nib)   # tegen een eindstop: via tilt
+    visca_cmd(sock, f"81 01 04 3F 02 {n:02x} FF")
+    back = wait_still(sock)
+    hit = abs(back["pan"] - target["pan"]) <= CAP_TOL and abs(back["tilt"] - target["tilt"]) <= CAP_TOL
+    moved_back = abs(back["pan"] - away["pan"]) > CAP_TOL or abs(back["tilt"] - away["tilt"]) > CAP_TOL
+    res["ok"] = hit
+    if not hit:
+        res["note"] = "camera kwam niet terug op de teststand" if moved_back else "camera reageerde niet (preset niet ondersteund)"
+    # 3) herstellen
+    if res["had_preset"]:
+        _goto_pt(sock, old["pan"], old["tilt"], nib, zoom=old["zoom"])
+        if visca_cmd(sock, f"81 01 04 3F 01 {n:02x} FF"):
+            res["note"] = (res["note"] + "; " if res["note"] else "") + "bestaande preset teruggezet"
+        else:
+            res["note"] = (res["note"] + "; " if res["note"] else "") + "LET OP: bestaande preset kon niet worden teruggezet"
+    elif hit:
+        # was leeg: testpositie weer wissen (VISCA Memory Reset)
+        if visca_cmd(sock, f"81 01 04 3F 00 {n:02x} FF"):
+            res["note"] = "was leeg; testpositie weer gewist"
+        else:
+            res["left_test"] = True
+            res["note"] = "was leeg; wissen niet ondersteund, bevat nu een testpositie"
+    return res
+
+
+def capacity_test(cam, progress):
+    """Vindt het hoogste werkende presetnummer: eerst grenswaarden, daarna halveren."""
+    results = {}
+    with visca_session(cam) as s:
+        start = read_position(s)
+
+        def run(n):
+            if n in results or not usable(n):
+                return results.get(n, {}).get("ok", False)
+            progress(f"preset {n} testen… ({len(results) + 1})")
+            try:
+                results[n] = test_preset_slot(s, n)
+            except ViscaError as e:
+                results[n] = {"n": n, "ok": False, "note": str(e), "had_preset": False, "left_test": False}
+            return results[n]["ok"]
+
+        for n in CAP_PROBES:
+            run(n)
+        oks = [n for n in results if results[n]["ok"]]
+        best = max(oks) if oks else 0
+        fails_above = sorted(n for n in results if not results[n]["ok"] and n > best)
+        if fails_above:
+            lo, hi = best, fails_above[0]          # lo werkt (of 0), hi faalt
+            while hi - lo > 1:
+                mid = (lo + hi) // 2
+                if not usable(mid):                # 90-99 overslaan
+                    mid = 89 if mid < 95 else 100
+                    if mid <= lo or mid >= hi:
+                        break
+                if run(mid):
+                    lo = mid
+                else:
+                    hi = mid
+            best = lo
+        _goto_pt(s, start["pan"], start["tilt"], start.get("pt_nibbles", [4, 4]), zoom=start["zoom"])
+    total = sum(1 for n in range(1, best + 1) if usable(n))
+    gaps = sorted(n for n in results if n < best and not results[n]["ok"])
+    return {"max": best, "total": total, "gaps": gaps,
+            "tested": [results[n] for n in sorted(results)]}
