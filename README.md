@@ -123,8 +123,21 @@ Elke knop kan ook worden: een vaste camera, een andere preset, home, volgen, aut
 De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller alleen door aan het actieve tabblad).
 Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 
+## YouTube-livestream bekijken
+Menu → **⚙ Instellingen** → vul bij *YouTube-livestream* het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal).
+De app kijkt daarna elke minuut of het kanaal live is. De knop rechtsboven wordt rood (**● LIVE**) zodra er een stream loopt,
+en de stream verschijnt in een **klein venster** (standaard automatisch, zonder geluid).
+
+- Venster verplaatsen: sleep aan de titelbalk. Groter/kleiner: sleep het hoekje rechtsonder (of kies Klein/Middel/Groot in Instellingen).
+- Tonen/verbergen: klik op de YouTube-knop of toets **Y**. ↗ opent de stream op YouTube.
+- Positie, grootte, automatisch openen en geluid onthoudt elk apparaat zelf; het kanaal geldt voor alle schermen.
+- Alleen kijken: de stream starten en stoppen gebeurt nog steeds buiten deze app. Let op: de stream loopt een paar seconden achter.
+
+## Licht of donker
+Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. In **⚙ Instellingen** kun je ook *Automatisch* kiezen (volgt het besturingssysteem). Per apparaat.
+
 ## Sneltoetsen
-Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen (instelbaar per camera; in Alle camera's blijf je in die weergave) · H = home · T = volgen · F = volledig scherm · Spatie = stop
+Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen (instelbaar per camera; in Alle camera's blijf je in die weergave) · H = home · T = volgen · F = volledig scherm · Y = YouTube-venster · Spatie = stop
 
 ## Tip
 Geef de pc met deze app een vast IP-adres (DHCP-reservering), dan blijft het tabletadres hetzelfde.

@@ -15,7 +15,9 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - 🧑 **Xbox-controller** is de fysieke bediening. De PTZJoy-koppeling (PT-JOY-G4 / SuperJoy, `/api/joy/*`) is op verzoek **verwijderd**; niet opnieuw toevoegen zonder expliciete vraag.
 - 🧑 Knopindeling van de Xbox-controller is **instelbaar** per knop, gedeeld via `cameras.json` (`pad_map`).
 - 🧑 **Persoon volgen: alleen pan** via software. Tilt en zoom nooit aanpassen door de tracker.
-- 🧑 **Geen YouTube/stream-bediening in deze software.** Een eerdere OBS-koppeling is op verzoek verwijderd; streamen gebeurt buiten deze app. Niet opnieuw toevoegen zonder expliciete vraag.
+- 🧑 **Geen YouTube/stream-bediening in deze software** (starten/stoppen). Een eerdere OBS-koppeling is op verzoek verwijderd; streamen gebeurt buiten deze app. Niet opnieuw toevoegen zonder expliciete vraag.
+- 🧑 **YouTube-stream wél bekijken** (op verzoek, nov 2026): de server herkent automatisch welke stream live is op een instelbaar kanaal en de UI toont die in een **klein, verplaatsbaar en schaalbaar venster**. Zie §8a.
+- 🧑 **Licht en donker thema**, keuze per apparaat (zie §2).
 - 🧑 Draait op een **Mac mini (Apple Silicon)** ("livestreams-mac-mini"). Er is ook een **Windows-starter** gevraagd.
 - 🧑 **Alle presets en camera-instellingen moeten bewaard en teruggezet kunnen worden**: app-instellingen (back-upbestand), presetposities zelf én beeldinstellingen.
 - 🧑 **Presets moeten geladen kunnen worden vanaf de camera** (bestaande presets in de app krijgen, met foto).
@@ -29,6 +31,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 | `ptz_control.py` | HTTP-server (alleen stdlib), camera-commando's (HTTP-CGI + VISCA), config, SSE-events, tracking-beheer |
 | `index.html` | Volledige UI (vanilla JS, geen build), presets, handbediening, Xbox-controller, dialogen |
 | `tracker.py` | Volgmodule: RTSP-grabber, persoonsdetectie (YOLO of OpenCV HOG), pan-regelaar |
+| `youtube.py` | Live-detectie van het YouTube-kanaal (zonder API-sleutel) + achtergrond-`Watcher` |
 | `backup.py` | Back-up: VISCA-inquiries, presetposities lezen/terugzetten, beeldinstellingen lezen/terugzetten |
 | `Start PTZ Control.command` / `.bat` | 🧑 **Installer en starter in één.** Installeert als `.venv` ontbreekt, als `requirements.txt` verschilt van `.venv/requirements.installed` (kopie die pas na een geslaagde installatie wordt gezet) of met `--installeer` / `/installeer`. Start daarna `ptz_control.py --open`; overige argumenten gaan door. Er zijn geen aparte `Installeer.*`-scripts meer. |
 | `PTZ Control.app` | 🧑 **Dock-app (macOS)** met eigen icoon. `Contents/MacOS/PTZ Control` is een bash-script: draait de server al op poort 8080 (`PTZ_PORT`) → alleen browser openen; anders `open -a Terminal "Start PTZ Control.command"`. Zoekt de repo als map náást de .app, dus de .app moet in de repo blijven (Dock = verwijzing). Uitvoerbaar bit moet in git blijven (100755). |
@@ -39,8 +42,10 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Kern heeft **geen externe packages** nodig; numpy/opencv/ultralytics zijn alleen voor volgen. ⚠️ Python **3.9+** (installers checken dat; de code zelf vermijdt nieuwere syntax).
 - Server luistert op **0.0.0.0:8080**, **zonder authenticatie**. ⚠️ Aanname: vertrouwd kerknetwerk. Iedereen op het LAN kan de camera's bedienen (en een back-up met wachtwoorden downloaden).
 - `do_HEAD` bestaat alleen voor `/api/thumb` (de UI checkt daarmee of een thumbnail bestaat na een `thumb`-event) en `/`. Ontbrak eerst, waardoor nieuwe thumbnails pas na herladen zichtbaar werden.
-- Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `job`, `state`.
-- Per-apparaat-instellingen (snelheden, Xbox-opties) staan in **localStorage**, niet op de server. Tegelgrootte en aantal tegels staan in `cameras.json` (gedeeld).
+- Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `job`, `state`, `youtube`.
+- Per-apparaat-instellingen (snelheden, Xbox-opties, thema, YouTube-venster) staan in **localStorage**, niet op de server. Tegelgrootte en aantal tegels staan in `cameras.json` (gedeeld).
+- 🧑 **Thema** licht/donker via `html[data-theme]` en CSS-variabelen (`:root` = donker, `:root[data-theme=light]` = licht). Geen losse kleurcodes meer in de CSS gebruiken: voeg een variabele toe aan beide blokken. `localStorage.theme` = `auto`/`dark`/`light` (auto volgt `prefers-color-scheme`); een klein script in `<head>` zet het thema vóór het tekenen. Wisselen via menu (`#btnTheme`) of ⚙ Instellingen (`#dlgPrefs`).
+- 🧑 **Menu** heeft ook **⚙ Instellingen** (`#btnPrefs`, dialoog `#dlgPrefs`: thema + YouTube). De camera-dialoog heet in het menu nu 📷 Camera's (id `btnSettings` ongewijzigd).
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
 - 🧑 **Menuknop "🎮 Menu ▾"** (`#btnPad`) toont de controllerstatus visueel, zonder tekst: grijs icoon + grijs bolletje = geen controller; gekleurd icoon + groen bolletje + groene rand (`.on`) = verbonden; bolletje pulseert tijdens bewegen (`.act`). Tooltip noemt de status.
 - 🧑 **Menu onder die knop** (`#mainMenu`): Controller-instellingen, Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen. De knoppen houden hun oude id's (`btnKeys`, `btnWall`, `btnBackup`, `btnSettings`, `btnCap`); klik buiten of Esc sluit het menu.
@@ -118,9 +123,21 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - **Presetaantal testen** (`POST /api/presets/captest {cams}`, taak-soort `captest`, menu 🧪): per nummer: oproepen (bestond hij al = camera bewoog), camera `CAP_OFFSET` opzij en opslaan, de andere kant op, terugroepen; "werkt" = terug binnen `CAP_TOL`. Bestaande preset daarna exact teruggezet; was hij leeg, dan **gewist met VISCA Memory Reset `81 01 04 3F 00 pp FF`** (⚠️ niet op hun camera's getest; lukt dat niet, dan meldt de app dat er een testpositie achterblijft). Eerst `CAP_PROBES` (1, 32, 64, 89, 100, 128, 150, 200, 254), daarna halveren tussen hoogste werkende en laagste falende. Resultaat in `cameras.json` als `preset_capacity` (beschermd tegen overschrijven, zoals `saved_*`). ✅ Getest met nep-camera's zonder limiet, die boven 127 weigeren en die boven 64 stil negeren: 254 / 127 / 64 gevonden, bestaande presets identiek, geen 90–99 verstuurd.
 - ⚠️ Fabrieksreset kan het IP wijzigen; pas dat eerst aan bij ⚙ Camera's (camera-id blijft gelijk, dus de bewaarde data blijft gekoppeld).
 
+## 8a. YouTube-livestream bekijken
+
+- Config: `cfg.youtube = {channel}` in `cameras.json` (gedeeld). `POST /api/config` valideert het kanaal met `youtube.channel_path()` (400 bij onzin) en **behoudt** de bestaande `youtube` als een scherm hem niet meestuurt.
+- Kanaal mag zijn: `@naam`, `naam`, `UC…`-id, of een link (`/@`, `/channel/`, `/c/`, `/user/`).
+- ⚠️ **Detectie zonder API-sleutel**: server haalt `https://www.youtube.com/<kanaal>/live` op (cookies `SOCS`/`CONSENT` tegen de EU-toestemmingspagina) en leest `ytInitialPlayerResponse` (`liveBroadcastDetails.isLiveNow`, `videoDetails.isUpcoming/videoId/title`), met de canonical-link als terugval. Dit is geen officiële API: als YouTube de pagina verandert, kan het breken. Alleen getest met een **nagebootste YouTube-server** (`PTZ_YT_BASE=http://…` vervangt de basis-URL); echte YouTube was vanuit de bouwomgeving niet bereikbaar. Bij de eerste dienst controleren. Alternatief bij problemen: YouTube Data API (kost quota: `search` = 100 eenheden/aanroep).
+- Controle elke 60 s (fout: 120 s), `POST /api/youtube/check` = nu controleren, `GET /api/youtube` = status. Bij een netwerkfout blijft de laatst bekende stream staan.
+- UI: knop `#btnYt` in de kop (grijs / rood **LIVE** / oranje **Gepland**), toets **Y**. Venster `#ytWin`: slepen aan `.ythead`, schalen met `#ytGrip` (alleen breedte, 16:9 vast), min. 220 px. `localStorage`: `ytGeom {x,y,w}`, `ytAuto` (standaard aan), `ytSound` (standaard uit → `mute=1`, anders blokkeert autoplay).
+- Iframe (`youtube-nocookie.com/embed/<id>`) bestaat **alleen** als het venster open is én er live is; anders verwijderd (geen afspelen/dataverkeer op de Mac mini).
+- Zelf gesloten tijdens een livestream → niet steeds opnieuw automatisch openen (`ytUserClosed`, reset bij een nieuwe stream).
+- ⚠️ Klik in de speler pakt de focus; na 0,4 s geeft de pagina die terug (`blur`-handler), zodat sneltoetsen en de Xbox-controller blijven werken. Toetsenbordbediening ín de speler werkt daardoor niet (bewust).
+- ⚠️ Kanalen kunnen insluiten (embedding) uitzetten; dan toont de speler een melding. ↗ opent de stream op YouTube.
+
 ## 8. Bewust níet in de software
 
-- 🧑 **YouTube/stream starten en stoppen** (en opnemen). Was eerst gebouwd via OBS WebSocket, daarna op verzoek volledig verwijderd (server, UI). Een oude `obs`-sectie in `cameras.json` wordt bij opslaan weggegooid.
+- 🧑 **YouTube/stream starten en stoppen** (en opnemen). Kijken mag wel (§8a). Was eerst gebouwd via OBS WebSocket, daarna op verzoek volledig verwijderd (server, UI). Een oude `obs`-sectie in `cameras.json` wordt bij opslaan weggegooid.
 - 🧑 **Live preview** van de camerabeelden.
 - 🧑 **Scènes** (meerdere camera's tegelijk bewegen), zie §2.
 
@@ -138,8 +155,8 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - **Nooit committen:** `cameras.json`, `thumbs/`, `.venv/`, `*.pt`.
 - **Controles na wijzigingen:**
   ```bash
-  python3 -m py_compile ptz_control.py tracker.py backup.py
-  python3 -c "import re;s=open('index.html').read();open('/tmp/a.js','w').write(re.search(r'<script>(.*)</script>',s,re.S).group(1))" && node --check /tmp/a.js
+  python3 -m py_compile ptz_control.py tracker.py backup.py youtube.py
+  python3 -c "import re;s=open('index.html').read();open('/tmp/a.js','w').write(re.findall(r'<script>(.*?)</script>',s,re.S)[-1])" && node --check /tmp/a.js
   bash -n "Start PTZ Control.command" && bash -n "PTZ Control.app/Contents/MacOS/PTZ Control"
   ```
 - **Testen zonder hardware:** gebruik nep-camera's (kleine `ThreadingHTTPServer` die `ptzctrl.cgi`-aanroepen logt en een JPEG op `/snapshot.jpg` geeft), voor back-ups een nep-VISCA-TCP-camera met toestand (posities, presets, beeld, geleidelijke beweging), en voor volgen een `SimGrabber` + `FakeDetector` die `tracker.FrameGrabber` / `_DETECTOR` vervangen. Xbox testen door `navigator.getGamepads` te vervangen in Playwright.

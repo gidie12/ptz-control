@@ -29,6 +29,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 import backup as _backup  # noqa: E402
+import youtube as _youtube  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "cameras.json")
@@ -110,6 +111,14 @@ def broadcast(event):
     with SUB_LOCK:
         for q in list(SUBSCRIBERS):
             q.put(event)
+
+
+# ---------------------------------------------------------------- YouTube (alleen kijken)
+def _yt_channel():
+    return (load_config().get("youtube") or {}).get("channel", "")
+
+
+YT = _youtube.Watcher(_yt_channel, lambda st, changed: broadcast(st))
 
 
 # ---------------------------------------------------------------- helpers
@@ -432,6 +441,7 @@ def restore_backup(data):
                 f.write(base64.b64decode(b64))
             count += 1
     broadcast({"type": "config"})
+    YT.refresh()
     return {"cameras": len(new["cameras"]), "thumbs": count}
 
 
@@ -619,6 +629,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, JOB)
         if u.path == "/api/state":
             return self._send(200, STATE)
+        if u.path == "/api/youtube":
+            return self._send(200, YT.snapshot())
         if u.path == "/api/events":
             return self._sse()
         if u.path == "/api/thumb":
@@ -653,6 +665,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(f"data: {json.dumps(JOB)}\n\n".encode())
             for st in list(TRACK_STATUS.values()):
                 self.wfile.write(f"data: {json.dumps(st)}\n\n".encode())
+            self.wfile.write(f"data: {json.dumps(YT.snapshot())}\n\n".encode())
             self.wfile.flush()
             while True:
                 try:
@@ -697,9 +710,22 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(body.get("cameras"), list):
                 return self._send(400, {"error": "cameras ontbreekt"})
             body.pop("tracking_error", None)
-            body.pop("obs", None)  # YouTube/OBS-koppeling is verwijderd
+            body.pop("obs", None)  # OBS-koppeling (stream starten/stoppen) is verwijderd
             body.pop("scenes", None)  # scènes zijn verwijderd
-            existing = {c["id"]: c for c in load_config().get("cameras", [])}
+            old_cfg = load_config()
+            old_yt = (old_cfg.get("youtube") or {}).get("channel", "")
+            yt = body.get("youtube") if isinstance(body.get("youtube"), dict) else old_cfg.get("youtube")
+            if yt:
+                chan = str(yt.get("channel") or "").strip()[:200]
+                if chan:
+                    try:
+                        _youtube.channel_path(chan)
+                    except ValueError as e:
+                        return self._send(400, {"error": str(e)})
+                body["youtube"] = {"channel": chan}
+            else:
+                body.pop("youtube", None)
+            existing = {c["id"]: c for c in old_cfg.get("cameras", [])}
             for cam in body["cameras"]:
                 cam.pop("thumbs", None)
                 # uitgelezen posities/beeld alleen via de back-uptaken wijzigen, nooit via een (mogelijk verouderd) scherm
@@ -709,6 +735,12 @@ class Handler(BaseHTTPRequestHandler):
                         cam[key] = existing[cam["id"]][key]
             save_config(body)
             broadcast({"type": "config"})
+            if (body.get("youtube") or {}).get("channel", "") != old_yt:
+                YT.refresh()
+            return self._send(200, {"ok": True})
+
+        if u.path == "/api/youtube/check":
+            YT.refresh()
             return self._send(200, {"ok": True})
 
         if u.path == "/api/backup/restore":
@@ -810,6 +842,7 @@ def main():
     args = ap.parse_args()
     load_config()
     STATE["server"] = f"{local_ip()}:{args.port}"
+    YT.start()
     srv = ThreadingHTTPServer((args.bind, args.port), Handler)
     srv.daemon_threads = True
     print(f"PTZ Control draait op http://localhost:{args.port}  en  http://{local_ip()}:{args.port}")

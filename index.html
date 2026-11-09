@@ -5,10 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>PTZ Control</title>
 <link rel="icon" href="data:,">
+<script>
+  // thema vóór het tekenen zetten (geen witte/zwarte flits)
+  (function () {
+    var t = "auto"; try { t = localStorage.getItem("theme") || "auto"; } catch (e) {}
+    if (t === "auto") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
 <style>
+  /* Thema: donker (standaard) en licht. Keuze per apparaat in ⚙ Instellingen (localStorage.theme: auto/dark/light). */
   :root {
+    color-scheme: dark;
     --bg: #111317; --panel: #1a1d23; --panel2: #22262e; --line: #2e333d;
     --text: #e8eaed; --muted: #8b93a1; --accent: #f2a93b; --live: #e5484d; --ok: #3fb950;
+    --img: #0b0c0f; --imgtxt: #3a404c; --onaccent: #1a1200;
+    --okbg: #12301c; --oktxt: #7ee2a0; --warnbg: #3a2a10; --warntxt: #f5d49a; --errbg: #2b1416; --errline: #5a2a2c;
+    --shadow: rgba(0,0,0,.45); --backdrop: rgba(0,0,0,.65);
+  }
+  :root[data-theme=light] {
+    color-scheme: light;
+    --bg: #f3f4f6; --panel: #ffffff; --panel2: #eceef2; --line: #d3d8e0;
+    --text: #16181d; --muted: #5d6573; --accent: #e09415; --live: #d6343a; --ok: #1f8f3d;
+    --img: #dde1e7; --imgtxt: #a3abb8; --onaccent: #1a1200;
+    --okbg: #dcf3e2; --oktxt: #17692f; --warnbg: #fff1d6; --warntxt: #7a4a00; --errbg: #fde6e6; --errline: #efb4b6;
+    --shadow: rgba(20,24,32,.18); --backdrop: rgba(20,24,32,.45);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
@@ -20,7 +41,7 @@
   header h1 { font-size: 15px; font-weight: 600; margin: 0 6px 0 0; }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
   .tab { padding: 8px 14px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; }
-  .tab.active { background: var(--accent); color: #1a1200; border-color: var(--accent); font-weight: 600; }
+  .tab.active { background: var(--accent); color: var(--onaccent); border-color: var(--accent); font-weight: 600; }
   .tab.all { border-style: dashed; }
   .tab.all.active { border-style: solid; }
   .tab small { opacity: .6; margin-left: 4px; }
@@ -44,8 +65,8 @@
     border: 2px solid var(--line); cursor: pointer; padding: 0; text-align: left; touch-action: manipulation;
     transition: transform .06s; }
   .tile:active { transform: scale(.97); }
-  .tile .img { aspect-ratio: 16/9; background: #0b0c0f center/cover no-repeat; display: grid; place-items: center;
-    color: #3a404c; font-size: 34px; font-weight: 700; }
+  .tile .img { aspect-ratio: 16/9; background: var(--img) center/cover no-repeat; display: grid; place-items: center;
+    color: var(--imgtxt); font-size: 34px; font-weight: 700; }
   .tile .meta { display: flex; align-items: center; gap: 8px; padding: 7px 9px; }
   .tile .num { background: var(--bg); border-radius: 6px; padding: 1px 7px; font-size: 13px; font-weight: 700;
     color: var(--accent); flex: none; }
@@ -77,10 +98,10 @@
   .col .tile .edit { width: 26px; height: 26px; font-size: 12px; }
   .trk { margin-left: 6px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2);
     font-size: 12px; cursor: pointer; white-space: nowrap; }
-  .trk.on { background: #12301c; border-color: var(--ok); color: #7ee2a0; }
+  .trk.on { background: var(--okbg); border-color: var(--ok); color: var(--oktxt); }
   .trk.wait { border-color: var(--accent); color: var(--accent); }
-  .trk.warn { background: #3a2a10; border-color: var(--accent); color: var(--accent); }
-  .tile .tb { position: absolute; bottom: 38px; right: 6px; background: rgba(18,48,28,.9); color: #7ee2a0;
+  .trk.warn { background: var(--warnbg); border-color: var(--accent); color: var(--accent); }
+  .tile .tb { position: absolute; bottom: 38px; right: 6px; background: var(--okbg); color: var(--oktxt);
     font-size: 11px; padding: 1px 6px; border-radius: 4px; }
   .camrow2 { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
     border-bottom: 1px solid var(--line); align-items: center; }
@@ -93,7 +114,7 @@
   input.hk:focus { border-color: var(--accent); }
   input.hk.warn { border-color: var(--live); }
   .btn.trackbtn { height: 44px; font-size: 14px; margin-top: 8px; width: 100%; }
-  .btn.trackbtn.on { background: #12301c; border-color: var(--ok); color: #7ee2a0; }
+  .btn.trackbtn.on { background: var(--okbg); border-color: var(--ok); color: var(--oktxt); }
   /* Menuknop met controllerstatus: grijs icoon = geen controller, kleur + groen bolletje = verbonden, pulseert bij bewegen */
   #btnPad .padico { position: relative; display: inline-block; margin-right: 7px; filter: grayscale(1); opacity: .45; transition: opacity .2s, filter .2s; }
   #btnPad .padico i { position: absolute; right: -3px; bottom: -1px; width: 8px; height: 8px; border-radius: 50%;
@@ -106,7 +127,7 @@
   .menuwrap { position: relative; }
   #btnPad .caret { font-size: 11px; opacity: .7; margin-left: 2px; }
   .menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 230px; background: var(--panel); border: 1px solid var(--line);
-    border-radius: 10px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.45); z-index: 30; display: grid; gap: 2px; }
+    border-radius: 10px; padding: 6px; box-shadow: 0 10px 30px var(--shadow); z-index: 30; display: grid; gap: 2px; }
   .menu[hidden] { display: none; }
   .mi { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; background: none; border: 0;
     color: var(--text); padding: 9px 10px; border-radius: 7px; cursor: pointer; font-size: 14px; }
@@ -132,8 +153,8 @@
   .bcams td, .bcams th { padding: 6px 8px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
   .bcams th { color: var(--muted); font-weight: 500; font-size: 12px; }
   .bstat { font-size: 12px; }
-  .bstat.ok { color: #7ee2a0; } .bstat.warn { color: var(--accent); } .bstat.err { color: var(--live); } .bstat.busy { color: var(--accent); }
-  .warnbox { background: #3a2a10; border: 1px solid var(--accent); color: #f5d49a; border-radius: 8px; padding: 8px 10px;
+  .bstat.ok { color: var(--oktxt); } .bstat.warn { color: var(--accent); } .bstat.err { color: var(--live); } .bstat.busy { color: var(--accent); }
+  .warnbox { background: var(--warnbg); border: 1px solid var(--accent); color: var(--warntxt); border-radius: 8px; padding: 8px 10px;
     font-size: 13px; margin-top: 8px; }
   .tilectl { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
   .tilectl input[type=number] { width: 52px; background: var(--panel2); border: 1px solid var(--line); color: var(--text);
@@ -168,7 +189,7 @@
   .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 12px; }
   .btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; height: 48px; cursor: pointer;
     touch-action: none; display: grid; place-items: center; font-size: 18px; }
-  .btn:active, .btn.held { background: var(--accent); color: #1a1200; border-color: var(--accent); }
+  .btn:active, .btn.held { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
   .btn.sm { font-size: 13px; height: 40px; }
   .btn.on { background: var(--ok); border-color: var(--ok); color: #04150a; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; }
@@ -182,16 +203,16 @@
   /* ---- dialogs ---- */
   dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
     width: min(680px, 94vw); padding: 18px; }
-  dialog::backdrop { background: rgba(0,0,0,.65); }
+  dialog::backdrop { background: var(--backdrop); }
   dialog h3 { margin: 0 0 12px; }
   dialog input[type=text], dialog input[type=password], dialog input[type=number], dialog select {
     background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 7px;
     font: inherit; font-size: 14px; width: 100%; user-select: text; -webkit-user-select: text; }
   .actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  .primary { background: var(--accent); color: #1a1200; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
-  .danger { color: var(--live); border-color: #5a2a2c; }
+  .primary { background: var(--accent); color: var(--onaccent); border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+  .danger { color: var(--live); border-color: var(--errline); }
   #dlgPreset { width: min(460px, 94vw); }
-  #dlgPreset .img { aspect-ratio: 16/9; background: #0b0c0f center/cover no-repeat; border-radius: 8px; margin-bottom: 12px;
+  #dlgPreset .img { aspect-ratio: 16/9; background: var(--img) center/cover no-repeat; border-radius: 8px; margin-bottom: 12px;
     display: grid; place-items: center; color: var(--muted); font-size: 13px; }
   .stackbtn { display: grid; gap: 6px; margin-top: 10px; }
   .stackbtn .icon { text-align: left; color: var(--text); padding: 10px 12px; }
@@ -201,11 +222,49 @@
   .small { font-size: 12px; color: var(--muted); line-height: 1.6; }
   kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
 
-  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #2b1416; z-index: 20;
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--errbg); color: var(--text); z-index: 20;
     border: 1px solid var(--live); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0;
     transition: opacity .2s; pointer-events: none; max-width: 90vw; }
   #toast.show { opacity: 1; }
-  #toast.good { background: #0f2416; border-color: var(--ok); }
+
+  /* ---- YouTube: knop in de kop + klein, verplaatsbaar en schaalbaar venster ---- */
+  #btnYt { display: flex; gap: 7px; align-items: center; font-size: 13px; }
+  #btnYt .ytdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  #btnYt.live { border-color: var(--live); color: var(--text); }
+  #btnYt.live .ytdot { background: var(--live); box-shadow: 0 0 6px var(--live); animation: padpulse 1s ease-in-out infinite alternate; }
+  #btnYt.upcoming .ytdot { background: var(--accent); }
+  #btnYt.shown { background: var(--panel2); }
+  #ytWin { position: fixed; z-index: 25; width: 360px; left: 16px; top: 80px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); overflow: hidden;
+    display: flex; flex-direction: column; min-width: 220px; }
+  #ytWin[hidden] { display: none; }
+  #ytWin.live { border-color: var(--live); }
+  .ythead { display: flex; align-items: center; gap: 6px; padding: 5px 6px 5px 10px; cursor: move; touch-action: none;
+    border-bottom: 1px solid var(--line); font-size: 12px; min-width: 0; }
+  .ythead .yttitle { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  .ythead .ytbadge { background: var(--muted); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+    letter-spacing: .05em; flex: none; }
+  #ytWin.live .ytbadge { background: var(--live); }
+  #ytWin.upcoming .ytbadge { background: var(--accent); color: var(--onaccent); }
+  .ythead button { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 5px;
+    font-size: 13px; line-height: 1.2; flex: none; }
+  .ythead button:hover { background: var(--panel2); color: var(--text); }
+  .ytbody { position: relative; aspect-ratio: 16/9; background: #000; }
+  .ytbody iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .ytmsg { position: absolute; inset: 0; display: grid; place-content: center; gap: 8px; text-align: center; padding: 12px;
+    background: var(--img); color: var(--muted); font-size: 13px; }
+  .ytmsg button { justify-self: center; }
+  #ytWin.dragging .ytbody iframe { pointer-events: none; }
+  .ytgrip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; z-index: 2;
+    background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%,
+      transparent 70%, var(--muted) 70%, var(--muted) 78%, transparent 78%); opacity: .8; }
+  #dlgPrefs { width: min(560px, 95vw); }
+  #dlgPrefs .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  #dlgPrefs .seg button { background: var(--panel2); border: 0; padding: 7px 14px; cursor: pointer; font-size: 13px; }
+  #dlgPrefs .seg button + button { border-left: 1px solid var(--line); }
+  #dlgPrefs .seg button.on { background: var(--accent); color: var(--onaccent); font-weight: 600; }
+  #dlgPrefs label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
+  #toast.good { background: var(--okbg); border-color: var(--ok); }
 </style>
 </head>
 <body>
@@ -217,6 +276,7 @@
     <span id="liveDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
     <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
+  <button class="icon" id="btnYt" title="YouTube-livestream tonen of verbergen (toets Y)"><span class="ytdot"></span><span id="ytLbl">YouTube</span></button>
   <div class="menuwrap">
     <button class="icon" id="btnPad" title="Menu · geen controller verbonden" aria-haspopup="true" aria-expanded="false"><span class="padico" aria-hidden="true">🎮<i></i></span>Menu <span class="caret">▾</span></button>
     <div class="menu" id="mainMenu" hidden role="menu">
@@ -225,8 +285,11 @@
       <div class="msep"></div>
       <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm <kbd>F</kbd></button>
       <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
-      <button class="mi" id="btnSettings" role="menuitem">⚙ Camera's</button>
+      <button class="mi" id="btnSettings" role="menuitem">📷 Camera's</button>
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
+      <div class="msep"></div>
+      <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
+      <button class="mi" id="btnPrefs" role="menuitem" title="Weergave en YouTube-kanaal">⚙ Instellingen</button>
     </div>
   </div>
 </header>
@@ -311,7 +374,7 @@
     </div>
     <div class="small" style="padding:0 4px">
       <kbd>1</kbd>–<kbd>9</kbd> preset · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>9</kbd> camera (instelbaar) · <kbd>←↑→↓</kbd> bewegen ·
-      <kbd>Q</kbd>/<kbd>A</kbd> zoom · <kbd>W</kbd>/<kbd>S</kbd> focus · <kbd>H</kbd> home · <kbd>T</kbd> volgen · <kbd>F</kbd> volledig scherm · <kbd>Spatie</kbd> stop ·
+      <kbd>Q</kbd>/<kbd>A</kbd> zoom · <kbd>W</kbd>/<kbd>S</kbd> focus · <kbd>H</kbd> home · <kbd>T</kbd> volgen · <kbd>F</kbd> volledig scherm · <kbd>Y</kbd> YouTube · <kbd>Spatie</kbd> stop ·
       rechtsklik of lang drukken op een preset = bewerken
     </div>
   </aside>
@@ -370,6 +433,7 @@
     <b>H</b><span>Home</span>
     <b>T</b><span>Volgen (pan) aan/uit</span>
     <b>F</b><span>Volledig scherm</span>
+    <b>Y</b><span>YouTube-venster tonen / verbergen</span>
     <b>Spatie</b><span>Stop</span>
     <b>Esc</b><span>Volledig scherm / opslaan-modus verlaten</span>
   </div>
@@ -459,6 +523,55 @@
     <span style="display:flex;gap:8px"><button class="icon" id="ldClose">Sluiten</button>
     <button class="primary" id="ldStart">Laden</button></span></div>
 </dialog>
+
+<dialog id="dlgPrefs">
+  <h3>⚙ Instellingen</h3>
+  <div class="bsec" style="margin-top:0">
+    <h4>Weergave <span class="muted" style="font-weight:400">· dit apparaat</span></h4>
+    <div class="row" style="display:flex;gap:10px;align-items:center;margin-top:8px">
+      <span class="small">Thema</span>
+      <span class="seg" id="themeSeg">
+        <button data-theme="auto" title="Volgt de instelling van het besturingssysteem">Automatisch</button>
+        <button data-theme="light">☀ Licht</button>
+        <button data-theme="dark">🌙 Donker</button>
+      </span>
+    </div>
+  </div>
+  <div class="bsec">
+    <h4>YouTube-livestream</h4>
+    <div class="small">De app kijkt elke minuut of dit kanaal live is en toont de stream in een klein venster. Alleen kijken:
+      starten en stoppen van de stream gebeurt buiten deze app.</div>
+    <label class="small" style="display:block;margin-top:10px">Kanaal <span class="muted">(geldt voor alle schermen)</span>
+      <input type="text" id="ytChannel" placeholder="@kerknaam, kanaal-id (UC…) of link naar het kanaal" maxlength="200"></label>
+    <div class="small" id="ytPrefStatus" style="margin-top:6px"></div>
+    <div class="small" style="margin-top:10px"><b>Venster</b> <span class="muted">· dit apparaat</span></div>
+    <label class="chk"><input type="checkbox" id="ytAuto"> Venster automatisch openen als het kanaal live gaat</label>
+    <label class="chk"><input type="checkbox" id="ytSound"> Met geluid starten <span class="muted">(standaard zonder, de browser kan geluid blokkeren)</span></label>
+    <div class="row" style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">
+      <span class="small">Grootte</span>
+      <span class="seg" id="ytSizeSeg">
+        <button data-w="260">Klein</button><button data-w="360">Middel</button><button data-w="520">Groot</button>
+      </span>
+      <button class="icon" id="ytResetPos" title="Venster terug naar linksonder">Positie herstellen</button>
+    </div>
+    <div class="small muted" style="margin-top:6px">Tip: sleep het venster aan de titelbalk, en maak het groter of kleiner met het hoekje rechtsonder.</div>
+  </div>
+  <div class="actions"><span></span>
+    <span style="display:flex;gap:8px"><button class="icon" id="prefsCancel">Sluiten</button>
+    <button class="primary" id="prefsSave">Opslaan</button></span></div>
+</dialog>
+
+<!-- YouTube: klein venster (verplaatsbaar, schaalbaar) -->
+<div id="ytWin" hidden>
+  <div class="ythead" id="ytHead">
+    <span class="ytbadge" id="ytBadge">OFFLINE</span>
+    <span class="yttitle" id="ytTitle">YouTube</span>
+    <button id="ytOpen" title="Openen op YouTube">↗</button>
+    <button id="ytClose" title="Venster sluiten (Y)">✕</button>
+  </div>
+  <div class="ytbody" id="ytBody"><div class="ytmsg" id="ytMsg"></div></div>
+  <div class="ytgrip" id="ytGrip" title="Sleep om de grootte te wijzigen"></div>
+</div>
 
 <button class="icon" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
 <dialog id="dlgCap">
@@ -798,7 +911,7 @@ const sendMove = () => {
 /* ---- sneltoetsen om een camera te kiezen (instelbaar per camera, cfg.cameras[i].hotkey) ---- */
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 // Toetsen die de app al gebruikt (zonder Shift/Alt/Ctrl)
-const USED_KEYS = ["KeyQ", "KeyA", "KeyW", "KeyS", "KeyH", "KeyT", "KeyF", "Space", "Escape",
+const USED_KEYS = ["KeyQ", "KeyA", "KeyW", "KeyS", "KeyH", "KeyT", "KeyF", "KeyY", "Space", "Escape",
   "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => "Digit" + n)];
 function comboOf(e) {
   if (["Shift", "Alt", "Control", "Meta", "AltGraph"].includes(e.key) || !e.code) return null;
@@ -863,6 +976,7 @@ document.addEventListener("keydown", (e) => {
   else if (k === "h") { moved(); cmd("home"); }
   else if (k === "t" && ctrlCam) toggleTrack(ctrlCam);
   else if (k === "f" && !e.metaKey && !e.ctrlKey) setWall(!document.body.classList.contains("wall"));
+  else if (k === "y" && !e.metaKey && !e.ctrlKey) $("#btnYt").click();
   else if (e.key === " ") { e.preventDefault(); cmd("stop"); cmd("zoom", { dir: "stop" }); }
   else if (e.key === "Escape" && storeMode) setStore(false);
   else if (e.key === "Escape" && document.body.classList.contains("wall")) setWall(false);
@@ -1315,7 +1429,7 @@ function renderCap() {
     const cap = st?.capacity || c.preset_capacity;
     const cls = !st ? "" : st.status === "fout" ? "err" : st.status === "bezig" || st.status === "wachten" ? "busy" : st.errors?.length ? "warn" : "ok";
     const detail = cap?.tested ? `<div class="small" style="margin-top:3px">${cap.tested.map(t =>
-      `<span title="${esc(t.note || "")}" style="color:${t.ok ? "#7ee2a0" : "var(--live)"}">${t.n}${t.ok ? "✓" : "✗"}</span>`).join(" ")}</div>` : "";
+      `<span title="${esc(t.note || "")}" style="color:${t.ok ? "var(--oktxt)" : "var(--live)"}">${t.n}${t.ok ? "✓" : "✗"}</span>`).join(" ")}</div>` : "";
     const summary = cap ? `<b>${cap.max ? `max. preset ${cap.max}` : "geen werkende preset"}</b> · ${cap.total} bruikbaar` +
       (cap._tested ? ` <span class="small">(${fmtDate(cap._tested)})</span>` : "") +
       (cap.gaps?.length ? `<div class="small" style="color:var(--accent)">Let op: lager nummer werkte niet: ${cap.gaps.join(", ")}</div>` : "") : "";
@@ -1337,6 +1451,194 @@ $("#capStart").onclick = async () => {
   const r = await post("/api/presets/captest", { cams });
   if (!r.ok) toast(r.error || "Mislukt");
 };
+
+/* ================= thema (licht / donker, per apparaat) ================= */
+const themeMq = matchMedia("(prefers-color-scheme: light)");
+const themePref = () => store.get("theme") || "auto";
+function applyTheme() {
+  const p = themePref();
+  const t = p === "auto" ? (themeMq.matches ? "light" : "dark") : p;
+  document.documentElement.dataset.theme = t;
+  $("#btnTheme").textContent = t === "light" ? "🌙 Donkere modus" : "☀ Lichte modus";
+  $$("#themeSeg button").forEach(b => b.classList.toggle("on", b.dataset.theme === p));
+}
+function setTheme(p) { store.set("theme", p); applyTheme(); }
+themeMq.addEventListener?.("change", applyTheme);
+$("#btnTheme").onclick = () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+$$("#themeSeg button").forEach(b => b.onclick = () => setTheme(b.dataset.theme));
+applyTheme();
+
+/* ================= YouTube-livestream (alleen kijken) ================= */
+let yt = { channel: "", live: false, upcoming: false, video_id: null, title: null, checked: null, error: null };
+const ytWin = $("#ytWin");
+const ytOpt = {
+  get auto() { return store.get("ytAuto") !== "0"; },
+  get sound() { return store.get("ytSound") === "1"; },
+};
+let ytShownVid = null;      // video in de iframe
+let ytUserClosed = false;   // zelf gesloten tijdens deze livestream: niet steeds opnieuw openen
+
+function ytGeom() {
+  let g = {}; try { g = JSON.parse(store.get("ytGeom") || "{}"); } catch {}
+  const w = Math.max(220, Math.min(+g.w || 360, innerWidth - 16));
+  const h = w * 9 / 16 + 30;
+  const x = Math.max(0, Math.min(g.x ?? 16, innerWidth - w));
+  const y = Math.max(0, Math.min(g.y ?? (innerHeight - h - 16), innerHeight - h));
+  return { x, y, w };
+}
+function ytPlace(g = ytGeom()) {
+  ytWin.style.width = g.w + "px"; ytWin.style.left = g.x + "px"; ytWin.style.top = g.y + "px";
+  $$("#ytSizeSeg button").forEach(b => b.classList.toggle("on", Math.abs(+b.dataset.w - g.w) < 2));
+}
+function ytSaveGeom() {
+  const r = ytWin.getBoundingClientRect();
+  store.set("ytGeom", JSON.stringify({ x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width) }));
+  ytPlace();
+}
+function ytEmbedUrl(id) {
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=${ytOpt.sound ? 0 : 1}&playsinline=1&rel=0&modestbranding=1`;
+}
+function ytRender() {
+  const btn = $("#btnYt"), shown = !ytWin.hidden;
+  btn.classList.toggle("live", !!yt.live);
+  btn.classList.toggle("upcoming", !yt.live && !!yt.upcoming);
+  btn.classList.toggle("shown", shown);
+  $("#ytLbl").textContent = yt.live ? "LIVE" : yt.upcoming ? "Gepland" : "YouTube";
+  btn.title = (!yt.channel ? "YouTube: nog geen kanaal ingesteld"
+    : yt.live ? "Live: " + (yt.title || "") : yt.upcoming ? "Gepland: " + (yt.title || "") : "Kanaal is niet live")
+    + (yt.error ? "\n" + yt.error : "") + "\nKlik of toets Y = venster tonen/verbergen";
+
+  ytWin.classList.toggle("live", !!yt.live);
+  ytWin.classList.toggle("upcoming", !yt.live && !!yt.upcoming);
+  $("#ytBadge").textContent = yt.live ? "LIVE" : yt.upcoming ? "GEPLAND" : "OFFLINE";
+  $("#ytTitle").textContent = yt.title || (yt.channel || "YouTube");
+  $("#ytTitle").title = yt.title || "";
+  $("#ytOpen").hidden = !yt.channel;
+
+  // iframe alleen als het venster open is én er een stream live is; anders weg (stopt afspelen en dataverkeer)
+  const want = shown && yt.live && yt.video_id ? yt.video_id : null;
+  if (want !== ytShownVid) {
+    $("#ytBody iframe")?.remove();
+    if (want) {
+      const f = document.createElement("iframe");
+      f.src = ytEmbedUrl(want);
+      f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+      f.allowFullscreen = true;
+      f.referrerPolicy = "strict-origin-when-cross-origin";
+      f.title = "YouTube-livestream";
+      $("#ytBody").appendChild(f);
+    }
+    ytShownVid = want;
+  }
+  const msg = $("#ytMsg");
+  msg.hidden = !!want;
+  if (!want) {
+    const start = yt.start ? new Date(yt.start) : null;
+    const when = start && !isNaN(start) ? start.toLocaleString("nl-NL", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "";
+    msg.innerHTML = !yt.channel
+      ? `<div>Nog geen YouTube-kanaal ingesteld.</div><button class="icon" data-act="prefs">⚙ Kanaal instellen</button>`
+      : `<div>${yt.upcoming ? "Livestream gepland" + (when ? " · " + esc(when) : "") : "Het kanaal is nu niet live."}</div>`
+        + `<div class="small">${yt.error ? esc(yt.error) : yt.checked ? "Laatst gecontroleerd " + esc(yt.checked) : "Bezig met controleren…"}</div>`
+        + `<button class="icon" data-act="check">⟳ Nu controleren</button>`;
+  }
+}
+function ytShow(on) {
+  ytWin.hidden = !on;
+  if (on) ytPlace();
+  ytRender();
+}
+function ytUpdate(ev) {
+  const wasLive = yt.live, oldVid = yt.video_id;
+  yt = ev;
+  if (yt.live && (!wasLive || yt.video_id !== oldVid)) {
+    if (oldVid !== yt.video_id) ytUserClosed = false;
+    if (ytOpt.auto && !ytUserClosed && ytWin.hidden) { ytShow(true); toast("YouTube is live", true); return; }
+  }
+  if (!yt.live) ytUserClosed = false;
+  ytRender();
+}
+$("#btnYt").onclick = () => {
+  if (!yt.channel && ytWin.hidden) return openPrefs();
+  ytShow(ytWin.hidden);
+  if (ytWin.hidden && yt.live) ytUserClosed = true;
+};
+$("#ytClose").onclick = () => { ytShow(false); if (yt.live) ytUserClosed = true; };
+$("#ytOpen").onclick = () => window.open(yt.live && yt.video_id ? `https://www.youtube.com/watch?v=${yt.video_id}` : ytChannelUrl(yt.channel), "_blank", "noopener");
+$("#ytMsg").addEventListener("click", (e) => {
+  const a = e.target.closest("button")?.dataset.act;
+  if (a === "prefs") openPrefs();
+  if (a === "check") { post("/api/youtube/check", {}); $("#ytMsg .small").textContent = "Bezig met controleren…"; }
+});
+function ytChannelUrl(c) {
+  c = String(c || "").trim();
+  if (/^https?:\/\//i.test(c)) return c;
+  if (/^UC[\w-]{22}$/.test(c)) return "https://www.youtube.com/channel/" + c;
+  return "https://www.youtube.com/" + (c.startsWith("@") ? c : "@" + c);
+}
+
+// slepen (titelbalk) en schalen (hoekje), houdt 16:9
+function ytDrag(el, onMove) {
+  el.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || e.target.closest("button")) return;
+    e.preventDefault();
+    const r = ytWin.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+    ytWin.classList.add("dragging"); el.setPointerCapture(e.pointerId);
+    const move = (m) => onMove(r, m.clientX - sx, m.clientY - sy);
+    const up = () => { ytWin.classList.remove("dragging"); el.removeEventListener("pointermove", move); ytSaveGeom(); };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up, { once: true });
+    el.addEventListener("pointercancel", up, { once: true });
+  });
+}
+ytDrag($("#ytHead"), (r, dx, dy) => {
+  ytWin.style.left = Math.max(0, Math.min(r.left + dx, innerWidth - r.width)) + "px";
+  ytWin.style.top = Math.max(0, Math.min(r.top + dy, innerHeight - r.height)) + "px";
+});
+ytDrag($("#ytGrip"), (r, dx) => {
+  ytWin.style.width = Math.max(220, Math.min(r.width + dx, innerWidth - r.left)) + "px";
+});
+addEventListener("resize", () => { if (!ytWin.hidden) ytPlace(); });
+// Klik in de speler pakt de toetsenbordfocus; geef die terug zodat sneltoetsen en de Xbox-controller blijven werken
+addEventListener("blur", () => setTimeout(() => {
+  if (document.activeElement?.tagName === "IFRAME" && ytWin.contains(document.activeElement)) { document.activeElement.blur(); window.focus(); }
+}, 400));
+
+/* ---- ⚙ Instellingen ---- */
+function openPrefs() {
+  $("#ytChannel").value = (cfg.youtube || {}).channel || "";
+  $("#ytAuto").checked = ytOpt.auto;
+  $("#ytSound").checked = ytOpt.sound;
+  $("#ytPrefStatus").textContent = !yt.channel ? "" : yt.error ? yt.error
+    : (yt.live ? "● Nu live: " + (yt.title || "") : yt.upcoming ? "Gepland: " + (yt.title || "") : "Niet live")
+      + (yt.checked ? " · gecontroleerd " + yt.checked : "");
+  applyTheme(); ytPlace();
+  $("#dlgPrefs").showModal();
+}
+$("#btnPrefs").onclick = openPrefs;
+$("#prefsCancel").onclick = () => $("#dlgPrefs").close();
+$("#ytAuto").onchange = () => store.set("ytAuto", $("#ytAuto").checked ? "1" : "0");
+$("#ytSound").onchange = () => { store.set("ytSound", $("#ytSound").checked ? "1" : "0"); ytShownVid = "_"; ytRender(); };
+$$("#ytSizeSeg button").forEach(b => b.onclick = () => {
+  const g = ytGeom(); g.w = +b.dataset.w;
+  store.set("ytGeom", JSON.stringify(g)); ytPlace(ytGeom());
+});
+$("#ytResetPos").onclick = () => {
+  const w = ytGeom().w; store.set("ytGeom", JSON.stringify({ w })); ytPlace(ytGeom());
+};
+$("#prefsSave").onclick = async () => {
+  const chan = $("#ytChannel").value.trim();
+  if (chan !== ((cfg.youtube || {}).channel || "")) {
+    const prev = cfg.youtube;
+    cfg.youtube = { channel: chan };
+    const clean = JSON.parse(JSON.stringify(cfg)); clean.cameras.forEach(c => delete c.thumbs);
+    const r = await post("/api/config", clean);
+    if (r.error) { cfg.youtube = prev; return toast(r.error); }
+    if (chan) { yt = { ...yt, channel: chan, checked: null, error: null }; ytRender(); }
+  }
+  $("#dlgPrefs").close(); toast("Opgeslagen", true);
+};
+fetch("/api/youtube").then(r => r.json()).then(ytUpdate).catch(() => {});
+ytRender();
 
 /* ================= live events ================= */
 function connectEvents() {
@@ -1381,6 +1683,8 @@ function connectEvents() {
           : ev.kind === "capture" ? "Uitlezen klaar" : "Terugzetten klaar";
         toast(errs ? `Klaar, ${errs} camera('s) met fout` : done, !errs);
       }
+    } else if (ev.type === "youtube") {
+      ytUpdate(ev);
     } else if (ev.type === "config") {
       loadConfig();
     }
