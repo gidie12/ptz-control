@@ -42,6 +42,8 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `job`, `state`.
 - Per-apparaat-instellingen (snelheden, tegelgrootte, Xbox-opties) staan in **localStorage**, niet op de server.
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
+- 🧑 **Camerabediening inklapbaar** (klik op de titel; `localStorage.ctrlFolded`).
+- 🧑 **⛶ Volledig scherm** / toets F: `body.wall` verbergt kop en zijbalk, zet weergave op Alle camera's en vraagt browser-fullscreen. Esc / fullscreen verlaten → terug naar vorige weergave.
 - **Scènes** = meerdere camera's tegelijk naar een preset (vergelijkbaar met SuperPresets op een PTZOptics-joystick).
 
 ## 3. Camera-protocol (PTZOptics)
@@ -74,7 +76,8 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Standaard: A/B/X/Y preset 1–4, LB shift (5–8), Menu opslaan, D-pad ←/→ camera, ↑ volgende scène, ↓ home, RB volgen, L3 fijn-modus (max/4), R3 one-push AF, View alles stoppen.
 - Zachte beweging, tilt omkeren en max. snelheid blijven per apparaat (localStorage).
 - Commando's alleen bij verandering, maximaal ~12/s (80 ms).
-- 🧑 Instellingen en knoppenindeling staan in een kaart in de **zijbalk onder de camerabediening** (geen dialoog meer); 🎮 in de kop scrolt ernaartoe.
+- 🧑 Instellingen (zacht, omkeren, max.) staan in een kaart in de **zijbalk onder de camerabediening**; 🎮-status in de kop scrolt ernaartoe.
+- 🧑 **Knoppenindeling** in dialoog `#dlgMap`, te openen met **🎮 Knoppen** naast Back-up (en vanuit de zijbalkkaart). Zolang die open is bestuurt de controller niets, maar een ingedrukte knop licht zijn regel op (`padHit`).
 - 🧑 **Zachte beweging** (optie, standaard aan, `localStorage.padSoft`): derdemachtscurve i.p.v. kwadratisch, en optrekken met max. `max/12` stap per verzonden commando (~1 s naar topsnelheid); zoom +1 per commando. Stoppen gaat altijd direct.
 - ⚠️ De Xbox-code was per ongeluk meeverwijderd in de OBS-commit (d040960) en is daarna teruggezet. Let bij grote verwijderingen in `index.html` op dat de sectie `Xbox-controller (Gamepad API)` blijft staan.
 - ⚠️ Trillen (`vibrationActuator`) werkt niet in elke browser; is optioneel.

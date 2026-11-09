@@ -45,6 +45,9 @@ Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom 
 Klik op de kopregel van een kolom (of Shift+1/2/3) om te kiezen welke camera de pijltjes/handbediening aanstuurt.
 Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
 
+**⛶ Volledig scherm** (of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop rechtsonder.
+De **camerabediening** in de zijbalk klap je in en uit door op de titel te klikken; dat wordt per apparaat onthouden.
+
 
 ## Presets laden van de camera
 Staan er al presets in de camera's (bijv. gemaakt met het oude PTZOptics-programma of de afstandsbediening)? Klik op **📥 Laden van camera**
@@ -89,11 +92,11 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De knop **🎮** rechtsboven toont de status; de instellingen en de volledige knoppenindeling staan in de zijbalk onder de camerabediening.
+De knop **🎮 controller** rechtsboven toont de status; zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening. De knoppenindeling stel je in via **🎮 Knoppen** (naast Back-up).
 
 **Zachte beweging** (standaard aan): de camera trekt geleidelijk op (ca. 1 seconde naar topsnelheid) en de stick reageert fijner rond het midden. Uitzetten geeft direct de volle snelheid.
 
-Sticks en triggers liggen vast. De knoppen stel je per knop in onder **Knoppenindeling** in de zijbalk; die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
+Sticks en triggers liggen vast. De knoppen stel je per knop in via **🎮 Knoppen** rechtsboven (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
 
 | Controller | Functie |
 |---|---|
@@ -112,7 +115,7 @@ De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller 
 Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 
 ## Sneltoetsen
-Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera · H = home · T = volgen · Spatie = stop
+Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera · H = home · T = volgen · F = volledig scherm · Spatie = stop
 
 ## Tip
 Geef de pc met deze app een vast IP-adres (DHCP-reservering), dan blijft het tabletadres hetzelfde.

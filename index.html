@@ -97,6 +97,11 @@
   #padCard.flash { border-color: var(--accent); }
   .padset label { display: flex; gap: 6px; align-items: center; }
   #dlgBackup { width: min(760px, 95vw); }
+  #dlgMap { width: min(720px, 95vw); }
+  #dlgMap #padMap { grid-template-columns: 120px 1fr 120px 1fr; gap: 6px 12px; font-size: 13px; }
+  @media (max-width: 600px) { #dlgMap #padMap { grid-template-columns: 110px 1fr; } }
+  #dlgMap .padset { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+  #padMap .hit { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
   .bsec { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
   .bsec h4 { margin: 0 0 4px; font-size: 14px; }
   .bsec .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
@@ -121,6 +126,19 @@
 
   /* ---- zijbalk ---- */
   aside { display: grid; gap: 16px; position: sticky; top: 70px; }
+  /* inklapbare camerabediening */
+  .fold { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; width: 30px; height: 26px;
+    cursor: pointer; font-size: 13px; line-height: 1; transition: transform .15s; }
+  .fold:hover { color: var(--text); }
+  #ctrlCard .bar { cursor: pointer; }
+  #ctrlCard.collapsed #ctrlBody { display: none; }
+  #ctrlCard.collapsed .fold { transform: rotate(-90deg); }
+  /* volledig scherm: alleen de presets van alle camera's */
+  body.wall header, body.wall aside { display: none; }
+  body.wall main { grid-template-columns: 1fr; padding: 10px; }
+  body.wall #presetCard { border: 0; background: none; padding: 0; }
+  #btnWallExit { display: none; position: fixed; bottom: 12px; right: 12px; z-index: 20; background: var(--panel2); color: var(--text); }
+  body.wall #btnWallExit { display: block; }
   .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 12px; }
   .btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; height: 48px; cursor: pointer;
     touch-action: none; display: grid; place-items: center; font-size: 18px; }
@@ -174,7 +192,9 @@
     <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
   <button class="icon" id="btnPad" title="Xbox-controller">🎮 <span id="padState">geen controller</span></button>
+  <button class="icon" id="btnWall" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm</button>
   <button class="icon" id="btnBackup" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
+  <button class="icon" id="btnMap" title="Knoppenindeling van de Xbox-controller instellen">🎮 Knoppen</button>
   <button class="icon" id="btnSettings">⚙ Camera's</button>
 </header>
 
@@ -198,10 +218,12 @@
 
   <!-- ZIJBALK: beeld + handbediening -->
   <aside>
-    <div class="card">
-      <div class="bar" style="margin:0">
+    <div class="card" id="ctrlCard">
+      <div class="bar" style="margin:0" id="ctrlBar" title="Klik om de bediening in of uit te klappen">
         <h2 id="camLabel">Camera</h2>
+        <button class="fold" id="btnFold" aria-label="Bediening in- of uitklappen">▾</button>
       </div>
+      <div id="ctrlBody">
 
       <div class="dpad" id="dpad">
         <button class="btn" data-dir="leftup">↖</button>
@@ -234,6 +256,7 @@
         <label class="sl">Zoom <input type="range" id="spZoom" min="1" max="7" value="4"><span id="vZoom"></span></label>
         <label class="sl">Focus <input type="range" id="spFocus" min="1" max="7" value="3"><span id="vFocus"></span></label>
       </details>
+      </div>
     </div>
     <div class="card" id="padCard">
       <div class="bar" style="margin:0">
@@ -246,25 +269,11 @@
         <label><input type="checkbox" id="padInvY"> Tilt omkeren (stick omhoog = camera omlaag)</label>
         <label>Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
       </div>
-      <details>
-        <summary>Knoppenindeling</summary>
-        <div class="map">
-          <b>Linker stick</b><span>Pan / tilt: hoe verder je duwt, hoe sneller</span>
-          <b>RT / LT</b><span>Zoom in / uit: hoe dieper je drukt, hoe sneller</span>
-          <b>Rechter stick ↑ / ↓</b><span>Focus ver / dichtbij (zet autofocus uit)</span>
-        </div>
-        <p class="small" style="margin:8px 0 0">Per knop instelbaar, geldt voor alle schermen. <b>Shift</b> en <b>Opslaan</b> werken
-          als je ze ingedrukt houdt en dan een presetknop drukt (opslaan trilt ter bevestiging).</p>
-        <div class="map" id="padMap"></div>
-        <div class="padset">
-          <label>Shift telt <input type="number" id="padShift" min="0" max="60" value="4" style="width:56px"> op bij presets</label>
-          <button class="icon" id="padReset">Standaard terugzetten</button>
-        </div>
-      </details>
+      <button class="icon" id="btnMap2" style="margin-top:6px">🎮 Knoppenindeling instellen…</button>
     </div>
     <div class="small" style="padding:0 4px">
       <kbd>1</kbd>–<kbd>9</kbd> preset · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>9</kbd> camera · <kbd>←↑→↓</kbd> bewegen ·
-      <kbd>Q</kbd>/<kbd>A</kbd> zoom · <kbd>W</kbd>/<kbd>S</kbd> focus · <kbd>H</kbd> home · <kbd>T</kbd> volgen · <kbd>Spatie</kbd> stop ·
+      <kbd>Q</kbd>/<kbd>A</kbd> zoom · <kbd>W</kbd>/<kbd>S</kbd> focus · <kbd>H</kbd> home · <kbd>T</kbd> volgen · <kbd>F</kbd> volledig scherm · <kbd>Spatie</kbd> stop ·
       rechtsklik of lang drukken op een preset = bewerken
     </div>
   </aside>
@@ -306,6 +315,24 @@
 </dialog>
 
 
+
+<dialog id="dlgMap">
+  <h3>🎮 Knoppenindeling Xbox-controller</h3>
+  <p class="small" style="margin:0">Druk op een knop van de controller om de regel te laten oplichten. Zolang dit venster open is, bestuurt de controller niets.</p>
+  <div class="map">
+    <b>Linker stick</b><span>Pan / tilt: hoe verder je duwt, hoe sneller</span>
+    <b>RT / LT</b><span>Zoom in / uit: hoe dieper je drukt, hoe sneller</span>
+    <b>Rechter stick ↑ / ↓</b><span>Focus ver / dichtbij (zet autofocus uit)</span>
+  </div>
+  <p class="small" style="margin:8px 0 0">Per knop instelbaar, geldt voor alle schermen. <b>Shift</b> en <b>Opslaan</b> werken
+    als je ze ingedrukt houdt en dan een presetknop drukt (opslaan trilt ter bevestiging).</p>
+  <div class="map" id="padMap"></div>
+  <div class="padset">
+    <label>Shift telt <input type="number" id="padShift" min="0" max="60" value="4" style="width:56px"> op bij presets</label>
+    <button class="icon" id="padReset">Standaard terugzetten</button>
+  </div>
+  <div class="actions"><span></span><button class="primary" id="btnMapClose">Sluiten</button></div>
+</dialog>
 
 <dialog id="dlgBackup">
   <h3>💾 Back-up van presets en camera-instellingen</h3>
@@ -371,6 +398,7 @@
     <button class="primary" id="ldStart">Laden</button></span></div>
 </dialog>
 
+<button class="icon" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
 <div id="toast"></div>
 
 <script>
@@ -676,8 +704,10 @@ document.addEventListener("keydown", (e) => {
   else if (k === "s") cmd("focus", { dir: "near", speed: sp("#spFocus") });
   else if (k === "h") { moved(); cmd("home"); }
   else if (k === "t" && ctrlCam) toggleTrack(ctrlCam);
+  else if (k === "f" && !e.metaKey && !e.ctrlKey) setWall(!document.body.classList.contains("wall"));
   else if (e.key === " ") { e.preventDefault(); cmd("stop"); cmd("zoom", { dir: "stop" }); }
   else if (e.key === "Escape" && storeMode) setStore(false);
+  else if (e.key === "Escape" && document.body.classList.contains("wall")) setWall(false);
   else if (/^Digit[1-9]$/.test(e.code)) {
     const n = +e.code.slice(5);
     if (e.shiftKey) { const c = cfg.cameras[n - 1]; if (c) setView(c.id); }
@@ -691,6 +721,34 @@ document.addEventListener("keyup", (e) => {
   else if ("ws".includes(k) && k) cmd("focus", { dir: "stop" });
 });
 window.addEventListener("blur", () => { if (pressed.size) { pressed.clear(); cmd("stop"); } });
+
+/* ================= bediening inklappen / volledig scherm ================= */
+function setFold(on) {
+  $("#ctrlCard").classList.toggle("collapsed", on);
+  $("#btnFold").title = on ? "Bediening uitklappen" : "Bediening inklappen";
+  store.set("ctrlFolded", on ? "1" : "0");
+}
+setFold(store.get("ctrlFolded") === "1");
+$("#ctrlBar").onclick = () => setFold(!$("#ctrlCard").classList.contains("collapsed"));
+
+let wallPrevView = null;
+function setWall(on) {
+  if (on === document.body.classList.contains("wall")) return;
+  if (on) {
+    wallPrevView = view;
+    if (cfg.cameras.length > 1 && view !== ALL) setView(ALL);
+    document.body.classList.add("wall");
+    try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch {}
+  } else {
+    document.body.classList.remove("wall");
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    if (wallPrevView !== null && wallPrevView !== view && (wallPrevView === ALL || camById(wallPrevView))) setView(wallPrevView);
+  }
+}
+$("#btnWall").onclick = () => setWall(true);
+$("#btnWallExit").onclick = () => setWall(false);
+// Esc in de browser verlaat fullscreen; dan ook de weergave terugzetten
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) setWall(false); });
 
 /* ================= camera-instellingen ================= */
 function camRow(c) {
@@ -798,6 +856,17 @@ async function savePadMap() {
   await saveConfig(); toast("Knopindeling opgeslagen", true);
 }
 $("#padShift").onchange = savePadMap;
+const openMap = () => { renderPadMap(); $("#dlgMap").showModal(); };
+$("#btnMap").onclick = openMap;
+$("#btnMap2").onclick = openMap;
+$("#btnMapClose").onclick = () => $("#dlgMap").close();
+function padHit(k) {
+  const sel = $(`#padMap select[data-btn="${k}"]`); if (!sel) return;
+  const els = [sel, sel.previousElementSibling];
+  els.forEach(e => e?.classList.add("hit"));
+  sel.scrollIntoView({ block: "nearest" });
+  clearTimeout(sel._hit); sel._hit = setTimeout(() => els.forEach(e => e?.classList.remove("hit")), 700);
+}
 $("#padReset").onclick = async () => {
   if (!confirm("Standaard knopindeling terugzetten (voor alle schermen)?")) return;
   cfg.pad_map = JSON.parse(JSON.stringify(PAD_DEFAULT)); await saveConfig(); renderPadMap(); toast("Standaard teruggezet", true);
@@ -894,6 +963,7 @@ function padLoop() {
   const val = (i) => gp.buttons[i]?.value || 0;
   const down = (i) => btn(i) && !pad.prev[i];
   const busy = anyDialog();
+  if ($("#dlgMap").open) PAD_BUTTONS.forEach(([k]) => { if (down(B[k])) padHit(k); });
 
   if (!busy) {
     // ---- knoppen (eenmalig bij indrukken), volgens de instelbare indeling
