@@ -4,12 +4,12 @@ Eigen webbediening voor PTZOptics-camera's, met koppeling aan de PT-JOY-G4 / Sup
 
 ## Installeren en starten
 
-**Eén klik:** de starter installeert bij de eerste keer automatisch de `.venv` (een paar minuten) en opent daarna de bediening in je browser.
+**Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in je browser.
 
 | | Mac | Windows |
 |---|---|---|
 | Starten | dubbelklik **Start PTZ Control.command** | dubbelklik **Start PTZ Control.bat** |
-| Opnieuw installeren / bijwerken | **Installeer.command** | **Installeer.bat** |
+| Opnieuw installeren afdwingen | in Terminal: `bash "Start PTZ Control.command" --installeer` | in cmd: `"Start PTZ Control.bat" /installeer` |
 | Vereist | Python 3.9+ (python.org of `brew install python`) | Python 3.9+ (python.org, vink *Add python.exe to PATH* aan, of `winget install -e --id Python.Python.3.12`) |
 
 - **Mac:** meldt macOS "onbekende ontwikkelaar", rechtsklik → **Open** (eenmalig).

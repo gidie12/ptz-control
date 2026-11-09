@@ -29,8 +29,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 | `index.html` | Volledige UI (vanilla JS, geen build), presets, scènes, handbediening, Xbox-controller, dialogen |
 | `tracker.py` | Volgmodule: RTSP-grabber, persoonsdetectie (YOLO of OpenCV HOG), pan-regelaar |
 | `backup.py` | Back-up: VISCA-inquiries, presetposities lezen/terugzetten, beeldinstellingen lezen/terugzetten |
-| `Installeer.command` / `Installeer.bat` | Maakt `.venv` en installeert `requirements.txt` (`--no-pause` / `/nopause` als ze door de starter worden aangeroepen) |
-| `Start PTZ Control.command` / `.bat` | Eén-klik-start: installeert bij eerste keer, start met `--open` |
+| `Start PTZ Control.command` / `.bat` | 🧑 **Installer en starter in één.** Installeert als `.venv` ontbreekt, als `requirements.txt` verschilt van `.venv/requirements.installed` (kopie die pas na een geslaagde installatie wordt gezet) of met `--installeer` / `/installeer`. Start daarna `ptz_control.py --open`; overige argumenten gaan door. Er zijn geen aparte `Installeer.*`-scripts meer. |
 | `cameras.json` | Lokale config (camera's, presetnamen, scènes, uitgelezen `saved_positions` / `saved_image`). **Bevat camerawachtwoorden in platte tekst. Nooit committen** (staat in `.gitignore`) |
 | `thumbs/` | Preset-thumbnails (`<camid>_<n>.jpg`), lokaal, niet committen |
 
@@ -109,7 +108,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 
 ## 9. Installatie en platform
 
-- 🧑 Mac mini (Apple Silicon). `.venv` moet **op de Mac zelf** worden gemaakt (een in de cloud gebouwde venv werkt daar niet). De starters doen dat automatisch bij de eerste start.
+- 🧑 Mac mini (Apple Silicon). `.venv` moet **op de Mac zelf** worden gemaakt (een in de cloud gebouwde venv werkt daar niet). De starter doet dat automatisch bij de eerste start en na gewijzigde requirements.
 - ⚠️ Windows-scripts (`.bat`) zijn **niet uitgevoerd** (geen Windows beschikbaar), alleen gereviewd. `.gitattributes` forceert CRLF voor `.bat` en LF voor `.command`.
 - ⚠️ Windows met NVIDIA: `ultralytics` installeert standaard CPU-torch; GPU vereist de CUDA-index (zie README).
 - macOS Gatekeeper ("onbekende ontwikkelaar") en Windows SmartScreen/firewall vragen eenmalig om bevestiging.
@@ -122,7 +121,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
   ```bash
   python3 -m py_compile ptz_control.py tracker.py backup.py
   python3 -c "import re;s=open('index.html').read();open('/tmp/a.js','w').write(re.search(r'<script>(.*)</script>',s,re.S).group(1))" && node --check /tmp/a.js
-  bash -n Installeer.command && bash -n "Start PTZ Control.command"
+  bash -n "Start PTZ Control.command"
   ```
 - **Testen zonder hardware:** gebruik nep-camera's (kleine `ThreadingHTTPServer` die `ptzctrl.cgi`-aanroepen logt en een JPEG op `/snapshot.jpg` geeft), voor back-ups een nep-VISCA-TCP-camera met toestand (posities, presets, beeld, geleidelijke beweging), en voor volgen een `SimGrabber` + `FakeDetector` die `tracker.FrameGrabber` / `_DETECTOR` vervangen. Xbox testen door `navigator.getGamepads` te vervangen in Playwright.
 - Wijzig je camera-commando's, controleer dan beide paden (HTTP-CGI én VISCA) en dat `do_action()` tracking correct stopt.
