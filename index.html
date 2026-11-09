@@ -263,6 +263,7 @@
   #dlgPrefs .seg button { background: var(--panel2); border: 0; padding: 7px 14px; cursor: pointer; font-size: 13px; }
   #dlgPrefs .seg button + button { border-left: 1px solid var(--line); }
   #dlgPrefs .seg button.on { background: var(--accent); color: var(--onaccent); font-weight: 600; }
+  #ytChannel:disabled { opacity: .55; cursor: not-allowed; }
   #dlgPrefs label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
   #toast.good { background: var(--okbg); border-color: var(--ok); }
 </style>
@@ -532,6 +533,7 @@
       starten en stoppen van de stream gebeurt buiten deze app.</div>
     <label class="small" style="display:block;margin-top:10px">Kanaal <span class="muted">(geldt voor alle schermen)</span>
       <input type="text" id="ytChannel" placeholder="@kerknaam, kanaal-id (UC…), kanaallink of link naar de stream" maxlength="200"></label>
+    <div class="small" id="ytLockNote" style="margin-top:6px;color:var(--accent)" hidden>🔒 Er loopt nu een stream. Het kanaal kun je pas wijzigen als die afgelopen is.</div>
     <div class="small" id="ytPrefStatus" style="margin-top:6px"></div>
     <div class="small" style="margin-top:10px"><b>Venster</b> <span class="muted">· dit apparaat</span></div>
     <label class="chk"><input type="checkbox" id="ytAuto"> Venster automatisch openen als het kanaal live gaat</label>
@@ -1487,6 +1489,7 @@ function ytEmbedUrl(id) {
 }
 function ytRender() {
   const btn = $("#btnYt"), shown = !ytWin.hidden;
+  if ($("#dlgPrefs").open) { $("#ytChannel").disabled = !!yt.live; $("#ytLockNote").hidden = !yt.live; }
   btn.classList.toggle("live", !!yt.live);
   btn.classList.toggle("upcoming", !yt.live && !!yt.upcoming);
   btn.classList.toggle("shown", shown);
@@ -1593,6 +1596,8 @@ addEventListener("blur", () => setTimeout(() => {
 /* ---- ⚙ Instellingen ---- */
 function openPrefs() {
   $("#ytChannel").value = (cfg.youtube || {}).channel || "";
+  $("#ytChannel").disabled = !!yt.live;
+  $("#ytLockNote").hidden = !yt.live;
   $("#ytAuto").checked = ytOpt.auto;
   $("#ytSound").checked = ytOpt.sound;
   $("#ytPrefStatus").textContent = !yt.channel ? "" : yt.error ? yt.error
@@ -1614,12 +1619,17 @@ $("#ytResetPos").onclick = () => {
 };
 $("#prefsSave").onclick = async () => {
   const chan = $("#ytChannel").value.trim();
+  if (chan !== ((cfg.youtube || {}).channel || "") && yt.live) {
+    $("#ytChannel").value = (cfg.youtube || {}).channel || "";
+    return toast("Er loopt een stream: het kanaal kan nu niet gewijzigd worden");
+  }
   if (chan !== ((cfg.youtube || {}).channel || "")) {
     const prev = cfg.youtube;
     cfg.youtube = { channel: chan };
     const clean = JSON.parse(JSON.stringify(cfg)); clean.cameras.forEach(c => delete c.thumbs);
     const r = await post("/api/config", clean);
     if (r.error) { cfg.youtube = prev; return toast(r.error); }
+    if (r.youtube_locked) { cfg.youtube = prev; $("#dlgPrefs").close(); return toast("Er loopt een stream: het kanaal is niet gewijzigd"); }
     const st = await fetch("/api/youtube").catch(() => null);
     if (st && st.status === 404) { ytUpdate({ ...yt, channel: chan, error: YT_OLD }); $("#dlgPrefs").close(); return toast(YT_OLD); }
     if (chan) { yt = { ...yt, channel: chan, checked: null, error: null }; ytRender(); }
