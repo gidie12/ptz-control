@@ -168,7 +168,7 @@ class Watcher:
             wait = 3600
         else:
             try:
-                new.update(check(chan))
+                new.update(self._check_sticky(chan))
                 wait = POLL_LIVE if new["live"] else POLL_IDLE
             except ValueError as e:
                 new.update(live=False, upcoming=False, video_id=None, title=None, start=None, error=str(e))
@@ -188,6 +188,20 @@ class Watcher:
         # altijd melden: de 'laatst gecontroleerd'-tijd verandert ook
         self.on_change(snap, changed)
         return wait
+
+    def _check_sticky(self, chan):
+        """Loopt er al een stream, dan blijft die staan zolang hij live is.
+
+        Eerst die stream zelf (watch?v=<id>) controleren; pas als hij afgelopen is weer het kanaal.
+        Zo springt de knop/het venster niet naar een andere stream van hetzelfde kanaal, en gaat hij
+        niet uit door een toevallig afwijkende /live-pagina."""
+        with self._lock:
+            cur = dict(self.state)
+        if cur.get("live") and cur.get("video_id") and cur.get("channel") == chan:
+            res = check("https://www.youtube.com/watch?v=" + cur["video_id"])
+            if res["live"]:
+                return res
+        return check(chan)
 
     def snapshot(self):
         with self._lock:
