@@ -82,9 +82,13 @@
   .trk.warn { background: #3a2a10; border-color: var(--accent); color: var(--accent); }
   .tile .tb { position: absolute; bottom: 38px; right: 6px; background: rgba(18,48,28,.9); color: #7ee2a0;
     font-size: 11px; padding: 1px 6px; border-radius: 4px; }
-  .camrow2 { display: grid; grid-template-columns: 2.2fr 1fr 1.2fr 1.1fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
+  .camrow2 { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
     border-bottom: 1px solid var(--line); align-items: center; }
   .camrow2 label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  #dlgKeys { width: min(560px, 95vw); }
+  .keylist { display: grid; grid-template-columns: 1fr 160px; gap: 6px 12px; align-items: center; }
+  .keylist b { font-weight: 600; }
+  .keyfixed { grid-template-columns: 90px 1fr; font-size: 13px; }
   input.hk { width: 100%; min-width: 80px; cursor: pointer; text-align: center; caret-color: transparent; }
   input.hk:focus { border-color: var(--accent); }
   input.hk.warn { border-color: var(--live); }
@@ -210,6 +214,7 @@
     <div class="menu" id="mainMenu" hidden role="menu">
       <button class="mi" id="btnPadSet" role="menuitem">🎮 Controller-instellingen</button>
       <button class="mi" id="btnMap" role="menuitem" title="Knoppenindeling van de Xbox-controller instellen">🕹 Knoppenindeling</button>
+      <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen">⌨ Sneltoetsen</button>
       <div class="msep"></div>
       <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm <kbd>F</kbd></button>
       <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
@@ -323,8 +328,6 @@
   <div class="camrow camhead"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span>VISCA-poort</span><span>Gebruiker</span><span>Wachtwoord</span><span></span></div>
   <div id="camList"></div>
   <button class="icon" id="btnAddCam" style="margin-top:6px">+ Camera toevoegen</button>
-  <p class="small"><b>Sneltoets</b>: hiermee kies je de camera die je bedient (in <i>Alle camera's</i> blijf je in die weergave); daarna roept 1–9 een preset op.
-    Standaard Shift+1, Shift+2, … Klik in het veld en druk bijvoorbeeld F1 of Num 1. Backspace = terug naar standaard.</p>
   <p class="small">Protocol <b>HTTP-CGI</b> werkt op vrijwel alle PTZOptics-camera's (en geeft thumbnails). Kies <b>VISCA (TCP)</b> als HTTP niet reageert.
     Gebruiker/wachtwoord alleen invullen als de camera om inloggen vraagt.</p>
   <div class="actions">
@@ -336,6 +339,30 @@
 </dialog>
 
 
+
+<dialog id="dlgKeys">
+  <h3>⌨ Sneltoetsen</h3>
+  <h4 style="margin:0 0 6px">Camera kiezen</h4>
+  <p class="small" style="margin:0 0 8px">Met deze toets kies je de camera die je bedient (in <i>Alle camera's</i> blijf je in die weergave); daarna roept
+    <kbd>1</kbd>–<kbd>9</kbd> een preset op die camera op. Klik in een veld en druk de toets, bijvoorbeeld <kbd>F1</kbd> of <kbd>Num 1</kbd>.
+    <kbd>Backspace</kbd> = standaard (<kbd>Shift</kbd>+cijfer). Rood = toets al in gebruik. Geldt voor alle schermen.</p>
+  <div id="keyList" class="keylist"></div>
+  <h4 style="margin:14px 0 6px">Vaste toetsen</h4>
+  <div class="map keyfixed">
+    <b>1 – 9</b><span>Preset op de gekozen camera</span>
+    <b>← ↑ → ↓</b><span>Bewegen (vasthouden)</span>
+    <b>Q / A</b><span>Zoom in / uit</span>
+    <b>W / S</b><span>Focus ver / dichtbij</span>
+    <b>H</b><span>Home</span>
+    <b>T</b><span>Volgen (pan) aan/uit</span>
+    <b>F</b><span>Volledig scherm</span>
+    <b>Spatie</b><span>Stop</span>
+    <b>Esc</b><span>Volledig scherm / opslaan-modus verlaten</span>
+  </div>
+  <div class="actions"><button class="icon" id="keysReset">Standaard terugzetten</button>
+    <span style="display:flex;gap:8px"><button class="icon" id="keysCancel">Annuleren</button>
+    <button class="primary" id="keysSave">Opslaan</button></span></div>
+</dialog>
 
 <dialog id="dlgMap">
   <h3>🎮 Knoppenindeling Xbox-controller</h3>
@@ -547,7 +574,7 @@ function renderPresets() {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "");
       const ln = lastPreset[c.id];
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
-        <b>${esc(c.name)}</b>${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⚙ Camera's)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}
+        <b>${esc(c.name)}</b>${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⌨ Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}
         <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
@@ -715,7 +742,7 @@ function keyLabel(k) {
 function camHotkey(c, i) { return c.hotkey || (i < 9 ? "Shift+Digit" + (i + 1) : ""); }
 function hotkeyProblem(k, input) {
   if (USED_KEYS.includes(k)) return "Deze toets gebruikt de app al (presets, bewegen, zoom, …).";
-  const rows = $$("#camList .hk");
+  const rows = $$("#keyList .hk");
   for (let j = 0; j < rows.length; j++) {
     if (rows[j] === input) continue;
     if ((rows[j].dataset.key || (j < 9 ? "Shift+Digit" + (j + 1) : "")) === k) return "Deze toets is al gekozen voor een andere camera.";
@@ -723,6 +750,7 @@ function hotkeyProblem(k, input) {
   return "";
 }
 function hotkeyInput(inp) {
+  const ph = inp.placeholder || "standaard";
   const show = () => {
     const k = inp.dataset.key;
     inp.value = k ? keyLabel(k) : "";
@@ -730,7 +758,7 @@ function hotkeyInput(inp) {
     inp.classList.toggle("warn", !!p); inp.title = p || "Klik en druk een toets. Backspace = standaard.";
   };
   inp.addEventListener("focus", () => { inp.value = ""; inp.placeholder = "druk een toets…"; });
-  inp.addEventListener("blur", () => { inp.placeholder = "standaard"; show(); });
+  inp.addEventListener("blur", () => { inp.placeholder = ph; show(); });
   inp.addEventListener("keydown", (e) => {
     if (e.key === "Tab") return;
     e.preventDefault(); e.stopPropagation();
@@ -827,15 +855,28 @@ function camRow(c) {
     <label>Volg-stream <input type="text" data-f="stream_url" value="${esc(c.stream_url || "")}"
       placeholder="leeg = rtsp://IP:554/2 (substream)"></label>
     <label>Max. volgsnelheid <input type="number" data-f="track_speed" min="1" max="24" value="${c.track_speed || 6}" style="width:64px"></label>
-    <label><input type="checkbox" data-f="track_invert" ${c.track_invert ? "checked" : ""}> Pan omgekeerd (camera ondersteboven)</label>
-    <label title="Klik en druk de toets(combinatie) waarmee je deze camera kiest. Backspace = terug naar standaard.">Sneltoets
-      <input type="text" readonly class="hk" data-f="hotkey" data-key="${esc(c.hotkey || "")}"
-        value="${esc(c.hotkey ? keyLabel(c.hotkey) : "")}" placeholder="standaard"></label>`;
-  hotkeyInput(d2.querySelector(".hk"));
+    <label><input type="checkbox" data-f="track_invert" ${c.track_invert ? "checked" : ""}> Pan omgekeerd (camera ondersteboven)</label>`;
   d.querySelector("button").onclick = () => { d.remove(); d2.remove(); };
   d._extra = d2;
   return d;
 }
+// venster Sneltoetsen
+function renderKeys() {
+  $("#keyList").innerHTML = cfg.cameras.map((c, i) => `<b>${esc(c.name)}</b>
+    <input type="text" readonly class="hk" data-id="${esc(c.id)}" data-key="${esc(c.hotkey || "")}"
+      placeholder="${esc(i < 9 ? "standaard: " + keyLabel("Shift+Digit" + (i + 1)) : "geen")}">`).join("")
+    || '<span class="small">Nog geen camera\'s.</span>';
+  $$("#keyList .hk").forEach(hotkeyInput);
+}
+$("#btnKeys").onclick = () => { renderKeys(); $("#dlgKeys").showModal(); };
+$("#keysCancel").onclick = () => $("#dlgKeys").close();
+$("#keysReset").onclick = () => { $$("#keyList .hk").forEach(x => { x.dataset.key = ""; x.dispatchEvent(new Event("blur")); }); };
+$("#keysSave").onclick = async () => {
+  const keys = Object.fromEntries($$("#keyList .hk").map(x => [x.dataset.id, x.dataset.key]));
+  cfg.cameras.forEach(c => { if (keys[c.id]) c.hotkey = keys[c.id]; else delete c.hotkey; });
+  $("#dlgKeys").close(); await saveConfig(); render(); toast("Sneltoetsen opgeslagen", true);
+};
+
 $("#btnSettings").onclick = () => {
   $("#camList").innerHTML = ""; cfg.cameras.forEach(c => { const r = camRow(c); $("#camList").append(r, r._extra); });
   $("#presetCount").value = cfg.preset_count;
@@ -847,11 +888,10 @@ $("#btnSave").onclick = async () => {
   const old = Object.fromEntries(cfg.cameras.map(c => [c.id, c]));
   cfg.cameras = $$("#camList .camrow").map(r => {
     const o = { id: r.dataset.id, presets: old[r.dataset.id]?.presets || {}, track_presets: old[r.dataset.id]?.track_presets || [] };
+    if (old[r.dataset.id]?.hotkey) o.hotkey = old[r.dataset.id].hotkey;   // sneltoets wordt in het venster Sneltoetsen ingesteld
     const fields = [...r.querySelectorAll("[data-f]"), ...r.nextElementSibling.querySelectorAll("[data-f]")];
     fields.forEach(i => o[i.dataset.f] = i.type === "checkbox" ? i.checked
-      : i.dataset.f === "hotkey" ? i.dataset.key
       : ["visca_port", "track_speed"].includes(i.dataset.f) ? +i.value : i.value.trim());
-    if (!o.hotkey) delete o.hotkey;
     return o;
   }).filter(c => c.host);
   cfg.preset_count = Math.max(1, Math.min(64, +$("#presetCount").value || 12));
