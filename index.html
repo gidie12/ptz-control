@@ -617,12 +617,18 @@ async function presetClick(camId, n, el) {
     const r = await cmd("preset_set", { n }, camId);
     el?.classList.remove("busy");
     setStore(false);
-    if (r?.ok) { toast(`Preset ${n} opgeslagen`, true); openPreset(camId, n, true); }
+    if (r?.ok) { storedToast(`Preset ${n} opgeslagen`, r); openPreset(camId, n, true); }
     return;
   }
   lastPreset[camId] = n;            // direct feedback; server bevestigt via event
   renderPresets(); renderSide();
   await cmd("preset_call", { n }, camId);
+}
+
+// na het vastzetten van een positie: melden of de thumbnail ook gelukt is
+function storedToast(msg, r) {
+  if (r.thumb_error) toast(`${msg}, maar geen thumbnail: ${r.thumb_error}`);
+  else toast(`${msg} + thumbnail`, true);
 }
 
 function setStore(on) {
@@ -665,7 +671,7 @@ $("#pRecall").onclick = () => { $("#dlgPreset").close(); presetClick(edit.camId,
 $("#pStore").onclick = async () => {
   if (!confirm("Huidige camerapositie op deze preset opslaan?")) return;
   const r = await cmd("preset_set", { n: edit.n }, edit.camId);
-  if (r?.ok) toast("Positie opgeslagen", true);
+  if (r?.ok) storedToast("Positie opgeslagen", r);
 };
 $("#pThumb").onclick = async () => {
   const r = await post("/api/thumb", { cam: edit.camId, n: edit.n });
@@ -961,7 +967,7 @@ function padAction(action, gp, mods) {
     case "preset": {
       const n = +arg + (mods.shift ? mods.shiftBy : 0);
       padStopAll();
-      if (mods.store) cmd("preset_set", { n }).then(r => { if (r?.ok) { rumble(gp, 350, 1); toast(`Preset ${n} opgeslagen`, true); } });
+      if (mods.store) cmd("preset_set", { n }).then(r => { if (r?.ok) { rumble(gp, 350, 1); storedToast(`Preset ${n} opgeslagen`, r); } });
       else { presetClick(ctrlCam, n); rumble(gp, 60, 0.3); }
       break;
     }

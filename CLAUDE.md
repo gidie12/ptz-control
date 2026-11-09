@@ -61,6 +61,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
   - auto `81 01 04 38 02 FF`, handmatig `81 01 04 38 03 FF`, one-push `81 01 04 18 01 FF`.
 - ⚠️ VISCA over IP = **raw VISCA over TCP 5678** (geen Sony VISCA-over-IP-header). Pan/tilt `81 01 06 01 VV WW XX YY FF`, preset `81 01 04 3F 02/01 pp FF`.
 - ⚠️ Snapshot voor thumbnails: `http://<ip>/snapshot.jpg`.
+- 🧑 **Elke `preset_set` maakt automatisch een thumbnail** (server-side in `do_action`, dus ook via Xbox en het presetvenster). `snapshot_thumb()` probeert 2× (0,5 s ertussen), accepteert alleen JPEG (`FF D8`) en geeft de reden terug; `/api/cmd` stuurt die mee als `thumb_error`, de UI meldt het (`storedToast`).
 - ⚠️ Inloggen: Basic én Digest auth worden geprobeerd als gebruiker/wachtwoord is ingevuld.
 - Camera-host mag een poort bevatten (`ip:poort`); exacte host-match gaat voor IP-match (alleen relevant voor tests met meerdere nep-camera's op één IP).
 

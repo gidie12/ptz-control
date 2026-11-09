@@ -22,6 +22,7 @@ import os
 import queue
 import socket
 import threading
+import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -231,23 +232,42 @@ def thumb_path(cam, n):
     return os.path.join(THUMB_DIR, f"{safe}_{int(n)}.jpg")
 
 
+def snapshot_thumb(cam, n, tries=2):
+    """Sla een snapshot op als thumbnail voor preset n. Geeft "" bij succes, anders de reden."""
+    err = ""
+    for attempt in range(tries):
+        if attempt:
+            time.sleep(0.5)
+        try:
+            data, _ = http_get(cam, "/snapshot.jpg", binary=True)
+        except Exception as e:  # noqa: BLE001
+            err = f"geen snapshot van de camera ({e})"
+            continue
+        if not data.startswith(b"\xff\xd8"):  # geen JPEG, bv. een inlogpagina
+            err = "camera gaf geen JPEG-beeld terug (inloggegevens?)"
+            continue
+        _store_thumb(cam, n, data)
+        return ""
+    return err
+
+
 def capture_thumb(cam, n):
-    """Sla een snapshot op als thumbnail voor preset n. Geeft True bij succes."""
-    try:
-        data, _ = http_get(cam, "/snapshot.jpg", binary=True)
-    except Exception:  # noqa: BLE001
-        return False
+    """Zoals snapshot_thumb, maar geeft True/False."""
+    return not snapshot_thumb(cam, n)
+
+
+def _store_thumb(cam, n, data):
     os.makedirs(THUMB_DIR, exist_ok=True)
     tmp = thumb_path(cam, n) + ".tmp"
     with open(tmp, "wb") as f:
         f.write(data)
     os.replace(tmp, thumb_path(cam, n))
     broadcast({"type": "thumb", "cam": cam["id"], "n": int(n)})
-    return True
 
 
-def do_action(cam, action, args):
-    """Voer een commando uit en houd alle schermen (en thumbnails) bij."""
+def do_action(cam, action, args, info=None):
+    """Voer een commando uit en houd alle schermen (en thumbnails) bij.
+    Bij preset_set komt in info["thumb_error"] waarom de thumbnail niet lukte ("" = gelukt)."""
     if action in ("preset_call", "preset_set"):
         n = clamp(args.get("n"), 0, 254)
         if n in _backup.RESERVED:
@@ -263,7 +283,9 @@ def do_action(cam, action, args):
             follow_after_preset(cam)
     elif action == "preset_set":
         n = clamp(args.get("n"), 0, 254)
-        capture_thumb(cam, n)
+        err = snapshot_thumb(cam, n)  # nieuwe positie vastgezet: meteen een thumbnail
+        if info is not None:
+            info["thumb_error"] = err
         broadcast({"type": "preset", "cam": cam["id"], "n": n})
     return res
 
@@ -737,8 +759,8 @@ class Handler(BaseHTTPRequestHandler):
                     pass
                 broadcast({"type": "thumb", "cam": cam["id"], "n": n})
                 return self._send(200, {"ok": True})
-            ok = capture_thumb(cam, n)
-            return self._send(200 if ok else 502, {"ok": ok, "error": None if ok else "Geen snapshot van camera"})
+            err = snapshot_thumb(cam, n)
+            return self._send(502 if err else 200, {"ok": not err, "error": ("Thumbnail mislukt: " + err) if err else None})
 
         if u.path == "/api/select":
             try:
@@ -752,8 +774,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 cam = find_camera(body.get("cam"))
                 args = body.get("args") or {}
-                res = do_action(cam, body.get("action"), args)
-                return self._send(200, {"ok": True, "response": res})
+                info = {}
+                res = do_action(cam, body.get("action"), args, info)
+                return self._send(200, {"ok": True, "response": res, **info})
             except KeyError as e:
                 return self._send(404, {"ok": False, "error": e.args[0]})
             except (urllib.error.URLError, OSError) as e:
