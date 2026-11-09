@@ -76,7 +76,9 @@ Let op: beweeg je dezelfde camera met de joystick terwijl volgen aan staat, dan 
 
 ## Xbox-controller (vervangt de PTZJoy)
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De knop **🎮** rechtsboven toont de status en de volledige knoppenindeling.
+De knop **🎮** rechtsboven toont de status; de instellingen en de volledige knoppenindeling staan in de zijbalk onder de camerabediening.
+
+**Zachte beweging** (standaard aan): de camera trekt geleidelijk op (ca. 1 seconde naar topsnelheid) en de stick reageert fijner rond het midden. Uitzetten geeft direct de volle snelheid.
 
 | Controller | Functie |
 |---|---|

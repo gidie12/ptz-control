@@ -68,6 +68,9 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - ⚠️ Werkt alleen als de bedieningspagina **open en zichtbaar** is. Bij tabblad naar achtergrond / venster kwijt → alles stoppen.
 - Indeling: linker stick pan/tilt (kwadratische curve, deadzone 0.18, 8 richtingen), L3 fijn-modus (max/4), RT/LT zoom, rechter stick ↑↓ focus, R3 one-push AF, A/B/X/Y preset 1–4, LB+ = 5–8, Menu+knop = preset opslaan (trilt), D-pad ←/→ camera, ↑ volgende scène, ↓ home, RB volgen aan/uit, View alles stoppen.
 - Commando's alleen bij verandering, maximaal ~12/s (80 ms).
+- 🧑 Instellingen en knoppenindeling staan in een kaart in de **zijbalk onder de camerabediening** (geen dialoog meer); 🎮 in de kop scrolt ernaartoe.
+- 🧑 **Zachte beweging** (optie, standaard aan, `localStorage.padSoft`): derdemachtscurve i.p.v. kwadratisch, en optrekken met max. `max/12` stap per verzonden commando (~1 s naar topsnelheid); zoom +1 per commando. Stoppen gaat altijd direct.
+- ⚠️ De Xbox-code was per ongeluk meeverwijderd in de OBS-commit (d040960) en is daarna teruggezet. Let bij grote verwijderingen in `index.html` op dat de sectie `Xbox-controller (Gamepad API)` blijft staan.
 - ⚠️ Trillen (`vibrationActuator`) werkt niet in elke browser; is optioneel.
 
 ## 6. Persoon volgen (alleen pan)
