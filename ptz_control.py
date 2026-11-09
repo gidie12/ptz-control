@@ -806,6 +806,7 @@ def main():
     ap = argparse.ArgumentParser(description="Webbediening voor PTZOptics-camera's")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--bind", default="0.0.0.0")
+    ap.add_argument("--open", action="store_true", help="open de bediening in de standaardbrowser")
     args = ap.parse_args()
     load_config()
     global OBS
@@ -814,7 +815,10 @@ def main():
     srv = ThreadingHTTPServer((args.bind, args.port), Handler)
     srv.daemon_threads = True
     print(f"PTZ Control draait op http://localhost:{args.port}  en  http://{local_ip()}:{args.port}")
-    print("Stoppen met Ctrl+C")
+    print("Stoppen met Ctrl+C (of dit venster sluiten)")
+    if args.open:
+        import webbrowser
+        threading.Timer(1.0, lambda: webbrowser.open(f"http://localhost:{args.port}")).start()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

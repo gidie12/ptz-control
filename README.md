@@ -2,18 +2,29 @@
 
 Eigen webbediening voor PTZOptics-camera's, met koppeling aan de PT-JOY-G4 / SuperJoy.
 
-## Installeren (Mac)
-1. Pak de map uit, bijv. naar `Documenten/ptz-control`.
-2. Dubbelklik **Installeer.command**. Dat maakt de `.venv` aan en installeert `requirements.txt`
-   (de eerste keer een paar minuten; ook het volgmodel wordt dan klaargezet).
-   Meldt macOS "onbekende ontwikkelaar": rechtsklik → **Open**. Of in Terminal: `bash Installeer.command`.
-3. Starten: dubbelklik **Start PTZ Control.command** (opent de bediening in je browser).
+## Installeren en starten
+
+**Eén klik:** de starter installeert bij de eerste keer automatisch de `.venv` (een paar minuten) en opent daarna de bediening in je browser.
+
+| | Mac | Windows |
+|---|---|---|
+| Starten | dubbelklik **Start PTZ Control.command** | dubbelklik **Start PTZ Control.bat** |
+| Opnieuw installeren / bijwerken | **Installeer.command** | **Installeer.bat** |
+| Vereist | Python 3.9+ (python.org of `brew install python`) | Python 3.9+ (python.org, vink *Add python.exe to PATH* aan, of `winget install -e --id Python.Python.3.12`) |
+
+- **Mac:** meldt macOS "onbekende ontwikkelaar", rechtsklik → **Open** (eenmalig).
+- **Windows:** vraagt de firewall om toegang, kies **Privénetwerken**, anders kunnen tablets en de joystick de app niet bereiken.
+  SmartScreen ("Windows heeft uw pc beschermd"): **Meer info → Toch uitvoeren**.
+- **Windows met NVIDIA-videokaart:** het volgen gebruikt standaard de processor. Voor de GPU eenmalig:
+  `.venv\Scripts\pip install torch --index-url https://download.pytorch.org/whl/cu124` (daarna rekent hij op `cuda`).
+- Stoppen: sluit het venster van de starter.
 
 Handmatig kan ook:
 ```
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python ptz_control.py            # poort 8080 (andere poort: --port 9000)
+.venv/bin/python ptz_control.py --open     # poort 8080 (andere poort: --port 9000)
+# Windows: .venv\Scripts\python.exe ptz_control.py --open
 ```
 Open `http://localhost:8080`, of op een tablet `http://<ip-van-deze-pc>:8080` (het adres staat in de console).
 Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (volgen: zie hieronder). Instellingen komen in `cameras.json`.

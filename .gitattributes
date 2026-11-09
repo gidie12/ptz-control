@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Windows-scripts altijd met CRLF, Mac-scripts altijd met LF
+*.bat text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf
