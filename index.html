@@ -163,6 +163,8 @@
   body.wall #presetCard { border: 0; background: none; padding: 0; }
   #btnWallExit { display: none; position: fixed; bottom: 12px; right: 12px; z-index: 20; background: var(--panel2); color: var(--text); }
   body.wall #btnWallExit { display: block; }
+  /* volledig scherm = bedienen: geen presets laden of opslaan */
+  body.wall #btnLoad, body.wall #btnStore, body.wall #storeHint { display: none !important; }
   .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 12px; }
   .btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; height: 48px; cursor: pointer;
     touch-action: none; display: grid; place-items: center; font-size: 18px; }
@@ -893,6 +895,8 @@ function setWall(on) {
   if (on) {
     wallPrevView = view;
     if (cfg.cameras.length > 1 && view !== ALL) setView(ALL);
+    if (storeMode) setStore(false);          // opslaan-modus uit, zodat een tik niet per ongeluk opslaat
+    if ($("#dlgLoad")?.open) $("#dlgLoad").close();
     document.body.classList.add("wall");
     try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch {}
   } else {
