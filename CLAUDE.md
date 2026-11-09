@@ -18,6 +18,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - 🧑 **Geen YouTube/stream-bediening in deze software.** Een eerdere OBS-koppeling is op verzoek verwijderd; streamen gebeurt buiten deze app. Niet opnieuw toevoegen zonder expliciete vraag.
 - 🧑 Draait op een **Mac mini (Apple Silicon)** ("livestreams-mac-mini"). Er is ook een **Windows-starter** gevraagd.
 - 🧑 **Alle presets en camera-instellingen moeten bewaard en teruggezet kunnen worden**: app-instellingen (back-upbestand), presetposities zelf én beeldinstellingen.
+- 🧑 **Presets moeten geladen kunnen worden vanaf de camera** (bestaande presets in de app krijgen, met foto).
 - 🧑 UI, README, commits en communicatie in het **Nederlands**.
 - ⚠️ Het cameramodel is **onbekend** (Move/Studio/G2/G3 niet bevestigd). Daarom geen ingebouwde auto-tracking gebruikt.
 
@@ -37,6 +38,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 
 - Kern heeft **geen externe packages** nodig; numpy/opencv/ultralytics zijn alleen voor volgen. ⚠️ Python **3.9+** (installers checken dat; de code zelf vermijdt nieuwere syntax).
 - Server luistert op **0.0.0.0:8080**, **zonder authenticatie**. ⚠️ Aanname: vertrouwd kerknetwerk. Iedereen op het LAN kan de camera's bedienen (en een back-up met wachtwoorden downloaden).
+- `do_HEAD` bestaat alleen voor `/api/thumb` (de UI checkt daarmee of een thumbnail bestaat na een `thumb`-event) en `/`. Ontbrak eerst, waardoor nieuwe thumbnails pas na herladen zichtbaar werden.
 - Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `job`, `state`.
 - Per-apparaat-instellingen (snelheden, tegelgrootte, Xbox-opties) staan in **localStorage**, niet op de server.
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
@@ -49,7 +51,8 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - ⚠️ Snelheden: **pan 1–24, tilt 1–20, zoom/focus 1–7**. Standaard VISCA-bereik; niet per model gecontroleerd.
 - ⚠️ **Focus: `focusin` = ver, `focusout` = dichtbij.** Niet geverifieerd; kan omgekeerd zijn. Knoppen heten "Focus ver/dichtbij".
 - ⚠️ `poscall&<n>&<speed>` (preset-snelheid) is waarschijnlijk niet op alle firmware ondersteund (stond als feature request op het PTZOptics-forum). Backend ondersteunt het, de UI gebruikt het niet.
-- ⚠️ Presets 0–254 toegestaan; UI toont standaard 12 (instelbaar 1–64).
+- ⚠️ UI toont standaard 12 presets (instelbaar 1–64).
+- ✅ **Gereserveerde presets 90–99** (bron: PTZOptics-documentatie over preset-functies): 0 = opstartpositie, **90 = home, 95 = OSD-menu aan/uit**, 91–94 en 96–99 vast. Normaal bereik VISCA: 1–89 en 100–254. `do_action()` **weigert** `preset_call`/`preset_set` op 90–99 (dus ook via de Xbox-controller en een eventuele knopindeling); `backup.RESERVED` / `usable()` slaan ze over bij uitlezen, laden en terugzetten. **Nooit omzeilen**: per ongeluk 95 oproepen opent het OSD-menu in de livestream.
 - ⚠️ **Autofocus gaat altijd via VISCA over TCP poort 5678**, ook bij protocol HTTP, omdat er geen betrouwbaar HTTP-commando voor gevonden is:
   - auto `81 01 04 38 02 FF`, handmatig `81 01 04 38 03 FF`, one-push `81 01 04 18 01 FF`.
 - ⚠️ VISCA over IP = **raw VISCA over TCP 5678** (geen Sony VISCA-over-IP-header). Pan/tilt `81 01 06 01 VV WW XX YY FF`, preset `81 01 04 3F 02/01 pp FF`.
@@ -101,6 +104,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
   - beeld: AE-modus `39`, sluiter `4A`, iris `4B`, gain `4C`, helderheid `4D`, belichtingscorr. `3E`/`4E`, tegenlicht `33`, witbalans `35`, R/B-gain `43`/`44`, scherpte `42`, verzadiging `49`, flip `66`, mirror `61`. Modi worden eerst teruggezet, dan waarden; weigeringen (bv. sluitertijd in automatische modus) worden als melding getoond, niet als fout.
   - Niet-ondersteunde inquiries worden overgeslagen en gemeld ("niet ondersteund: …").
 - ✅ Getest met een **nagebootste VISCA-camera** (onthoudt posities/presets/beeld en beweegt geleidelijk): uitlezen exact gelijk, na "reset" + terugzetten alle presets en beeld identiek; ook via de UI (Playwright). Gevonden en opgelost: focus werd uitgelezen terwijl die nog bewoog.
+- **Presets laden vanaf de camera** (`POST /api/presets/load {cams, upto, thumbs}`, taak-soort `load`): er bestaat **geen API om de presetlijst of -namen op te vragen** (niet gevonden in PTZOptics-docs). Daarom: preset 1..`upto` (max 89, zonder 90–99) oproepen, wachten tot stil, foto via `/snapshot.jpg`, positie bewaren. ⚠️ **"Leeg" = camera bewoog niet** t.o.v. de vorige stand (aanname: een niet-ingestelde preset doet niets bij oproepen; niet getest op hun camera's). Twee opeenvolgende presets op exact dezelfde plek worden dus ten onrechte als leeg gezien. Foto's van lege presets worden weer verwijderd; `preset_count` groeit mee (max 64). Bestaande presetnamen blijven staan; tegels met foto maar zonder naam tonen "Preset n".
 - ⚠️ Fabrieksreset kan het IP wijzigen; pas dat eerst aan bij ⚙ Camera's (camera-id blijft gelijk, dus de bewaarde data blijft gekoppeld).
 
 ## 8. Bewust níet in de software

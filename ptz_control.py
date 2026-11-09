@@ -27,6 +27,8 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import backup as _backup  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "cameras.json")
 INDEX_PATH = os.path.join(HERE, "index.html")
@@ -246,6 +248,11 @@ def capture_thumb(cam, n):
 
 def do_action(cam, action, args):
     """Voer een commando uit en houd alle schermen (en thumbnails) bij."""
+    if action in ("preset_call", "preset_set"):
+        n = clamp(args.get("n"), 0, 254)
+        if n in _backup.RESERVED:
+            raise ValueError(f"Preset {n} is gereserveerd door PTZOptics (90 = home, 95 = OSD-menu, 91–99 vast). "
+                             "Gebruik 1–89 of 100–254.")
     if action in STOPS_TRACKING and (cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS):
         stop_tracking(cam["id"], halt=False)
     res = run_command(cam, action, args)
@@ -354,7 +361,6 @@ def follow_after_preset(cam, delay=2.5):
 
 
 # ---------------------------------------------------------------- back-up en herstel
-import backup as _backup  # noqa: E402
 
 JOB = {"type": "job", "running": False, "kind": "", "cams": {}}
 JOB_LOCK = threading.Lock()
@@ -426,7 +432,7 @@ def _job_update(cam_id, **kw):
 
 
 def start_job(kind, cam_ids, opts):
-    """kind = 'capture' (uit camera lezen) of 'apply' (naar camera terugzetten)."""
+    """kind = 'capture' (uit camera lezen), 'apply' (naar camera terugzetten) of 'load' (presets laden vanaf camera)."""
     with JOB_LOCK:
         if JOB["running"]:
             raise RuntimeError("Er loopt al een back-uptaak")
@@ -444,7 +450,31 @@ def start_job(kind, cam_ids, opts):
         stop_tracking(cid, halt=True)
         try:
             prog = lambda m: _job_update(cid, status="bezig", msg=m)  # noqa: E731
-            if kind == "capture":
+            if kind == "load":
+                upto = clamp(opts.get("upto") or preset_count, 1, 254)
+                presets = [n for n in range(1, upto + 1) if _backup.usable(n)]
+                photos = bool(opts.get("thumbs"))
+                shot = (lambda n, _pos, c=cam: capture_thumb(c, n)) if photos else None
+                pos, _img, errs = _backup.capture_camera(cam, presets, True, False, prog, stamp, on_preset=shot)
+                found = sorted(int(n) for n, p in pos.items() if p.get("moved"))
+                empty = sorted(int(n) for n, p in pos.items() if not p.get("moved"))
+                for n in empty:  # foto van een lege preset weggooien
+                    try:
+                        os.remove(thumb_path(cam, n))
+                        broadcast({"type": "thumb", "cam": cid, "n": n})
+                    except OSError:
+                        pass
+                results[cid] = ({str(n): pos[str(n)] for n in found}, None)
+                back = STATE["last_preset"].get(cid)
+                if back:
+                    try:
+                        run_command(cam, "preset_call", {"n": back})
+                    except Exception:  # noqa: BLE001
+                        pass
+                msg = (f"{len(found)} presets gevonden: {', '.join(map(str, found))}" if found else "geen presets gevonden") + \
+                      (f" · leeg: {', '.join(map(str, empty))}" if empty else "")
+                _job_update(cid, found=found, empty=empty)
+            elif kind == "capture":
                 cam["thumbs"] = list_thumbs(cam)
                 presets = _backup.preset_list(cam, preset_count, opts.get("presets", "used"))
                 pos, img, errs = _backup.capture_camera(cam, presets, opts.get("positions"), opts.get("image"), prog, stamp)
@@ -478,16 +508,20 @@ def start_job(kind, cam_ids, opts):
             t.start()
         for t in threads:
             t.join()
-        if kind == "capture" and results:
+        if kind in ("capture", "load") and results:
             with LOCK:
                 fresh = json.load(open(CONFIG_PATH, encoding="utf-8"))
+                top = 0
                 for cam in fresh.get("cameras", []):
                     if cam["id"] in results:
                         pos, img = results[cam["id"]]
                         if pos:
                             cam.setdefault("saved_positions", {}).update(pos)
+                            top = max([top] + [int(n) for n in pos])
                         if img:
                             cam["saved_image"] = img
+                if kind == "load" and top > int(fresh.get("preset_count") or 12):
+                    fresh["preset_count"] = min(64, top)   # raster groot genoeg voor de gevonden presets
                 _write(fresh)
             broadcast({"type": "config"})
         with JOB_LOCK:
@@ -503,7 +537,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "PTZControl/1.0"
 
     def log_message(self, fmt, *args):  # rustigere console
-        if "/api/snapshot" not in (args[0] if args else ""):
+        if "/api/snapshot" not in (str(args[0]) if args else ""):
             super().log_message(fmt, *args)
 
     def _send(self, code, body, ctype="application/json"):
@@ -598,6 +632,24 @@ class Handler(BaseHTTPRequestHandler):
                 SUBSCRIBERS.remove(q)
 
 
+    def do_HEAD(self):
+        """Alleen bestaan-check van thumbnails (gebruikt door de interface)."""
+        u = urlparse(self.path)
+        code = 404
+        if u.path == "/api/thumb":
+            q = parse_qs(u.query)
+            try:
+                path = thumb_path(find_camera(q.get("cam", [""])[0]), clamp(q.get("n", ["0"])[0], 0, 254))
+                code = 200 if os.path.exists(path) else 404
+            except KeyError:
+                code = 404
+        elif u.path in ("/", "/index.html"):
+            code = 200
+        self.send_response(code)
+        self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+
     def do_POST(self):
         u = urlparse(self.path)
         try:
@@ -637,11 +689,13 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:  # noqa: BLE001
                 return self._send(400, {"ok": False, "error": str(e)})
 
-        if u.path in ("/api/backup/capture", "/api/backup/apply"):
+        if u.path in ("/api/backup/capture", "/api/backup/apply", "/api/presets/load"):
             try:
-                start_job("capture" if u.path.endswith("capture") else "apply", body.get("cams") or [],
+                kind = "load" if u.path.endswith("load") else "capture" if u.path.endswith("capture") else "apply"
+                start_job(kind, body.get("cams") or [],
                           {"positions": bool(body.get("positions")), "image": bool(body.get("image")),
-                           "presets": body.get("presets", "used")})
+                           "presets": body.get("presets", "used"), "upto": body.get("upto"),
+                           "thumbs": body.get("thumbs", True)})
                 return self._send(200, {"ok": True})
             except Exception as e:  # noqa: BLE001
                 return self._send(409, {"ok": False, "error": str(e)})

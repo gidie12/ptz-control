@@ -46,6 +46,16 @@ Klik op de kopregel van een kolom (of Shift+1/2/3) om te kiezen welke camera de 
 Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
 
 
+## Presets laden van de camera
+Staan er al presets in de camera's (bijv. gemaakt met het oude PTZOptics-programma of de afstandsbediening)? Klik op **📥 Laden van camera**
+boven het presetraster. De camera's kunnen geen lijst van hun presets geven, dus de app roept preset 1 t/m het gekozen nummer op,
+wacht tot de camera stilstaat en maakt een **foto** voor de tegel. Presets waarbij de camera niet beweegt, worden als leeg
+overgeslagen. De positie wordt meteen bewaard voor de back-up; bestaande presetnamen blijven staan. Geef de gevonden presets
+daarna een naam met ✎. ⚠ De camera's bewegen hierbij: niet tijdens een dienst.
+
+**Gereserveerde presets:** PTZOptics gebruikt 90 (home), 95 (OSD-menu) en 91–99 voor vaste functies. De app roept deze nooit op
+en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 100–254.
+
 ## Back-up van presets en camera-instellingen
 Knop **💾 Back-up** rechtsboven:
 

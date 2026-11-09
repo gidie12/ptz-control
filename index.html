@@ -187,6 +187,7 @@
         <label class="muted" style="display:flex;gap:6px;align-items:center" title="Tegelgrootte">
           ▫<input type="range" id="tileSize" min="120" max="300" value="170" style="width:90px">◻
         </label>
+        <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset">📥 Laden van camera</button>
         <button class="chip" id="btnStore">＋ Preset opslaan</button>
       </div>
     </div>
@@ -352,6 +353,24 @@
   <div class="actions"><span class="small" id="bkJobInfo"></span><button class="primary" id="bkClose">Sluiten</button></div>
 </dialog>
 
+<dialog id="dlgLoad">
+  <h3>📥 Presets laden van de camera</h3>
+  <p class="small">De camera's hebben geen lijst van hun presets. Daarom roept de app elke preset in het bereik op, wacht tot de camera
+    stilstaat en maakt een foto voor de tegel. Presets waarbij de camera niet beweegt, worden als <b>leeg</b> overgeslagen.
+    De positie wordt meteen bewaard voor de back-up. Bestaande presetnamen blijven staan.</p>
+  <div class="warnbox">⚠ De camera's <b>rijden langs al hun presets</b>. Niet doen tijdens een dienst of livestream.
+    Daarna gaat elke camera terug naar de preset die LIVE stond.</div>
+  <table class="bcams" id="ldTable"></table>
+  <div class="row" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px">
+    <label class="small">Presets 1 t/m <input type="number" id="ldUpto" min="1" max="89" value="12" style="width:64px"></label>
+    <label class="small"><input type="checkbox" id="ldThumbs" checked> foto per preset</label>
+    <span class="small">90–99 worden altijd overgeslagen (o.a. 95 = OSD-menu).</span>
+  </div>
+  <div class="actions"><span class="small" id="ldInfo"></span>
+    <span style="display:flex;gap:8px"><button class="icon" id="ldClose">Sluiten</button>
+    <button class="primary" id="ldStart">Laden</button></span></div>
+</dialog>
+
 <div id="toast"></div>
 
 <script>
@@ -399,7 +418,7 @@ async function loadConfig() {
   if (view === null && cfg.cameras.length > 1) view = ALL;
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
-  render(); renderBackup(); renderPadMap();
+  render(); renderBackup(); renderPadMap(); renderLoad();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -441,7 +460,7 @@ function tile(c, n) {
   const name = c.presets[n];
   b.innerHTML = `
     <div class="img" style="${hasThumb(c, n) ? `background-image:url('${thumbUrl(c.id, n)}')` : ""}">${hasThumb(c, n) ? "" : n}</div>
-    <div class="meta"><span class="num">${n}</span><span class="name ${name ? "" : "empty"}">${esc(name || "Leeg")}</span></div>
+    <div class="meta"><span class="num">${n}</span><span class="name ${name || hasThumb(c, n) ? "" : "empty"}">${esc(name || (hasThumb(c, n) ? `Preset ${n}` : "Leeg"))}</span></div>
     <span class="edit" title="Bewerken">✎</span>${(c.track_presets || []).includes(n) ? '<span class="tb">🎯 volgt</span>' : ""}`;
   b.onclick = (e) => {
     if (e.target.classList.contains("edit")) return openPreset(c.id, n);
@@ -1007,6 +1026,38 @@ $("#bkApply").onclick = async () => {
   if (!r.ok) toast(r.error || "Mislukt");
 };
 
+/* ================= presets laden van de camera ================= */
+function renderLoad() {
+  if (!$("#dlgLoad").open) return;
+  const prev = new Set($$("#ldTable input[data-cam]:checked").map(i => i.dataset.cam));
+  const first = !$("#ldTable").dataset.init;
+  const mine = job.kind === "load";
+  $("#ldTable").innerHTML = `<tr><th></th><th>Camera</th><th>Status</th></tr>` + cfg.cameras.map(c => {
+    const st = mine ? job.cams[c.id] : null;
+    const cls = !st ? "" : st.status === "fout" ? "err" : st.status === "bezig" || st.status === "wachten" ? "busy" : st.errors?.length ? "warn" : "ok";
+    return `<tr><td><input type="checkbox" data-cam="${esc(c.id)}" ${first || prev.has(c.id) ? "checked" : ""}></td>
+      <td><b>${esc(c.name)}</b><br><span class="small">${esc(c.host)}</span></td>
+      <td><span class="bstat ${cls}">${st ? esc(st.status + (st.msg ? " · " + st.msg : "")) : ""}</span>
+        ${st?.errors?.length ? `<div class="small" style="color:var(--accent)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
+  }).join("");
+  $("#ldTable").dataset.init = "1";
+  $("#ldStart").disabled = job.running;
+  $("#ldInfo").textContent = job.running ? (mine ? "Bezig met laden…" : "Er loopt een andere back-uptaak…") : "";
+}
+$("#btnLoad").onclick = () => {
+  $("#ldTable").dataset.init = ""; $("#ldUpto").value = Math.min(89, cfg.preset_count || 12);
+  $("#dlgLoad").showModal(); renderLoad();
+};
+$("#ldClose").onclick = () => $("#dlgLoad").close();
+$("#ldStart").onclick = async () => {
+  const cams = $$("#ldTable input[data-cam]:checked").map(i => i.dataset.cam);
+  const upto = Math.max(1, Math.min(89, +$("#ldUpto").value || 12));
+  if (!cams.length) return toast("Kies minstens één camera");
+  if (!confirm(`${cams.length} camera('s) roepen nu preset 1 t/m ${upto} op (de camera's bewegen).\nNiet doen tijdens een dienst. Doorgaan?`)) return;
+  const r = await post("/api/presets/load", { cams, upto, thumbs: $("#ldThumbs").checked });
+  if (!r.ok) toast(r.error || "Mislukt");
+};
+
 /* ================= live events ================= */
 function connectEvents() {
   const es = new EventSource("/api/events");
@@ -1040,10 +1091,13 @@ function connectEvents() {
       if (prevStatus !== ev.status || !ev.on) { renderPresets(); renderSide(); } else renderSide();
     } else if (ev.type === "job") {
       const wasRunning = job.running;
-      job = ev; renderBackup();
+      job = ev; renderBackup(); renderLoad();
       if (wasRunning && !ev.running) {
         const errs = Object.values(ev.cams).filter(c => c.status === "fout").length;
-        toast(errs ? `Klaar, ${errs} camera('s) met fout` : (ev.kind === "capture" ? "Uitlezen klaar" : "Terugzetten klaar"), !errs);
+        const done = ev.kind === "load"
+          ? "Presets geladen: " + Object.entries(ev.cams).map(([id, c]) => `${camById(id)?.name || id} ${(c.found || []).length}`).join(", ")
+          : ev.kind === "capture" ? "Uitlezen klaar" : "Terugzetten klaar";
+        toast(errs ? `Klaar, ${errs} camera('s) met fout` : done, !errs);
       }
     } else if (ev.type === "config") {
       loadConfig();

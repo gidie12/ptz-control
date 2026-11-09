@@ -15,6 +15,14 @@ import time
 
 TIMEOUT = 2.0
 
+# PTZOptics: 0 = opstartpositie, 90 = home, 91-94/96-99 gereserveerd, 95 = OSD-menu aan/uit.
+# Normale presets: 1-89 en 100-254. Deze nummers roepen we nooit op en slaan we nooit op.
+RESERVED = set(range(90, 100))
+
+
+def usable(n):
+    return 1 <= n <= 254 and n not in RESERVED
+
 
 # ---------------------------------------------------------------- VISCA laag
 class ViscaError(Exception):
@@ -185,16 +193,19 @@ def apply_image(sock, values):
 # ---------------------------------------------------------------- taken per camera
 def preset_list(cam, preset_count, mode):
     if mode == "all":
-        return list(range(1, preset_count + 1))
+        return [n for n in range(1, preset_count + 1) if usable(n)]
     used = set(int(n) for n in (cam.get("presets") or {}).keys())
     used |= set(cam.get("thumbs") or [])
     used |= set(int(n) for n in (cam.get("saved_positions") or {}).keys())
-    return sorted(n for n in used if n >= 1) or list(range(1, preset_count + 1))
+    return sorted(n for n in used if usable(n)) or [n for n in range(1, preset_count + 1) if usable(n)]
 
 
-def capture_camera(cam, presets, do_positions, do_image, progress, stamp):
-    """Leest posities/beeld van één camera. Geeft (positions, image, fouten) terug."""
+def capture_camera(cam, presets, do_positions, do_image, progress, stamp, on_preset=None):
+    """Leest posities/beeld van één camera. Geeft (positions, image, fouten) terug.
+    Elke positie krijgt 'moved': of de camera bij het oproepen echt bewoog (zo niet: preset waarschijnlijk leeg).
+    on_preset(n, pos) wordt na elke aangekomen preset aangeroepen (bv. om een foto te maken)."""
     errors, positions, image = [], {}, None
+    presets = [n for n in presets if usable(n)]
     with visca_session(cam) as s:
         if do_image:
             progress("beeldinstellingen lezen…")
@@ -203,6 +214,10 @@ def capture_camera(cam, presets, do_positions, do_image, progress, stamp):
             if missing:
                 errors.append("niet ondersteund: " + ", ".join(IMAGE_LABELS[m] for m in missing))
         if do_positions:
+            try:
+                prev = read_position(s)
+            except ViscaError:
+                prev = None
             for i, n in enumerate(presets, 1):
                 progress(f"preset {n} ({i}/{len(presets)})")
                 if not visca_cmd(s, f"81 01 04 3F 02 {n:02x} FF"):
@@ -210,8 +225,13 @@ def capture_camera(cam, presets, do_positions, do_image, progress, stamp):
                     continue
                 try:
                     pos = wait_still(s)
+                    key = lambda p: (p["pan"], p["tilt"], p["zoom"])  # noqa: E731
+                    pos["moved"] = prev is None or key(pos) != key(prev)
                     pos["_captured"] = stamp
                     positions[str(n)] = pos
+                    prev = pos
+                    if on_preset:
+                        on_preset(n, pos)
                 except ViscaError as e:
                     errors.append(f"preset {n}: {e}")
     return positions, image, errors
@@ -223,7 +243,7 @@ def restore_camera(cam, do_positions, do_image, progress):
     saved_img = cam.get("saved_image") or {}
     with visca_session(cam) as s:
         if do_positions:
-            items = sorted(saved_pos.items(), key=lambda kv: int(kv[0]))
+            items = sorted(((n, p) for n, p in saved_pos.items() if usable(int(n))), key=lambda kv: int(kv[0]))
             for i, (n, pos) in enumerate(items, 1):
                 progress(f"preset {n} terugzetten ({i}/{len(items)})")
                 try:
