@@ -290,17 +290,6 @@ def do_action(cam, action, args, info=None):
     return res
 
 
-def run_scene(scene):
-    """Scène = meerdere camera's tegelijk naar een preset (zoals SuperPresets)."""
-    errors = []
-    for step in scene.get("steps", []):
-        try:
-            cam = find_camera(step["cam"])
-            do_action(cam, "preset_call", {"n": step["n"]})
-        except Exception as e:  # noqa: BLE001
-            errors.append(f"{step.get('cam')}: {e}")
-    return errors
-
 
 
 # ---------------------------------------------------------------- volgen (alleen pan)
@@ -443,7 +432,7 @@ def restore_backup(data):
                 f.write(base64.b64decode(b64))
             count += 1
     broadcast({"type": "config"})
-    return {"cameras": len(new["cameras"]), "thumbs": count, "scenes": len(new.get("scenes") or [])}
+    return {"cameras": len(new["cameras"]), "thumbs": count}
 
 
 def _job_update(cam_id, **kw):
@@ -684,6 +673,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "cameras ontbreekt"})
             body.pop("tracking_error", None)
             body.pop("obs", None)  # YouTube/OBS-koppeling is verwijderd
+            body.pop("scenes", None)  # scènes zijn verwijderd
             existing = {c["id"]: c for c in load_config().get("cameras", [])}
             for cam in body["cameras"]:
                 cam.pop("thumbs", None)
@@ -695,15 +685,6 @@ class Handler(BaseHTTPRequestHandler):
             save_config(body)
             broadcast({"type": "config"})
             return self._send(200, {"ok": True})
-
-        if u.path == "/api/scene":
-            try:
-                scenes = load_config().get("scenes", [])
-                idx = clamp(body.get("n"), 1, max(1, len(scenes))) - 1
-                errors = run_scene(scenes[idx])
-                return self._send(200, {"ok": not errors, "errors": errors})
-            except IndexError:
-                return self._send(404, {"ok": False, "error": "Onbekende scène"})
 
         if u.path == "/api/backup/restore":
             try:

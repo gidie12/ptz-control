@@ -27,13 +27,13 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 | Bestand | Rol |
 |---|---|
 | `ptz_control.py` | HTTP-server (alleen stdlib), camera-commando's (HTTP-CGI + VISCA), config, SSE-events, tracking-beheer |
-| `index.html` | Volledige UI (vanilla JS, geen build), presets, scènes, handbediening, Xbox-controller, dialogen |
+| `index.html` | Volledige UI (vanilla JS, geen build), presets, handbediening, Xbox-controller, dialogen |
 | `tracker.py` | Volgmodule: RTSP-grabber, persoonsdetectie (YOLO of OpenCV HOG), pan-regelaar |
 | `backup.py` | Back-up: VISCA-inquiries, presetposities lezen/terugzetten, beeldinstellingen lezen/terugzetten |
 | `Start PTZ Control.command` / `.bat` | 🧑 **Installer en starter in één.** Installeert als `.venv` ontbreekt, als `requirements.txt` verschilt van `.venv/requirements.installed` (kopie die pas na een geslaagde installatie wordt gezet) of met `--installeer` / `/installeer`. Start daarna `ptz_control.py --open`; overige argumenten gaan door. Er zijn geen aparte `Installeer.*`-scripts meer. |
 | `PTZ Control.app` | 🧑 **Dock-app (macOS)** met eigen icoon. `Contents/MacOS/PTZ Control` is een bash-script: draait de server al op poort 8080 (`PTZ_PORT`) → alleen browser openen; anders `open -a Terminal "Start PTZ Control.command"`. Zoekt de repo als map náást de .app, dus de .app moet in de repo blijven (Dock = verwijzing). Uitvoerbaar bit moet in git blijven (100755). |
 | `app/` | Icoon (`maak_icoon.py` tekent `icon.png`, `ptz.ico` en `AppIcon.icns` met Pillow) en `snelkoppeling.ps1` (Windows: `PTZ Control.lnk` in Startmenu + bureaublad, doel `cmd.exe /s /c ""…Start PTZ Control.bat""` zodat hij aan de taakbalk kan). De .bat roept dit aan als de Startmenu-snelkoppeling ontbreekt of met `/snelkoppeling`. |
-| `cameras.json` | Lokale config (camera's, presetnamen, scènes, uitgelezen `saved_positions` / `saved_image`). **Bevat camerawachtwoorden in platte tekst. Nooit committen** (staat in `.gitignore`) |
+| `cameras.json` | Lokale config (camera's, presetnamen, uitgelezen `saved_positions` / `saved_image`). **Bevat camerawachtwoorden in platte tekst. Nooit committen** (staat in `.gitignore`) |
 | `thumbs/` | Preset-thumbnails (`<camid>_<n>.jpg`), lokaal, niet committen |
 
 - Kern heeft **geen externe packages** nodig; numpy/opencv/ultralytics zijn alleen voor volgen. ⚠️ Python **3.9+** (installers checken dat; de code zelf vermijdt nieuwere syntax).
@@ -42,11 +42,12 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `job`, `state`.
 - Per-apparaat-instellingen (snelheden, tegelgrootte, Xbox-opties) staan in **localStorage**, niet op de server.
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
-- 🧑 **Menu onder de 🎮-statusknop** (`#mainMenu`): Controller-instellingen, Knoppenindeling, Volledig scherm, Back-up, Camera's. De knoppen houden hun oude id's (`btnMap`, `btnWall`, `btnBackup`, `btnSettings`); klik buiten of Esc sluit het menu.
+- 🧑 **Menuknop "🎮 Menu ▾"** (`#btnPad`) toont de controllerstatus visueel, zonder tekst: grijs icoon + grijs bolletje = geen controller; gekleurd icoon + groen bolletje + groene rand (`.on`) = verbonden; bolletje pulseert tijdens bewegen (`.act`). Tooltip noemt de status.
+- 🧑 **Menu onder die knop** (`#mainMenu`): Controller-instellingen, Knoppenindeling, Volledig scherm, Back-up, Camera's. De knoppen houden hun oude id's (`btnMap`, `btnWall`, `btnBackup`, `btnSettings`); klik buiten of Esc sluit het menu.
 - 🧑 **Toetsenbord in Alle camera's**: Shift+N kiest alleen de bediende camera (`selectCam`, post `/api/select` met origin `key`) en blijft in Alle camera's/volledig scherm; daarna 1–9 = preset op die camera. In de enkele weergave wisselt Shift+N nog steeds van tabblad. 🧑 De toets is **instelbaar per camera** in ⚙ Camera's: `cfg.cameras[i].hotkey` = combinatie op basis van `KeyboardEvent.code` (`Ctrl+`/`Alt+`/`Shift+` + code, bv. `F1`, `Numpad1`, `Shift+Digit1`); leeg/afwezig = standaard `Shift+Digit<n>` (n ≤ 9). De camera-sneltoets wordt vóór de andere toetsen gecontroleerd; conflicten met `USED_KEYS` of een andere camera worden rood gemarkeerd maar niet geblokkeerd. Pijltje loslaten stuurt alleen `stop` als dat pijltje echt bewoog (Num 2 zonder NumLock = ArrowDown gaf anders een losse stop).
 - 🧑 **Camerabediening inklapbaar** (klik op de titel; `localStorage.ctrlFolded`).
 - 🧑 **⛶ Volledig scherm** / toets F: `body.wall` verbergt kop en zijbalk, zet weergave op Alle camera's en vraagt browser-fullscreen. Esc / fullscreen verlaten → terug naar vorige weergave.
-- **Scènes** = meerdere camera's tegelijk naar een preset (vergelijkbaar met SuperPresets op een PTZOptics-joystick).
+- 🧑 **Geen scènes** (meerdere camera's tegelijk naar een preset). Op verzoek verwijderd: camera's mogen niet tegelijk bewegen, omdat de regie eerst via de videomixer naar een ander shot schakelt en dan pas de camera die niet live is verplaatst. Niet opnieuw toevoegen zonder expliciete vraag. Een oude `scenes`-sectie in `cameras.json` wordt bij opslaan weggegooid, oude `scene*`-knoppen in `pad_map` worden genegeerd.
 
 ## 3. Camera-protocol (PTZOptics)
 
@@ -75,8 +76,8 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Via de **Gamepad API** van de browser ("standard" mapping). ✅ Getest met een nagebootste gamepad in Chromium, **niet** met een echte controller.
 - ⚠️ Werkt alleen als de bedieningspagina **open en zichtbaar** is. Bij tabblad naar achtergrond / venster kwijt → alles stoppen.
 - Vast: linker stick pan/tilt (kwadratische curve, deadzone 0.18, 8 richtingen), RT/LT zoom, rechter stick ↑↓ focus.
-- 🧑 Knoppen instelbaar: `cfg.pad_map = {buttons: {A: "preset:1", …}, shift: 4}` in `cameras.json` (ontbrekende knoppen vallen terug op `PAD_DEFAULT`). Acties: `preset:N`, `cam_prev`, `cam_next`, `cam:N`, `scene_next`, `scene:N`, `home`, `track`, `af`, `fine`, `stopall`, en modifiers `shift` (presets +shift) en `store` (vasthouden + presetknop = opslaan, trilt).
-- Standaard: A/B/X/Y preset 1–4, LB shift (5–8), Menu opslaan, D-pad ←/→ camera, ↑ volgende scène, ↓ home, RB volgen, L3 fijn-modus (max/4), R3 one-push AF, View alles stoppen.
+- 🧑 Knoppen instelbaar: `cfg.pad_map = {buttons: {A: "preset:1", …}, shift: 4}` in `cameras.json` (ontbrekende knoppen vallen terug op `PAD_DEFAULT`). Acties: `preset:N`, `cam_prev`, `cam_next`, `cam:N`, `home`, `track`, `af`, `fine`, `stopall`, en modifiers `shift` (presets +shift) en `store` (vasthouden + presetknop = opslaan, trilt).
+- Standaard: A/B/X/Y preset 1–4, LB shift (5–8), Menu opslaan, D-pad ←/→ camera, ↑ niets, ↓ home, RB volgen, L3 fijn-modus (max/4), R3 one-push AF, View alles stoppen.
 - Zachte beweging, tilt omkeren en max. snelheid blijven per apparaat (localStorage).
 - Commando's alleen bij verandering, maximaal ~12/s (80 ms).
 - 🧑 Instellingen (zacht, omkeren, max.) staan in een kaart in de **zijbalk onder de camerabediening**; 🎮-status in de kop scrolt ernaartoe.
@@ -117,6 +118,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 
 - 🧑 **YouTube/stream starten en stoppen** (en opnemen). Was eerst gebouwd via OBS WebSocket, daarna op verzoek volledig verwijderd (server, UI). Een oude `obs`-sectie in `cameras.json` wordt bij opslaan weggegooid.
 - 🧑 **Live preview** van de camerabeelden.
+- 🧑 **Scènes** (meerdere camera's tegelijk bewegen), zie §2.
 
 ## 9. Installatie en platform
 

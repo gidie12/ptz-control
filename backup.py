@@ -1,7 +1,7 @@
 """
 Back-up en herstel voor PTZ Control.
 
-1. Back-upbestand: cameralijst, presetnamen, scènes, volg-instellingen, thumbnails en
+1. Back-upbestand: cameralijst, presetnamen, volg-instellingen, thumbnails en
    (indien uitgelezen) presetposities en beeldinstellingen, in één JSON-bestand.
 2. Presetposities: elke preset oproepen, wachten tot de camera stilstaat, pan/tilt/zoom/focus
    uitlezen via VISCA. Terugzetten = absoluut naar die positie rijden en de preset opnieuw opslaan.

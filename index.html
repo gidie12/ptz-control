@@ -90,8 +90,15 @@
   input.hk.warn { border-color: var(--live); }
   .btn.trackbtn { height: 44px; font-size: 14px; margin-top: 8px; width: 100%; }
   .btn.trackbtn.on { background: #12301c; border-color: var(--ok); color: #7ee2a0; }
-  #btnPad.on { color: #7ee2a0; border-color: var(--ok); }
-  #btnPad.act { background: #12301c; }
+  /* Menuknop met controllerstatus: grijs icoon = geen controller, kleur + groen bolletje = verbonden, pulseert bij bewegen */
+  #btnPad .padico { position: relative; display: inline-block; margin-right: 7px; filter: grayscale(1); opacity: .45; transition: opacity .2s, filter .2s; }
+  #btnPad .padico i { position: absolute; right: -3px; bottom: -1px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); border: 2px solid var(--bg); }
+  #btnPad.on { border-color: var(--ok); color: var(--text); }
+  #btnPad.on .padico { filter: none; opacity: 1; }
+  #btnPad.on .padico i { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  #btnPad.act .padico i { animation: padpulse .6s ease-in-out infinite alternate; }
+  @keyframes padpulse { to { transform: scale(1.35); box-shadow: 0 0 10px var(--ok); } }
   .menuwrap { position: relative; }
   #btnPad .caret { font-size: 11px; opacity: .7; margin-left: 2px; }
   .menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 230px; background: var(--panel); border: 1px solid var(--line);
@@ -130,11 +137,6 @@
   .camsec .grid { --tile: 140px; }
   .muted { color: var(--muted); font-size: 13px; }
 
-  .scenes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-  .scene { padding: 10px 14px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line);
-    cursor: pointer; font-size: 14px; }
-  .scene b { color: var(--accent); margin-right: 6px; }
-  .scene.add { color: var(--muted); border-style: dashed; }
 
   /* ---- zijbalk ---- */
   aside { display: grid; gap: 16px; position: sticky; top: 70px; }
@@ -204,7 +206,7 @@
     <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
   <div class="menuwrap">
-    <button class="icon" id="btnPad" title="Menu" aria-haspopup="true" aria-expanded="false">🎮 <span id="padState">geen controller</span> <span class="caret">▾</span></button>
+    <button class="icon" id="btnPad" title="Menu · geen controller verbonden" aria-haspopup="true" aria-expanded="false"><span class="padico" aria-hidden="true">🎮<i></i></span>Menu <span class="caret">▾</span></button>
     <div class="menu" id="mainMenu" hidden role="menu">
       <button class="mi" id="btnPadSet" role="menuitem">🎮 Controller-instellingen</button>
       <button class="mi" id="btnMap" role="menuitem" title="Knoppenindeling van de Xbox-controller instellen">🕹 Knoppenindeling</button>
@@ -230,7 +232,6 @@
       </div>
     </div>
     <div class="hint" id="storeHint" hidden>Tik op een tegel om de huidige camerapositie daar op te slaan.</div>
-    <div class="scenes" id="scenes"></div>
     <div id="presetArea"></div>
   </section>
 
@@ -359,7 +360,7 @@
 
   <div class="bsec">
     <h4>1. Back-upbestand</h4>
-    <div class="small">Cameralijst, presetnamen, scènes, volg-instellingen, thumbnails en (als uitgelezen) presetposities en beeldinstellingen, in één bestand.</div>
+    <div class="small">Cameralijst, presetnamen, volg-instellingen, thumbnails en (als uitgelezen) presetposities en beeldinstellingen, in één bestand.</div>
     <div class="row">
       <button class="primary" id="bkDownload">⬇ Back-up downloaden</button>
       <label class="small"><input type="checkbox" id="bkPw"> camerawachtwoorden meenemen</label>
@@ -425,7 +426,7 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const ALL = "__all__";
-let cfg = { cameras: [], scenes: [], preset_count: 12 };
+let cfg = { cameras: [], preset_count: 12 };
 let view = null;            // camera-id of ALL
 let ctrlCam = null;         // camera in zijbalk (bij ALL: laatst gebruikte)
 let storeMode = false;
@@ -461,7 +462,7 @@ async function cmd(action, args = {}, camId = ctrlCam) {
 /* ================= config ================= */
 async function loadConfig() {
   cfg = await (await fetch("/api/config")).json();
-  cfg.preset_count ||= 12; cfg.scenes ||= [];
+  cfg.preset_count ||= 12;
   cfg.cameras.forEach(c => { c.presets ||= {}; c.thumbs ||= []; });
   if (view === null && cfg.cameras.length > 1) view = ALL;
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
@@ -475,7 +476,7 @@ async function saveConfig() {
 }
 
 /* ================= render ================= */
-function render() { renderTabs(); renderScenes(); renderPresets(); renderSide(); }
+function render() { renderTabs(); renderPresets(); renderSide(); }
 
 function renderTabs() {
   const tabs = $("#tabs"); tabs.innerHTML = "";
@@ -566,38 +567,6 @@ function renderPresets() {
   const max = Math.max(cfg.preset_count, ...Object.keys(c.presets).map(Number), ...c.thumbs);
   for (let n = 1; n <= max; n++) g.appendChild(tile(c, n));
   area.appendChild(g);
-}
-
-function renderScenes() {
-  const box = $("#scenes"); box.innerHTML = "";
-  if (cfg.cameras.length < 2) return;
-  cfg.scenes.forEach((s, i) => {
-    const b = document.createElement("button"); b.className = "scene";
-    b.innerHTML = `<b>S${i + 1}</b>${esc(s.name)}`;
-    b.title = s.steps.map(st => `${camById(st.cam)?.name || st.cam} → ${camById(st.cam)?.presets[st.n] || "preset " + st.n}`).join("\n")
-      + "\nRechtsklik: hernoemen/verwijderen";
-    b.onclick = async () => { const r = await post("/api/scene", { n: i + 1 }); if (!r.ok) toast(r.errors?.join(" · ") || r.error || "Fout"); };
-    b.oncontextmenu = async (e) => {
-      e.preventDefault();
-      const name = prompt(`Naam voor scène S${i + 1} (leeg = verwijderen)`, s.name);
-      if (name === null) return;
-      if (name.trim()) s.name = name.trim(); else cfg.scenes.splice(i, 1);
-      await saveConfig();
-    };
-    box.appendChild(b);
-  });
-  const add = document.createElement("button"); add.className = "scene add";
-  add.textContent = "+ Scène van huidige stand";
-  add.title = "Bewaar de LIVE-preset van elke camera als één scène";
-  add.onclick = async () => {
-    const steps = cfg.cameras.filter(c => lastPreset[c.id]).map(c => ({ cam: c.id, n: lastPreset[c.id] }));
-    if (!steps.length) return toast("Roep eerst per camera een preset op");
-    const sum = steps.map(s => `${camById(s.cam).name} → ${camById(s.cam).presets[s.n] || "preset " + s.n}`).join("\n");
-    const name = prompt(`Scène opslaan:\n${sum}\n\nNaam:`, "Scène " + (cfg.scenes.length + 1));
-    if (!name) return;
-    cfg.scenes.push({ name: name.trim(), steps }); await saveConfig(); toast("Scène opgeslagen", true);
-  };
-  box.appendChild(add);
 }
 
 function renderSide() {
@@ -906,7 +875,7 @@ $("#btnTrack").onclick = () => ctrlCam && toggleTrack(ctrlCam);
 
 /* ================= Xbox-controller (Gamepad API) ================= */
 const pad = {
-  idx: null, prev: [], last: { move: null, zoom: null, focus: null }, lastSend: 0, fine: false, sceneIdx: -1,
+  idx: null, prev: [], last: { move: null, zoom: null, focus: null }, lastSend: 0, fine: false,
   invY: store.get("padInvY") === "1", soft: store.get("padSoft") !== "0", max: +(store.get("padMax") || 18),
 };
 const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
@@ -919,20 +888,21 @@ const PAD_BUTTONS = [
 ];
 const PAD_DEFAULT = {
   buttons: { A: "preset:1", B: "preset:2", X: "preset:3", Y: "preset:4", LB: "shift", RB: "track",
-             UP: "scene_next", DOWN: "home", LEFT: "cam_prev", RIGHT: "cam_next",
+             UP: "", DOWN: "home", LEFT: "cam_prev", RIGHT: "cam_next",
              L3: "fine", R3: "af", VIEW: "stopall", MENU: "store" },
   shift: 4,
 };
 const padMap = () => {
   const m = cfg.pad_map || {};
-  return { buttons: { ...PAD_DEFAULT.buttons, ...(m.buttons || {}) }, shift: m.shift ?? PAD_DEFAULT.shift };
+  const b = { ...PAD_DEFAULT.buttons, ...(m.buttons || {}) };
+  for (const k in b) if (/^scene/.test(b[k])) b[k] = "";   // scènes zijn verwijderd
+  return { buttons: b, shift: m.shift ?? PAD_DEFAULT.shift };
 };
 function padActionOptions() {
   const o = [["", "— niets —"], ["cam_prev", "Vorige camera"], ["cam_next", "Volgende camera"]];
   cfg.cameras.forEach((c, i) => o.push(["cam:" + (i + 1), "Camera: " + c.name]));
   o.push(["home", "Home"], ["track", "Volgen (pan) aan/uit"], ["af", "Autofocus (one-push)"], ["fine", "Fijn-modus aan/uit"],
-         ["stopall", "Alles stoppen"], ["scene_next", "Volgende scène"]);
-  cfg.scenes.forEach((s, i) => o.push(["scene:" + (i + 1), "Scène: " + s.name]));
+         ["stopall", "Alles stoppen"]);
   o.push(["shift", "Shift (vasthouden: presets +N)"], ["store", "Opslaan (vasthouden + presetknop)"]);
   for (let n = 1; n <= Math.max(cfg.preset_count, 8); n++) o.push(["preset:" + n, `Preset ${n}`]);
   return o;
@@ -997,7 +967,7 @@ window.addEventListener("gamepaddisconnected", (e) => {
 function padUI(gp) {
   if (!gp) $("#padLive").textContent = "";
   $("#btnPad").classList.toggle("on", !!gp);
-  $("#padState").textContent = gp ? "controller" : "geen controller";
+  $("#btnPad").title = gp ? "Menu · controller verbonden" : "Menu · geen controller verbonden";
   $("#padInfo").textContent = gp ? `Verbonden: ${gp.id}` : "Verbind de controller via Bluetooth of USB en druk op een knop (de browser ziet hem pas na een knopdruk).";
 }
 function rumble(gp, ms = 120, strong = 0.6) {
@@ -1041,16 +1011,6 @@ function padAction(action, gp, mods) {
     case "af": cmd("onepush_af"); setAF(true); break;
     case "fine": pad.fine = !pad.fine; toast(pad.fine ? "Fijn-modus aan" : "Fijn-modus uit", true); rumble(gp, 80, 0.4); break;
     case "stopall": padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); break;
-    case "scene_next":
-      if (!cfg.scenes.length) break;
-      pad.sceneIdx = (pad.sceneIdx + 1) % cfg.scenes.length;
-      post("/api/scene", { n: pad.sceneIdx + 1 }); toast("Scène: " + cfg.scenes[pad.sceneIdx].name, true);
-      break;
-    case "scene": {
-      const sc = cfg.scenes[+arg - 1]; if (!sc) break;
-      pad.sceneIdx = +arg - 1; post("/api/scene", { n: +arg }); toast("Scène: " + sc.name, true);
-      break;
-    }
   }
 }
 
@@ -1176,11 +1136,11 @@ $("#bkFile").onchange = async () => {
   const cams = data.config?.cameras || [];
   const msg = `Back-up van ${fmtDate(data.created)} terugzetten?\n\n` +
     cams.map(c => `• ${c.name} (${c.host}): ${Object.keys(c.presets || {}).length} presetnamen, ${Object.keys(c.saved_positions || {}).length} posities${c.saved_image ? ", beeld" : ""}`).join("\n") +
-    `\n• ${(data.config.scenes || []).length} scènes, ${Object.keys(data.thumbs || {}).length} thumbnails\n\n` +
+    `\n• ${Object.keys(data.thumbs || {}).length} thumbnails\n\n` +
     `Dit vervangt de huidige instellingen van de app. De camera's zelf veranderen pas als je daarna 'Naar camera's terugzetten' kiest.`;
   if (!confirm(msg)) return;
   const r = await post("/api/backup/restore", data);
-  r.ok ? toast(`Teruggezet: ${r.cameras} camera's, ${r.scenes} scènes, ${r.thumbs} thumbnails`, true) : toast(r.error || "Terugzetten mislukt");
+  r.ok ? toast(`Teruggezet: ${r.cameras} camera's, ${r.thumbs} thumbnails`, true) : toast(r.error || "Terugzetten mislukt");
 };
 $("#bkCapture").onclick = async () => {
   const cams = bkSelected(), positions = $("#bkPos").checked, image = $("#bkImg").checked;

@@ -38,7 +38,6 @@ Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (
 2. Je bestaande presets op de camera werken meteen. Rechtsklik, lang indrukken of ✎ op een tegel om een naam te geven
    en een **thumbnail** te maken van het huidige beeld.
 3. **＋ Preset opslaan** → tik op een tegel: de huidige positie wordt opgeslagen en er wordt automatisch een thumbnail gemaakt.
-4. **Scènes**: zet elke camera op een preset en klik op *Scène van huidige stand*. Eén klik zet dan alle camera's tegelijk goed.
 
 ## Meerdere camera's tegelijk
 Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de LIVE-preset en alle presettegels.
@@ -62,7 +61,7 @@ en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 
 ## Back-up van presets en camera-instellingen
 **💾 Back-up** in het menu onder 🎮 rechtsboven:
 
-1. **Back-upbestand downloaden / terugzetten**: cameralijst, presetnamen, scènes, volg-instellingen, thumbnails en (als uitgelezen)
+1. **Back-upbestand downloaden / terugzetten**: cameralijst, presetnamen, volg-instellingen, thumbnails en (als uitgelezen)
    presetposities en beeldinstellingen in één `.json`-bestand. Wachtwoorden alleen als je dat aanvinkt; zonder wachtwoorden houdt
    terugzetten de huidige wachtwoorden.
 2. **Uit de camera's lezen**: per preset pan/tilt/zoom/focus en de beeldinstellingen (belichting, witbalans, kleur, scherpte,
@@ -105,10 +104,10 @@ Sticks en triggers liggen vast. De knoppen stel je per knop in via **🎮 → Kn
 | Rechter stick ↑/↓ | Focus ver / dichtbij (indrukken = autofocus) |
 | A · B · X · Y | Preset 1–4 · met LB (Shift) ingedrukt: 5–8 |
 | ☰ Menu + A/B/X/Y | Huidige positie opslaan als preset (trilt ter bevestiging) |
-| D-pad ←/→ | Vorige / volgende camera · ↑ volgende scène · ↓ home |
+| D-pad ←/→ | Vorige / volgende camera · ↓ home (↑ vrij) |
 | RB | Volgen (pan) aan/uit · View = alles stoppen |
 
-Elke knop kan ook worden: een vaste camera, een vaste scène, een andere preset, home, volgen, autofocus, fijn-modus, alles stoppen, of niets.
+Elke knop kan ook worden: een vaste camera, een andere preset, home, volgen, autofocus, fijn-modus, alles stoppen, of niets.
 **Shift** telt bij presets een instelbaar getal op (standaard 4); **Opslaan** vasthouden + presetknop slaat de huidige positie op.
 
 De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller alleen door aan het actieve tabblad).
