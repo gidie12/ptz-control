@@ -91,6 +91,8 @@
   #btnPad.act { background: #12301c; }
   .map { display: grid; grid-template-columns: 120px 1fr; gap: 4px 10px; font-size: 12px; margin: 8px 0 0; }
   .map b { color: var(--accent); font-weight: 600; }
+  #padMap { align-items: center; }
+  #padMap select { width: 100%; font-size: 12px; padding: 4px; }
   .padset { display: grid; gap: 8px; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
   #padCard.flash { border-color: var(--accent); }
   .padset label { display: flex; gap: 6px; align-items: center; }
@@ -152,11 +154,6 @@
   .camrow { display: grid; grid-template-columns: 1.2fr 1.3fr .9fr .7fr 1fr 1fr auto; gap: 6px; margin-bottom: 6px; }
   .camhead { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
   @media (max-width: 640px) { .camrow { grid-template-columns: 1fr 1fr; } .camhead { display: none; } }
-  .joyrow { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
-  .joyrow b { font-size: 13px; }
-  .joyrow span { font-size: 12px; color: var(--muted); }
-  .joyrow code { display: block; font-size: 12px; color: var(--accent); word-break: break-all; margin-top: 4px; cursor: copy;
-    user-select: text; -webkit-user-select: text; }
   .small { font-size: 12px; color: var(--muted); line-height: 1.6; }
   kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
 
@@ -172,12 +169,11 @@
   <h1>PTZ Control</h1>
   <div class="tabs" id="tabs"></div>
   <label class="icon" style="display:flex;gap:6px;align-items:center;font-size:13px"
-    title="Wissel automatisch mee als op de joystick een andere camera gekozen wordt">
-    <span id="joyDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
-    <input type="checkbox" id="chkFollow" checked> Volg joystick
+    title="Wissel mee als op een ander scherm of met de controller een andere camera gekozen wordt. Het bolletje is groen als de verbinding met de app goed is.">
+    <span id="liveDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
+    <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
   <button class="icon" id="btnPad" title="Xbox-controller">🎮 <span id="padState">geen controller</span></button>
-  <button class="icon" id="btnJoy">🕹 Joystick</button>
   <button class="icon" id="btnBackup" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
   <button class="icon" id="btnSettings">⚙ Camera's</button>
 </header>
@@ -253,18 +249,15 @@
         <summary>Knoppenindeling</summary>
         <div class="map">
           <b>Linker stick</b><span>Pan / tilt: hoe verder je duwt, hoe sneller</span>
-          <b>Linker stick indrukken</b><span>Fijn-modus aan/uit (langzaam en precies)</span>
           <b>RT / LT</b><span>Zoom in / uit: hoe dieper je drukt, hoe sneller</span>
           <b>Rechter stick ↑ / ↓</b><span>Focus ver / dichtbij (zet autofocus uit)</span>
-          <b>Rechter stick indrukken</b><span>Autofocus aan (one-push)</span>
-          <b>A · B · X · Y</b><span>Preset 1 · 2 · 3 · 4</span>
-          <b>LB + A · B · X · Y</b><span>Preset 5 · 6 · 7 · 8</span>
-          <b>☰ Menu + A/B/X/Y</b><span>Huidige positie OPSLAAN als preset (met LB: 5–8). Bevestigd met trillen.</span>
-          <b>D-pad ← / →</b><span>Vorige / volgende camera</span>
-          <b>D-pad ↑</b><span>Volgende scène (alle camera's)</span>
-          <b>D-pad ↓</b><span>Home</span>
-          <b>RB</b><span>Volgen (pan) aan/uit</span>
-          <b>⧉ View</b><span>Alles stoppen</span>
+        </div>
+        <p class="small" style="margin:8px 0 0">Per knop instelbaar, geldt voor alle schermen. <b>Shift</b> en <b>Opslaan</b> werken
+          als je ze ingedrukt houdt en dan een presetknop drukt (opslaan trilt ter bevestiging).</p>
+        <div class="map" id="padMap"></div>
+        <div class="padset">
+          <label>Shift telt <input type="number" id="padShift" min="0" max="60" value="4" style="width:56px"> op bij presets</label>
+          <button class="icon" id="padReset">Standaard terugzetten</button>
         </div>
       </details>
     </div>
@@ -311,14 +304,6 @@
   </div>
 </dialog>
 
-<!-- Joystick -->
-<dialog id="dlgJoy">
-  <h3>Koppelen met PT-JOY-G4 / SuperJoy</h3>
-  <p class="small">De joystick bestuurt de camera's zelf. Deze app luistert mee via HTTP-commando's die je in de webinterface
-    van de joystick instelt (<b>Custom Buttons</b> en <b>Automatic Triggers</b>, firmware 4.1.8+). Klik op een URL om te kopiëren.</p>
-  <div id="joyList"></div>
-  <div class="actions"><span></span><button class="primary" id="btnJoyClose">Sluiten</button></div>
-</dialog>
 
 
 <dialog id="dlgBackup">
@@ -414,7 +399,7 @@ async function loadConfig() {
   if (view === null && cfg.cameras.length > 1) view = ALL;
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
-  render(); renderBackup();
+  render(); renderBackup(); renderPadMap();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -483,7 +468,7 @@ function renderPresets() {
     cfg.cameras.forEach((c, i) => {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "");
       const ln = lastPreset[c.id];
-      col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes/joystick-knoppen te bedienen">
+      col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
         <b>${esc(c.name)}</b><span class="key">Shift+${i + 1}</span>${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}
         <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
@@ -730,22 +715,6 @@ $("#btnSave").onclick = async () => {
   $("#dlg").close(); await saveConfig(); toast("Opgeslagen", true);
 };
 
-/* ================= joystick ================= */
-$("#btnJoy").onclick = () => {
-  const base = `http://${serverAddr}/api/joy`;
-  const rows = [
-    ["Automatic Trigger bij camerawissel", "De app springt mee naar de camera die op de joystick gekozen is.", `${base}/select?cam={{CURRENT_CAM}}`],
-    ["Custom button: preset", "Huidige joystick-camera naar preset 3; de tegel wordt LIVE gemarkeerd.", `${base}/preset?cam={{CURRENT_CAM}}&n=3`],
-    ["Custom button: scène", "Alle camera's tegelijk naar scène S1 (nummer of naam).", `${base}/scene?n=1`],
-    ["Custom button: preset opslaan + thumbnail", "Slaat de huidige positie op als preset 3 en maakt meteen een thumbnail.", `${base}/cmd?cam={{CURRENT_CAM}}&action=preset_set&n=3`],
-    ["Custom button: volgen aan/uit", "Zet volgen (alleen pan) aan of uit voor de camera die op de joystick gekozen is.", `${base}/track?cam={{CURRENT_CAM}}&on=toggle`],
-    ["Custom button: autofocus aan", "Acties: move, stop, home, zoom, focus, autofocus, onepush_af, preset_call, preset_set.", `${base}/cmd?cam={{CURRENT_CAM}}&action=autofocus&on=1`],
-  ];
-  $("#joyList").innerHTML = rows.map(([t, d, u]) => `<div class="joyrow"><b>${esc(t)}</b><br><span>${esc(d)}</span><code>${esc(u)}</code></div>`).join("");
-  $$("#joyList code").forEach(c => c.onclick = () => navigator.clipboard?.writeText(c.textContent).then(() => toast("Gekopieerd", true), () => {}));
-  $("#dlgJoy").showModal();
-};
-$("#btnJoyClose").onclick = () => $("#dlgJoy").close();
 
 /* ================= volgen (alleen pan) ================= */
 function trackBtnHtml(camId) {
@@ -767,6 +736,53 @@ const pad = {
   invY: store.get("padInvY") === "1", soft: store.get("padSoft") !== "0", max: +(store.get("padMax") || 18),
 };
 const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+// Knopindeling staat in cameras.json (cfg.pad_map), zodat alle schermen dezelfde indeling hebben.
+// Sticks en triggers liggen vast: linker stick pan/tilt, RT/LT zoom, rechter stick ↑↓ focus.
+const PAD_BUTTONS = [
+  ["A", "A"], ["B", "B"], ["X", "X"], ["Y", "Y"], ["LB", "LB"], ["RB", "RB"],
+  ["UP", "D-pad ↑"], ["DOWN", "D-pad ↓"], ["LEFT", "D-pad ←"], ["RIGHT", "D-pad →"],
+  ["L3", "Linker stick in"], ["R3", "Rechter stick in"], ["VIEW", "⧉ View"], ["MENU", "☰ Menu"],
+];
+const PAD_DEFAULT = {
+  buttons: { A: "preset:1", B: "preset:2", X: "preset:3", Y: "preset:4", LB: "shift", RB: "track",
+             UP: "scene_next", DOWN: "home", LEFT: "cam_prev", RIGHT: "cam_next",
+             L3: "fine", R3: "af", VIEW: "stopall", MENU: "store" },
+  shift: 4,
+};
+const padMap = () => {
+  const m = cfg.pad_map || {};
+  return { buttons: { ...PAD_DEFAULT.buttons, ...(m.buttons || {}) }, shift: m.shift ?? PAD_DEFAULT.shift };
+};
+function padActionOptions() {
+  const o = [["", "— niets —"], ["cam_prev", "Vorige camera"], ["cam_next", "Volgende camera"]];
+  cfg.cameras.forEach((c, i) => o.push(["cam:" + (i + 1), "Camera: " + c.name]));
+  o.push(["home", "Home"], ["track", "Volgen (pan) aan/uit"], ["af", "Autofocus (one-push)"], ["fine", "Fijn-modus aan/uit"],
+         ["stopall", "Alles stoppen"], ["scene_next", "Volgende scène"]);
+  cfg.scenes.forEach((s, i) => o.push(["scene:" + (i + 1), "Scène: " + s.name]));
+  o.push(["shift", "Shift (vasthouden: presets +N)"], ["store", "Opslaan (vasthouden + presetknop)"]);
+  for (let n = 1; n <= Math.max(cfg.preset_count, 8); n++) o.push(["preset:" + n, `Preset ${n}`]);
+  return o;
+}
+function renderPadMap() {
+  const m = padMap(), opts = padActionOptions();
+  $("#padMap").innerHTML = PAD_BUTTONS.map(([k, label]) => `<b>${esc(label)}</b><select data-btn="${k}">` +
+    opts.map(([v, t]) => `<option value="${v}"${m.buttons[k] === v ? " selected" : ""}>${esc(t)}</option>`).join("") +
+    (opts.some(([v]) => v === m.buttons[k]) ? "" : `<option value="${esc(m.buttons[k])}" selected>${esc(m.buttons[k])}</option>`) +
+    `</select>`).join("");
+  $("#padShift").value = m.shift;
+  $$("#padMap select").forEach(s => s.onchange = savePadMap);
+}
+async function savePadMap() {
+  const buttons = {};
+  $$("#padMap select").forEach(s => buttons[s.dataset.btn] = s.value);
+  cfg.pad_map = { buttons, shift: Math.max(0, Math.min(60, +$("#padShift").value || 0)) };
+  await saveConfig(); toast("Knopindeling opgeslagen", true);
+}
+$("#padShift").onchange = savePadMap;
+$("#padReset").onclick = async () => {
+  if (!confirm("Standaard knopindeling terugzetten (voor alle schermen)?")) return;
+  cfg.pad_map = JSON.parse(JSON.stringify(PAD_DEFAULT)); await saveConfig(); renderPadMap(); toast("Standaard teruggezet", true);
+};
 $("#padInvY").checked = pad.invY;
 $("#padSoft").checked = pad.soft;
 $("#padSoft").onchange = () => { pad.soft = $("#padSoft").checked; store.set("padSoft", pad.soft ? "1" : "0"); };
@@ -802,15 +818,48 @@ function padStopAll() {
   if (pad.last.focus) cmd("focus", { dir: "stop" });
   pad.last = { move: null, zoom: null, focus: null };
 }
-function selectByPad(delta) {
-  if (!cfg.cameras.length) return;
+function selectCamByPad(c) {
+  if (!c) return;
   padStopAll();
-  const i = Math.max(0, cfg.cameras.findIndex(c => c.id === ctrlCam));
-  const c = cfg.cameras[(i + delta + cfg.cameras.length) % cfg.cameras.length];
   ctrlCam = c.id;
   if (view !== ALL) view = c.id;
   render(); toast("🎮 " + c.name, true);
   post("/api/select", { cam: c.id, origin: "pad" });
+}
+function selectByPad(delta) {
+  if (!cfg.cameras.length) return;
+  const i = Math.max(0, cfg.cameras.findIndex(c => c.id === ctrlCam));
+  selectCamByPad(cfg.cameras[(i + delta + cfg.cameras.length) % cfg.cameras.length]);
+}
+function padAction(action, gp, mods) {
+  const [kind, arg] = action.split(":");
+  switch (kind) {
+    case "preset": {
+      const n = +arg + (mods.shift ? mods.shiftBy : 0);
+      padStopAll();
+      if (mods.store) cmd("preset_set", { n }).then(r => { if (r?.ok) { rumble(gp, 350, 1); toast(`Preset ${n} opgeslagen`, true); } });
+      else { presetClick(ctrlCam, n); rumble(gp, 60, 0.3); }
+      break;
+    }
+    case "cam_prev": return selectByPad(-1);
+    case "cam_next": return selectByPad(+1);
+    case "cam": return selectCamByPad(cfg.cameras[+arg - 1]);
+    case "home": padStopAll(); moved(); cmd("home"); break;
+    case "track": toggleTrack(ctrlCam); break;
+    case "af": cmd("onepush_af"); setAF(true); break;
+    case "fine": pad.fine = !pad.fine; toast(pad.fine ? "Fijn-modus aan" : "Fijn-modus uit", true); rumble(gp, 80, 0.4); break;
+    case "stopall": padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); break;
+    case "scene_next":
+      if (!cfg.scenes.length) break;
+      pad.sceneIdx = (pad.sceneIdx + 1) % cfg.scenes.length;
+      post("/api/scene", { n: pad.sceneIdx + 1 }); toast("Scène: " + cfg.scenes[pad.sceneIdx].name, true);
+      break;
+    case "scene": {
+      const sc = cfg.scenes[+arg - 1]; if (!sc) break;
+      pad.sceneIdx = +arg - 1; post("/api/scene", { n: +arg }); toast("Scène: " + sc.name, true);
+      break;
+    }
+  }
 }
 
 function padLoop() {
@@ -828,29 +877,14 @@ function padLoop() {
   const busy = anyDialog();
 
   if (!busy) {
-    // ---- knoppen (eenmalig bij indrukken)
-    const page = btn(B.LB) ? 4 : 0;
-    [[B.A, 1], [B.B, 2], [B.X, 3], [B.Y, 4]].forEach(([b, n]) => {
-      if (!down(b)) return;
-      const preset = n + page;
-      if (btn(B.MENU)) {
-        padStopAll();
-        cmd("preset_set", { n: preset }).then(r => { if (r?.ok) { rumble(gp, 350, 1); toast(`Preset ${preset} opgeslagen`, true); } });
-      } else {
-        padStopAll(); presetClick(ctrlCam, preset); rumble(gp, 60, 0.3);
-      }
+    // ---- knoppen (eenmalig bij indrukken), volgens de instelbare indeling
+    const m = padMap();
+    const held = (what) => PAD_BUTTONS.some(([k]) => m.buttons[k] === what && btn(B[k]));
+    const mods = { shift: held("shift"), store: held("store"), shiftBy: m.shift };
+    PAD_BUTTONS.forEach(([k]) => {
+      const a = m.buttons[k];
+      if (a && a !== "shift" && a !== "store" && down(B[k])) padAction(a, gp, mods);
     });
-    if (down(B.LEFT)) selectByPad(-1);
-    if (down(B.RIGHT)) selectByPad(+1);
-    if (down(B.DOWN)) { padStopAll(); moved(); cmd("home"); }
-    if (down(B.UP) && cfg.scenes.length) {
-      pad.sceneIdx = (pad.sceneIdx + 1) % cfg.scenes.length;
-      post("/api/scene", { n: pad.sceneIdx + 1 }); toast("Scène: " + cfg.scenes[pad.sceneIdx].name, true);
-    }
-    if (down(B.RB)) toggleTrack(ctrlCam);
-    if (down(B.R3)) { cmd("onepush_af"); setAF(true); }
-    if (down(B.L3)) { pad.fine = !pad.fine; toast(pad.fine ? "Fijn-modus aan" : "Fijn-modus uit", true); rumble(gp, 80, 0.4); }
-    if (down(B.VIEW)) { padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); }
 
     // ---- analoog: pan/tilt
     const max = pad.fine ? Math.max(2, Math.round(pad.max / 4)) : pad.max;
@@ -976,8 +1010,8 @@ $("#bkApply").onclick = async () => {
 /* ================= live events ================= */
 function connectEvents() {
   const es = new EventSource("/api/events");
-  es.onopen = () => $("#joyDot").style.background = "var(--ok)";
-  es.onerror = () => $("#joyDot").style.background = "var(--live)";
+  es.onopen = () => $("#liveDot").style.background = "var(--ok)";
+  es.onerror = () => $("#liveDot").style.background = "var(--live)";
   es.onmessage = (m) => {
     const ev = JSON.parse(m.data);
     if (ev.type === "state") {
@@ -988,7 +1022,7 @@ function connectEvents() {
     } else if (ev.type === "select") {
       if ($("#chkFollow").checked && camById(ev.cam) && ev.cam !== ctrlCam) {
         ctrlCam = ev.cam; if (view !== ALL) view = ev.cam;
-        render(); toast("Joystick: " + camById(ev.cam).name, true);
+        render(); toast("Camera: " + camById(ev.cam).name, true);
       }
     } else if (ev.type === "preset") {
       lastPreset[ev.cam] = ev.n; renderPresets();

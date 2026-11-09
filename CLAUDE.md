@@ -12,8 +12,8 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - 🧑 **3 PTZOptics-camera's** die **tegelijk** bediend worden (Links / Midden / Rechts in de testdata; echte namen staan in `cameras.json`).
 - 🧑 **Presets zijn de hoofdfunctie.** Het hoofdscherm is een presetraster per camera; handbediening is secundair (zijbalk).
 - 🧑 **Geen live preview.** Bewust verwijderd. Thumbnails op presettegels mogen wel (worden alleen gemaakt bij opslaan/vernieuwen).
-- 🧑 **PTZJoy-joystick** (PTZOptics PT-JOY-G4 / SuperJoy) moet integreren.
-- 🧑 **Xbox-controller** als zelfgebouwde vervanging van de PTZJoy.
+- 🧑 **Xbox-controller** is de fysieke bediening. De PTZJoy-koppeling (PT-JOY-G4 / SuperJoy, `/api/joy/*`) is op verzoek **verwijderd**; niet opnieuw toevoegen zonder expliciete vraag.
+- 🧑 Knopindeling van de Xbox-controller is **instelbaar** per knop, gedeeld via `cameras.json` (`pad_map`).
 - 🧑 **Persoon volgen: alleen pan** via software. Tilt en zoom nooit aanpassen door de tracker.
 - 🧑 **Geen YouTube/stream-bediening in deze software.** Een eerdere OBS-koppeling is op verzoek verwijderd; streamen gebeurt buiten deze app. Niet opnieuw toevoegen zonder expliciete vraag.
 - 🧑 Draait op een **Mac mini (Apple Silicon)** ("livestreams-mac-mini"). Er is ook een **Windows-starter** gevraagd.
@@ -25,7 +25,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 
 | Bestand | Rol |
 |---|---|
-| `ptz_control.py` | HTTP-server (alleen stdlib), camera-commando's (HTTP-CGI + VISCA), config, SSE-events, joystick-endpoints, tracking-beheer |
+| `ptz_control.py` | HTTP-server (alleen stdlib), camera-commando's (HTTP-CGI + VISCA), config, SSE-events, tracking-beheer |
 | `index.html` | Volledige UI (vanilla JS, geen build), presets, scènes, handbediening, Xbox-controller, dialogen |
 | `tracker.py` | Volgmodule: RTSP-grabber, persoonsdetectie (YOLO of OpenCV HOG), pan-regelaar |
 | `backup.py` | Back-up: VISCA-inquiries, presetposities lezen/terugzetten, beeldinstellingen lezen/terugzetten |
@@ -38,7 +38,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `job`, `state`.
 - Per-apparaat-instellingen (snelheden, tegelgrootte, Xbox-opties) staan in **localStorage**, niet op de server.
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
-- **Scènes** = meerdere camera's tegelijk naar een preset (zoals SuperPresets van de joystick).
+- **Scènes** = meerdere camera's tegelijk naar een preset (vergelijkbaar met SuperPresets op een PTZOptics-joystick).
 
 ## 3. Camera-protocol (PTZOptics)
 
@@ -55,19 +55,19 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - ⚠️ Inloggen: Basic én Digest auth worden geprobeerd als gebruiker/wachtwoord is ingevuld.
 - Camera-host mag een poort bevatten (`ip:poort`); exacte host-match gaat voor IP-match (alleen relevant voor tests met meerdere nep-camera's op één IP).
 
-## 4. PTZJoy-joystick (PT-JOY-G4 / SuperJoy)
+## 4. PTZJoy-joystick (verwijderd)
 
-- ✅ USB op de joystick is **alleen voor firmware**; geen USB-besturing mogelijk.
-- ✅ Joystick bestuurt camera's **zelf**. De app luistert mee via HTTP-commando's uit **Custom Buttons** en **Automatic Triggers** (firmware **4.1.8+**), met variabele `{{CURRENT_CAM}}` (= IP van de gekozen camera).
-- Endpoints (allemaal GET): `/api/joy/select`, `/api/joy/preset`, `/api/joy/scene`, `/api/joy/cmd`, `/api/joy/track`. `cam` = id, volgnummer (1-based) of IP.
-- ⚠️ De pc met de app heeft een **vast IP** nodig, anders kloppen de joystick-URL's niet.
-- ⚠️ Joystick-bewegingen zijn **onzichtbaar** voor de app: als de joystick een camera beweegt terwijl volgen aan staat, werken ze tegen elkaar in.
+- 🧑 Op verzoek verwijderd: endpoints `/api/joy/*`, de 🕹-dialoog en de README-sectie. De Xbox-controller vervangt hem.
+- Camerakeuze delen tussen schermen gaat via `POST /api/select` + SSE `select` ("Volg selectie" rechtsboven).
 
 ## 5. Xbox-controller
 
 - Via de **Gamepad API** van de browser ("standard" mapping). ✅ Getest met een nagebootste gamepad in Chromium, **niet** met een echte controller.
 - ⚠️ Werkt alleen als de bedieningspagina **open en zichtbaar** is. Bij tabblad naar achtergrond / venster kwijt → alles stoppen.
-- Indeling: linker stick pan/tilt (kwadratische curve, deadzone 0.18, 8 richtingen), L3 fijn-modus (max/4), RT/LT zoom, rechter stick ↑↓ focus, R3 one-push AF, A/B/X/Y preset 1–4, LB+ = 5–8, Menu+knop = preset opslaan (trilt), D-pad ←/→ camera, ↑ volgende scène, ↓ home, RB volgen aan/uit, View alles stoppen.
+- Vast: linker stick pan/tilt (kwadratische curve, deadzone 0.18, 8 richtingen), RT/LT zoom, rechter stick ↑↓ focus.
+- 🧑 Knoppen instelbaar: `cfg.pad_map = {buttons: {A: "preset:1", …}, shift: 4}` in `cameras.json` (ontbrekende knoppen vallen terug op `PAD_DEFAULT`). Acties: `preset:N`, `cam_prev`, `cam_next`, `cam:N`, `scene_next`, `scene:N`, `home`, `track`, `af`, `fine`, `stopall`, en modifiers `shift` (presets +shift) en `store` (vasthouden + presetknop = opslaan, trilt).
+- Standaard: A/B/X/Y preset 1–4, LB shift (5–8), Menu opslaan, D-pad ←/→ camera, ↑ volgende scène, ↓ home, RB volgen, L3 fijn-modus (max/4), R3 one-push AF, View alles stoppen.
+- Zachte beweging, tilt omkeren en max. snelheid blijven per apparaat (localStorage).
 - Commando's alleen bij verandering, maximaal ~12/s (80 ms).
 - 🧑 Instellingen en knoppenindeling staan in een kaart in de **zijbalk onder de camerabediening** (geen dialoog meer); 🎮 in de kop scrolt ernaartoe.
 - 🧑 **Zachte beweging** (optie, standaard aan, `localStorage.padSoft`): derdemachtscurve i.p.v. kwadratisch, en optrekken met max. `max/12` stap per verzonden commando (~1 s naar topsnelheid); zoom +1 per commando. Stoppen gaat altijd direct.
@@ -103,7 +103,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 
 ## 8. Bewust níet in de software
 
-- 🧑 **YouTube/stream starten en stoppen** (en opnemen). Was eerst gebouwd via OBS WebSocket, daarna op verzoek volledig verwijderd (server, UI, joystick-endpoint). Een oude `obs`-sectie in `cameras.json` wordt bij opslaan weggegooid.
+- 🧑 **YouTube/stream starten en stoppen** (en opnemen). Was eerst gebouwd via OBS WebSocket, daarna op verzoek volledig verwijderd (server, UI). Een oude `obs`-sectie in `cameras.json` wordt bij opslaan weggegooid.
 - 🧑 **Live preview** van de camerabeelden.
 
 ## 9. Installatie en platform

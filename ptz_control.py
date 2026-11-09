@@ -551,8 +551,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, STATE)
         if u.path == "/api/events":
             return self._sse()
-        if u.path.startswith("/api/joy/"):
-            return self._joy(u.path[len("/api/joy/"):], parse_qs(u.query))
         if u.path == "/api/thumb":
             q = parse_qs(u.query)
             try:
@@ -570,7 +568,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(502, {"error": str(e)})
         self._send(404, {"error": "niet gevonden"})
 
-    # --- Server-Sent Events: browsers volgen joystick/andere tablets live
+    # --- Server-Sent Events: browsers houden de camerakeuze onderling gelijk
     def _sse(self):
         q = queue.Queue()
         with SUB_LOCK:
@@ -599,52 +597,6 @@ class Handler(BaseHTTPRequestHandler):
             with SUB_LOCK:
                 SUBSCRIBERS.remove(q)
 
-    # --- Endpoints voor PT-JOY-G4 / SuperJoy custom buttons & automatic triggers (HTTP GET)
-    def _joy(self, what, qs):
-        g = lambda k, d="": qs.get(k, [d])[0]  # noqa: E731
-        try:
-            if what == "select":
-                cam = find_camera(g("cam"))
-                broadcast({"type": "select", "cam": cam["id"]})
-                return self._send(200, {"ok": True, "cam": cam["name"]})
-            if what == "preset":
-                cam = find_camera(g("cam") or STATE["active"])
-                n = clamp(g("n"), 0, 254)
-                do_action(cam, "preset_call", {"n": n, "speed": g("speed") or None})
-                return self._send(200, {"ok": True})
-            if what == "scene":
-                cfg = load_config()
-                scenes = cfg.get("scenes", [])
-                ref = g("n") or g("name")
-                scene = next((s for i, s in enumerate(scenes, 1)
-                              if str(i) == ref or s.get("name", "").lower() == ref.lower()), None)
-                if not scene:
-                    raise KeyError(f"Onbekende scène: {ref}")
-                errors = run_scene(scene)
-                return self._send(200 if not errors else 207, {"ok": not errors, "errors": errors})
-            if what == "track":
-                cam = find_camera(g("cam") or STATE["active"])
-                on = g("on", "toggle")
-                if on == "toggle":
-                    on = not (cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS)
-                else:
-                    on = on in ("1", "true", "on")
-                start_tracking(cam) if on else stop_tracking(cam["id"])
-                return self._send(200, {"ok": True, "on": on})
-            if what == "cmd":
-                cam = find_camera(g("cam") or STATE["active"])
-                args = {k: v[0] for k, v in qs.items() if k not in ("cam", "action")}
-                if "on" in args:
-                    args["on"] = args["on"] in ("1", "true", "on")
-                do_action(cam, g("action"), args)
-                return self._send(200, {"ok": True})
-        except KeyError as e:
-            return self._send(404, {"ok": False, "error": e.args[0]})
-        except (urllib.error.URLError, OSError) as e:
-            return self._send(502, {"ok": False, "error": f"Camera niet bereikbaar: {e}"})
-        except Exception as e:  # noqa: BLE001
-            return self._send(400, {"ok": False, "error": str(e)})
-        self._send(404, {"error": "onbekend joystick-endpoint"})
 
     def do_POST(self):
         u = urlparse(self.path)
