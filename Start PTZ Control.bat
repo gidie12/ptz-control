@@ -3,6 +3,7 @@ rem PTZ Control (Windows): installeren en starten in een.
 rem - Eerste keer, of na een update met gewijzigde requirements.txt: maakt/werkt de .venv bij.
 rem - Daarna start de app en opent de bediening in de browser.
 rem Opnieuw installeren afdwingen: "Start PTZ Control.bat" /installeer
+rem Snelkoppeling (Startmenu + bureaublad, met icoon) opnieuw maken: "Start PTZ Control.bat" /snelkoppeling
 rem Overige argumenten gaan door naar ptz_control.py (bijv. --port 9000).
 rem Stoppen: dit venster sluiten of Ctrl+C.
 setlocal
@@ -11,10 +12,11 @@ chcp 65001 >nul
 title PTZ Control
 
 set "FORCE="
+set "LNK="
 set "ARGS="
 :args
 if "%~1"=="" goto :argsdone
-if /i "%~1"=="/installeer" ( set "FORCE=1" ) else if /i "%~1"=="--installeer" ( set "FORCE=1" ) else if /i "%~1"=="/install" ( set "FORCE=1" ) else ( set "ARGS=%ARGS% %1" )
+if /i "%~1"=="/installeer" ( set "FORCE=1" ) else if /i "%~1"=="--installeer" ( set "FORCE=1" ) else if /i "%~1"=="/install" ( set "FORCE=1" ) else if /i "%~1"=="/snelkoppeling" ( set "LNK=1" ) else ( set "ARGS=%ARGS% %1" )
 shift
 goto :args
 :argsdone
@@ -80,6 +82,11 @@ echo Installatie klaar.
 echo.
 
 :start
+rem Snelkoppeling met icoon: eenmalig (als hij in het Startmenu ontbreekt) of op verzoek
+if not exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\PTZ Control.lnk" set "LNK=1"
+if defined LNK (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0app\snelkoppeling.ps1" -Bureaublad
+)
 ".venv\Scripts\python.exe" ptz_control.py --open%ARGS%
 if errorlevel 1 pause
 exit /b

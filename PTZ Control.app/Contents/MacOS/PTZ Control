@@ -1,0 +1,21 @@
+#!/bin/bash
+# Dock-app voor PTZ Control.
+# Draait de app al: open alleen de bediening in de browser.
+# Anders: start "Start PTZ Control.command" in Terminal (installeert zo nodig, toont het logboek; venster sluiten = stoppen).
+# De app moet in de map van PTZ Control blijven staan; zet hem in het Dock door hem erheen te slepen (niet verplaatsen).
+APP="$(cd "$(dirname "$0")/../.." && pwd)"
+DIR="$(dirname "$APP")"
+PORT="${PTZ_PORT:-8080}"
+
+if [ ! -f "$DIR/ptz_control.py" ]; then
+  osascript -e 'display alert "PTZ Control niet gevonden" message "Laat PTZ Control.app in de map van PTZ Control staan en sleep hem vanuit daar naar het Dock (niet verplaatsen naar Programma'"'"'s)." as critical' >/dev/null
+  exit 1
+fi
+
+if curl -s -m 1 -o /dev/null "http://127.0.0.1:$PORT/"; then
+  open "http://localhost:$PORT/"
+  exit 0
+fi
+
+chmod +x "$DIR/Start PTZ Control.command" 2>/dev/null
+open -a Terminal "$DIR/Start PTZ Control.command"
