@@ -129,7 +129,8 @@ Menu → **⚙ Instellingen** → vul bij *YouTube-livestream* het kanaal in (`@
 De app kijkt daarna elke minuut of het kanaal live is. De knop rechtsboven wordt rood (**● LIVE**) zodra er een stream loopt,
 en de stream verschijnt in een **klein venster** (standaard automatisch, zonder geluid).
 
-- Venster verplaatsen: sleep aan de titelbalk. Groter/kleiner: sleep het hoekje rechtsonder (of kies Klein/Middel/Groot in Instellingen).
+- Het venster zoekt zelf een vrije plek naast of onder de presettegels en schuift mee als je het aantal tegels verandert. Is er op volledig scherm geen plek, dan houdt de app rechts een strook vrij en schuiven de tegels op.
+- Zelf verplaatsen: sleep aan de titelbalk (dan blijft het daar staan; ⌖ zet het weer automatisch). Groter/kleiner: sleep het hoekje rechtsonder (of kies Klein/Middel/Groot in Instellingen).
 - Tonen/verbergen: klik op de YouTube-knop of toets **Y**. ↗ opent de stream op YouTube.
 - Positie, grootte, automatisch openen en geluid onthoudt elk apparaat zelf; het kanaal geldt voor alle schermen.
 - Alleen kijken: de stream starten en stoppen gebeurt nog steeds buiten deze app. Let op: de stream loopt een paar seconden achter.

@@ -255,6 +255,7 @@
     background: var(--img); color: var(--muted); font-size: 13px; }
   .ytmsg button { justify-self: center; }
   #ytWin.dragging .ytbody iframe { pointer-events: none; }
+  body.wall.ytres main { padding-right: calc(var(--ytres) + 20px); }
   .ytgrip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; z-index: 2;
     background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%,
       transparent 70%, var(--muted) 70%, var(--muted) 78%, transparent 78%); opacity: .8; }
@@ -543,9 +544,11 @@
       <span class="seg" id="ytSizeSeg">
         <button data-w="260">Klein</button><button data-w="360">Middel</button><button data-w="520">Groot</button>
       </span>
-      <button class="icon" id="ytResetPos" title="Venster terug naar linksonder">Positie herstellen</button>
+      <button class="icon" id="ytResetPos" title="Venster zoekt zelf een vrije plek naast of onder de tegels">Automatisch plaatsen</button>
     </div>
-    <div class="small muted" style="margin-top:6px">Tip: sleep het venster aan de titelbalk, en maak het groter of kleiner met het hoekje rechtsonder.</div>
+    <div class="small muted" style="margin-top:6px">Standaard zoekt het venster zelf een vrije plek naast of onder de presettegels en past het zich aan
+      als het aantal tegels verandert (de grootte is dan het maximum). Sleep je het aan de titelbalk, dan blijft het op die plek staan;
+      ⌖ in de titelbalk of <i>Automatisch plaatsen</i> zet het terug.</div>
   </div>
   <div class="actions"><span></span>
     <span style="display:flex;gap:8px"><button class="icon" id="prefsCancel">Sluiten</button>
@@ -557,6 +560,7 @@
   <div class="ythead" id="ytHead">
     <span class="ytbadge" id="ytBadge">OFFLINE</span>
     <span class="yttitle" id="ytTitle">YouTube</span>
+    <button id="ytAutoBtn" title="Weer automatisch plaatsen (naast/onder de tegels)" hidden>⌖</button>
     <button id="ytOpen" title="Openen op YouTube">↗</button>
     <button id="ytClose" title="Venster sluiten (Y)">✕</button>
   </div>
@@ -1467,22 +1471,78 @@ const ytOpt = {
 let ytShownVid = null;      // video in de iframe
 let ytUserClosed = false;   // zelf gesloten tijdens deze livestream: niet steeds opnieuw openen
 
+// Geometrie (per apparaat): w = gewenste breedte; auto = zelf een vrije plek naast/onder de tegels zoeken.
+// Na zelf verslepen staat auto uit (x/y vast), "Automatisch plaatsen" zet hem weer aan.
+function ytGeomRaw() { let g = {}; try { g = JSON.parse(store.get("ytGeom") || "{}"); } catch {} return g; }
 function ytGeom() {
-  let g = {}; try { g = JSON.parse(store.get("ytGeom") || "{}"); } catch {}
+  const g = ytGeomRaw();
   const w = Math.max(220, Math.min(+g.w || 360, innerWidth - 16));
   const h = w * 9 / 16 + 30;
   const x = Math.max(0, Math.min(g.x ?? 16, innerWidth - w));
   const y = Math.max(0, Math.min(g.y ?? (innerHeight - h - 16), innerHeight - h));
-  return { x, y, w };
+  return { x, y, w, auto: g.auto !== false };
+}
+const ytH = (w) => w * 9 / 16 + 31;   // hoogte bij breedte w (16:9 + titelbalk)
+// Zoek de grootste vrije plek (≤ gewenste breedte) die geen presettegel bedekt:
+// rechts naast de laatste tegel van elk raster, of eronder (per kolom bij Alle camera's).
+function ytAutoSpot(maxW) {
+  const GAP = 10, vh = innerHeight, vw = innerWidth, best = { w: 0 };
+  const top0 = (document.querySelector("header")?.getBoundingClientRect().bottom || 0);
+  const consider = (x0, x1, y0, kind) => {
+    const y = Math.max(y0, top0 + GAP);
+    const availW = x1 - x0, availH = vh - GAP - y;
+    let w = Math.min(maxW, availW, (availH - 31) * 16 / 9);
+    if (w < 220) return;
+    w = Math.floor(w);
+    if (w > best.w + 1 || (Math.abs(w - best.w) <= 1 && kind === "naast" && best.kind !== "naast"))
+      Object.assign(best, { w, x: Math.round(kind === "naast" ? x1 - w : x0 + (availW - w) / 2), y: Math.round(y), kind });
+  };
+  $$("#presetArea .grid").forEach(grid => {
+    const tiles = grid.querySelectorAll(".tile"); if (!tiles.length) return;
+    const G = grid.getBoundingClientRect(), L = tiles[tiles.length - 1].getBoundingClientRect();
+    if (G.right - L.right > GAP + 100) consider(L.right + GAP, G.right, L.top, "naast");
+  });
+  const card = $("#presetCard").getBoundingClientRect();
+  const cols = $$("#presetArea .col, #presetArea .grid").map(e => e.getBoundingClientRect().bottom);
+  if (cols.length) consider(card.left, card.right, Math.max(...cols) + GAP + 4, "onder");
+  return best.w ? best : null;
 }
 function ytPlace(g = ytGeom()) {
-  ytWin.style.width = g.w + "px"; ytWin.style.left = g.x + "px"; ytWin.style.top = g.y + "px";
+  let { x, y, w } = g;
+  ytWin.classList.toggle("auto", g.auto);
+  const wall = document.body.classList.contains("wall");
+  // sleutel van de indeling: alleen als die verandert, opnieuw kijken of de strook nog nodig is (anders gaat hij heen en weer)
+  const key = [wall, cfg.preset_count, cfg.tile_size, view, cfg.cameras.length, innerWidth, innerHeight, g.w].join("|");
+  const strip = () => { w = Math.min(g.w, Math.round(innerWidth * 0.35)); ytReserve(w); ytResKey = key; x = innerWidth - w - 10; y = 10; };
+  if (g.auto && wall && ytResKey === key && document.body.classList.contains("ytres")) strip();
+  else if (g.auto) {
+    ytResKey = null; ytReserve(0);
+    const spot = ytAutoSpot(g.w);
+    if (spot) ({ x, y, w } = spot);
+    else if (wall) strip();   // volledig scherm zonder vrije plek: rechts een strook vrijhouden, de tegels schuiven op
+    else { ytReserve(0); w = Math.min(g.w, innerWidth - 32); x = innerWidth - w - 16; y = innerHeight - ytH(w) - 16; }   // rechtsonder (over de zijbalk)
+  } else ytReserve(0);
+  ytWin.style.width = w + "px"; ytWin.style.left = x + "px"; ytWin.style.top = y + "px";
   $$("#ytSizeSeg button").forEach(b => b.classList.toggle("on", Math.abs(+b.dataset.w - g.w) < 2));
+  $("#ytAutoBtn").hidden = g.auto;
 }
-function ytSaveGeom() {
-  const r = ytWin.getBoundingClientRect();
-  store.set("ytGeom", JSON.stringify({ x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width) }));
+function ytSaveGeom(kind) {
+  const r = ytWin.getBoundingClientRect(), old = ytGeomRaw();
+  const g = kind === "move" ? { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), auto: false }
+    : { ...old, w: Math.round(r.width), ...(old.auto === false ? { x: Math.round(r.left), y: Math.round(r.top) } : {}) };
+  store.set("ytGeom", JSON.stringify(g));
   ytPlace();
+}
+let ytResKey = null;
+function ytReserve(w) {
+  const on = !!w && !ytWin.hidden;
+  document.body.classList.toggle("ytres", on);
+  if (on) document.body.style.setProperty("--ytres", w + "px");
+}
+let ytPlaceRaf = 0;
+function ytReplace() {   // na wijziging van tegels/scherm opnieuw plaatsen (alleen in automatische stand)
+  if (ytWin.hidden || ytWin.classList.contains("dragging") || !ytGeom().auto) return;
+  cancelAnimationFrame(ytPlaceRaf); ytPlaceRaf = requestAnimationFrame(() => ytPlace());
 }
 function ytEmbedUrl(id) {
   return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=${ytOpt.sound ? 0 : 1}&playsinline=1&rel=0&modestbranding=1`;
@@ -1534,6 +1594,7 @@ function ytRender() {
 }
 function ytShow(on) {
   ytWin.hidden = !on;
+  if (!on) ytReserve(0);
   if (on) ytPlace();
   ytRender();
 }
@@ -1574,7 +1635,7 @@ function ytDrag(el, onMove) {
     const r = ytWin.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
     ytWin.classList.add("dragging"); el.setPointerCapture(e.pointerId);
     const move = (m) => onMove(r, m.clientX - sx, m.clientY - sy);
-    const up = () => { ytWin.classList.remove("dragging"); el.removeEventListener("pointermove", move); ytSaveGeom(); };
+    const up = () => { ytWin.classList.remove("dragging"); el.removeEventListener("pointermove", move); ytSaveGeom(el.id === "ytHead" ? "move" : "size"); };
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up, { once: true });
     el.addEventListener("pointercancel", up, { once: true });
@@ -1588,6 +1649,11 @@ ytDrag($("#ytGrip"), (r, dx) => {
   ytWin.style.width = Math.max(220, Math.min(r.width + dx, innerWidth - r.left)) + "px";
 });
 addEventListener("resize", () => { if (!ytWin.hidden) ytPlace(); });
+addEventListener("scroll", ytReplace, { passive: true });
+new ResizeObserver(ytReplace).observe($("#presetArea"));
+new MutationObserver(ytReplace).observe($("#presetArea"), { childList: true, subtree: true });
+new MutationObserver(ytReplace).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+$("#ytAutoBtn").onclick = () => { store.set("ytGeom", JSON.stringify({ w: ytGeom().w })); ytPlace(); };
 // Klik in de speler pakt de toetsenbordfocus; geef die terug zodat sneltoetsen en de Xbox-controller blijven werken
 addEventListener("blur", () => setTimeout(() => {
   if (document.activeElement?.tagName === "IFRAME" && ytWin.contains(document.activeElement)) { document.activeElement.blur(); window.focus(); }
@@ -1614,9 +1680,7 @@ $$("#ytSizeSeg button").forEach(b => b.onclick = () => {
   const g = ytGeom(); g.w = +b.dataset.w;
   store.set("ytGeom", JSON.stringify(g)); ytPlace(ytGeom());
 });
-$("#ytResetPos").onclick = () => {
-  const w = ytGeom().w; store.set("ytGeom", JSON.stringify({ w })); ytPlace(ytGeom());
-};
+$("#ytResetPos").onclick = () => { store.set("ytGeom", JSON.stringify({ w: ytGeom().w })); ytPlace(); };
 $("#prefsSave").onclick = async () => {
   const chan = $("#ytChannel").value.trim();
   if (chan !== ((cfg.youtube || {}).channel || "") && yt.live) {
