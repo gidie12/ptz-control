@@ -289,7 +289,7 @@
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
       <div class="msep"></div>
       <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
-      <button class="mi" id="btnPrefs" role="menuitem" title="Weergave en YouTube-kanaal">⚙ Instellingen</button>
+      <button class="mi" id="btnPrefs" role="menuitem" title="YouTube-kanaal en -venster">⚙ Instellingen</button>
     </div>
   </div>
 </header>
@@ -527,17 +527,6 @@
 <dialog id="dlgPrefs">
   <h3>⚙ Instellingen</h3>
   <div class="bsec" style="margin-top:0">
-    <h4>Weergave <span class="muted" style="font-weight:400">· dit apparaat</span></h4>
-    <div class="row" style="display:flex;gap:10px;align-items:center;margin-top:8px">
-      <span class="small">Thema</span>
-      <span class="seg" id="themeSeg">
-        <button data-theme="auto" title="Volgt de instelling van het besturingssysteem">Automatisch</button>
-        <button data-theme="light">☀ Licht</button>
-        <button data-theme="dark">🌙 Donker</button>
-      </span>
-    </div>
-  </div>
-  <div class="bsec">
     <h4>YouTube-livestream</h4>
     <div class="small">De app kijkt elke minuut of dit kanaal live is en toont de stream in een klein venster. Alleen kijken:
       starten en stoppen van de stream gebeurt buiten deze app.</div>
@@ -1460,12 +1449,10 @@ function applyTheme() {
   const t = p === "auto" ? (themeMq.matches ? "light" : "dark") : p;
   document.documentElement.dataset.theme = t;
   $("#btnTheme").textContent = t === "light" ? "🌙 Donkere modus" : "☀ Lichte modus";
-  $$("#themeSeg button").forEach(b => b.classList.toggle("on", b.dataset.theme === p));
 }
 function setTheme(p) { store.set("theme", p); applyTheme(); }
 themeMq.addEventListener?.("change", applyTheme);
 $("#btnTheme").onclick = () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
-$$("#themeSeg button").forEach(b => b.onclick = () => setTheme(b.dataset.theme));
 applyTheme();
 
 /* ================= YouTube-livestream (alleen kijken) ================= */
@@ -1611,7 +1598,7 @@ function openPrefs() {
   $("#ytPrefStatus").textContent = !yt.channel ? "" : yt.error ? yt.error
     : (yt.live ? "● Nu live: " + (yt.title || "") : yt.upcoming ? "Gepland: " + (yt.title || "") : "Niet live")
       + (yt.checked ? " · gecontroleerd " + yt.checked : "");
-  applyTheme(); ytPlace();
+  ytPlace();
   $("#dlgPrefs").showModal();
 }
 $("#btnPrefs").onclick = openPrefs;

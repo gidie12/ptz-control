@@ -134,7 +134,7 @@ en de stream verschijnt in een **klein venster** (standaard automatisch, zonder 
 - Alleen kijken: de stream starten en stoppen gebeurt nog steeds buiten deze app. Let op: de stream loopt een paar seconden achter.
 
 ## Licht of donker
-Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. In **⚙ Instellingen** kun je ook *Automatisch* kiezen (volgt het besturingssysteem). Per apparaat.
+Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
 
 ## Sneltoetsen
 Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen (instelbaar per camera; in Alle camera's blijf je in die weergave) · H = home · T = volgen · F = volledig scherm · Y = YouTube-venster · Spatie = stop
