@@ -17,6 +17,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - 🧑 **Persoon volgen: alleen pan** via software. Tilt en zoom nooit aanpassen door de tracker.
 - 🧑 **Geen YouTube/stream-bediening in deze software.** Een eerdere OBS-koppeling is op verzoek verwijderd; streamen gebeurt buiten deze app. Niet opnieuw toevoegen zonder expliciete vraag.
 - 🧑 Draait op een **Mac mini (Apple Silicon)** ("livestreams-mac-mini"). Er is ook een **Windows-starter** gevraagd.
+- 🧑 **Alle presets en camera-instellingen moeten bewaard en teruggezet kunnen worden**: app-instellingen (back-upbestand), presetposities zelf én beeldinstellingen.
 - 🧑 UI, README, commits en communicatie in het **Nederlands**.
 - ⚠️ Het cameramodel is **onbekend** (Move/Studio/G2/G3 niet bevestigd). Daarom geen ingebouwde auto-tracking gebruikt.
 
@@ -27,14 +28,15 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 | `ptz_control.py` | HTTP-server (alleen stdlib), camera-commando's (HTTP-CGI + VISCA), config, SSE-events, joystick-endpoints, tracking-beheer |
 | `index.html` | Volledige UI (vanilla JS, geen build), presets, scènes, handbediening, Xbox-controller, dialogen |
 | `tracker.py` | Volgmodule: RTSP-grabber, persoonsdetectie (YOLO of OpenCV HOG), pan-regelaar |
+| `backup.py` | Back-up: VISCA-inquiries, presetposities lezen/terugzetten, beeldinstellingen lezen/terugzetten |
 | `Installeer.command` / `Installeer.bat` | Maakt `.venv` en installeert `requirements.txt` (`--no-pause` / `/nopause` als ze door de starter worden aangeroepen) |
 | `Start PTZ Control.command` / `.bat` | Eén-klik-start: installeert bij eerste keer, start met `--open` |
-| `cameras.json` | Lokale config (camera's, presetnamen, scènes). **Bevat camerawachtwoorden in platte tekst. Nooit committen** (staat in `.gitignore`) |
+| `cameras.json` | Lokale config (camera's, presetnamen, scènes, uitgelezen `saved_positions` / `saved_image`). **Bevat camerawachtwoorden in platte tekst. Nooit committen** (staat in `.gitignore`) |
 | `thumbs/` | Preset-thumbnails (`<camid>_<n>.jpg`), lokaal, niet committen |
 
 - Kern heeft **geen externe packages** nodig; numpy/opencv/ultralytics zijn alleen voor volgen. ⚠️ Python **3.9+** (installers checken dat; de code zelf vermijdt nieuwere syntax).
-- Server luistert op **0.0.0.0:8080**, **zonder authenticatie**. ⚠️ Aanname: vertrouwd kerknetwerk. Iedereen op het LAN kan camera's en de stream bedienen.
-- Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `state`.
+- Server luistert op **0.0.0.0:8080**, **zonder authenticatie**. ⚠️ Aanname: vertrouwd kerknetwerk. Iedereen op het LAN kan de camera's bedienen (en een back-up met wachtwoorden downloaden).
+- Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `job`, `state`.
 - Per-apparaat-instellingen (snelheden, tegelgrootte, Xbox-opties) staan in **localStorage**, niet op de server.
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
 - **Scènes** = meerdere camera's tegelijk naar een preset (zoals SuperPresets van de joystick).
@@ -85,28 +87,43 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Preset-optie "na oproepen automatisch volgen": start **2,5 s** na de preset (aanname: dan is de camera aangekomen).
 - ✅ Getest in een **simulatie** (camera die echt draait op de commando's, spreker loopt heen en weer, tweede persoon staat stil): gemiddeld 9°, max 14° van het midden bij 60° beeldhoek. ⚠️ De simulatie nam **4°/s per snelheidsstap** aan; echte camera's wijken af, dus `track_speed` moet in een repetitie worden afgesteld.
 
-## 7. Bewust níet in de software
+## 7. Back-up van presets en camera-instellingen
+
+- **Back-upbestand** (`GET /api/backup?passwords=0|1`, `POST /api/backup/restore`): JSON met `type: "ptz-control-backup"`, `version: 1`, de volledige config en thumbnails als base64 (`"<camid>/<n>"`). Zonder wachtwoorden → bij terugzetten blijven de huidige wachtwoorden per camera-id behouden.
+- **Uitlezen/terugzetten** (`POST /api/backup/capture` / `/api/backup/apply`) draaien als **taak op de achtergrond**, per camera parallel, voortgang via SSE-event `job`. Maar één taak tegelijk. Volgen wordt voor die camera's eerst gestopt.
+- Resultaat staat in `cameras.json` per camera als `saved_positions` (`{"<n>": {pan, tilt, pt_nibbles, zoom, af, focus, _captured}}`) en `saved_image`. **`POST /api/config` mag deze nooit overschrijven** (server houdt zijn eigen versie), zodat een verouderd scherm ze niet kan wissen.
+- Na uitlezen gaat elke camera terug naar de preset die LIVE stond.
+- ⚠️ Alles via **VISCA over TCP 5678**, ook voor camera's die verder HTTP-CGI gebruiken. Gebruikte (standaard Sony/PTZOptics) commando's, **niet op hun camera's getest**:
+  - positie: `81 09 06 12 FF` → `90 50 0p×4 0t×4 FF` (bij 9–10 nibbles: pan met 5 nibbles), zoom `81 09 04 47 FF`, focus `81 09 04 48 FF`, AF-modus `81 09 04 38 FF`.
+  - terug: absoluut `81 01 06 02 14 12 <pan> <tilt> FF`, zoom `81 01 04 47 …`, focus `81 01 04 48 …` (alleen bij handmatige focus).
+  - "aangekomen" = twee metingen 0,35 s na elkaar gelijk (pan/tilt/zoom/focus), min. 0,8 s, max. 10 s.
+  - beeld: AE-modus `39`, sluiter `4A`, iris `4B`, gain `4C`, helderheid `4D`, belichtingscorr. `3E`/`4E`, tegenlicht `33`, witbalans `35`, R/B-gain `43`/`44`, scherpte `42`, verzadiging `49`, flip `66`, mirror `61`. Modi worden eerst teruggezet, dan waarden; weigeringen (bv. sluitertijd in automatische modus) worden als melding getoond, niet als fout.
+  - Niet-ondersteunde inquiries worden overgeslagen en gemeld ("niet ondersteund: …").
+- ✅ Getest met een **nagebootste VISCA-camera** (onthoudt posities/presets/beeld en beweegt geleidelijk): uitlezen exact gelijk, na "reset" + terugzetten alle presets en beeld identiek; ook via de UI (Playwright). Gevonden en opgelost: focus werd uitgelezen terwijl die nog bewoog.
+- ⚠️ Fabrieksreset kan het IP wijzigen; pas dat eerst aan bij ⚙ Camera's (camera-id blijft gelijk, dus de bewaarde data blijft gekoppeld).
+
+## 8. Bewust níet in de software
 
 - 🧑 **YouTube/stream starten en stoppen** (en opnemen). Was eerst gebouwd via OBS WebSocket, daarna op verzoek volledig verwijderd (server, UI, joystick-endpoint). Een oude `obs`-sectie in `cameras.json` wordt bij opslaan weggegooid.
 - 🧑 **Live preview** van de camerabeelden.
 
-## 8. Installatie en platform
+## 9. Installatie en platform
 
 - 🧑 Mac mini (Apple Silicon). `.venv` moet **op de Mac zelf** worden gemaakt (een in de cloud gebouwde venv werkt daar niet). De starters doen dat automatisch bij de eerste start.
 - ⚠️ Windows-scripts (`.bat`) zijn **niet uitgevoerd** (geen Windows beschikbaar), alleen gereviewd. `.gitattributes` forceert CRLF voor `.bat` en LF voor `.command`.
 - ⚠️ Windows met NVIDIA: `ultralytics` installeert standaard CPU-torch; GPU vereist de CUDA-index (zie README).
 - macOS Gatekeeper ("onbekende ontwikkelaar") en Windows SmartScreen/firewall vragen eenmalig om bevestiging.
 
-## 9. Werken aan deze repo
+## 10. Werken aan deze repo
 
 - **Talen:** Nederlands voor UI-teksten, README, commitberichten en uitleg aan de gebruiker.
 - **Nooit committen:** `cameras.json`, `thumbs/`, `.venv/`, `*.pt`.
 - **Controles na wijzigingen:**
   ```bash
-  python3 -m py_compile ptz_control.py tracker.py
+  python3 -m py_compile ptz_control.py tracker.py backup.py
   python3 -c "import re;s=open('index.html').read();open('/tmp/a.js','w').write(re.search(r'<script>(.*)</script>',s,re.S).group(1))" && node --check /tmp/a.js
   bash -n Installeer.command && bash -n "Start PTZ Control.command"
   ```
-- **Testen zonder hardware:** gebruik nep-camera's (kleine `ThreadingHTTPServer` die `ptzctrl.cgi`-aanroepen logt en een JPEG op `/snapshot.jpg` geeft), en voor volgen een `SimGrabber` + `FakeDetector` die `tracker.FrameGrabber` / `_DETECTOR` vervangen. Xbox testen door `navigator.getGamepads` te vervangen in Playwright.
+- **Testen zonder hardware:** gebruik nep-camera's (kleine `ThreadingHTTPServer` die `ptzctrl.cgi`-aanroepen logt en een JPEG op `/snapshot.jpg` geeft), voor back-ups een nep-VISCA-TCP-camera met toestand (posities, presets, beeld, geleidelijke beweging), en voor volgen een `SimGrabber` + `FakeDetector` die `tracker.FrameGrabber` / `_DETECTOR` vervangen. Xbox testen door `navigator.getGamepads` te vervangen in Playwright.
 - Wijzig je camera-commando's, controleer dan beide paden (HTTP-CGI én VISCA) en dat `do_action()` tracking correct stopt.
 - Eerst zonder echte hardware getest; **alles met ⚠️ hierboven moet bij de eerste repetitie in de kerk gecontroleerd worden**.

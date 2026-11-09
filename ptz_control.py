@@ -15,6 +15,8 @@ Protocollen per camera:
 Autofocus/one-push-AF gaan altijd via VISCA (TCP 5678), ook bij http.
 """
 import argparse
+import base64
+import datetime
 import json
 import os
 import queue
@@ -351,6 +353,151 @@ def follow_after_preset(cam, delay=2.5):
     t.start()
 
 
+# ---------------------------------------------------------------- back-up en herstel
+import backup as _backup  # noqa: E402
+
+JOB = {"type": "job", "running": False, "kind": "", "cams": {}}
+JOB_LOCK = threading.Lock()
+
+
+def _safe_id(cam_id):
+    return "".join(ch for ch in cam_id if ch.isalnum() or ch in "-_")
+
+
+def list_thumbs(cam):
+    prefix = _safe_id(cam["id"]) + "_"
+    try:
+        files = os.listdir(THUMB_DIR)
+    except OSError:
+        return []
+    return sorted(int(f[len(prefix):-4]) for f in files
+                  if f.startswith(prefix) and f.endswith(".jpg") and f[len(prefix):-4].isdigit())
+
+
+def now_stamp():
+    return datetime.datetime.now().isoformat(timespec="seconds")
+
+
+def make_backup(with_passwords=True):
+    cfg = load_config()
+    if not with_passwords:
+        for cam in cfg.get("cameras", []):
+            cam.pop("password", None)
+    thumbs = {}
+    for cam in cfg.get("cameras", []):
+        for n in list_thumbs(cam):
+            with open(thumb_path(cam, n), "rb") as f:
+                thumbs[f"{cam['id']}/{n}"] = base64.b64encode(f.read()).decode()
+    return {"type": "ptz-control-backup", "version": 1, "created": now_stamp(),
+            "with_passwords": with_passwords, "config": cfg, "thumbs": thumbs}
+
+
+def restore_backup(data):
+    if not isinstance(data, dict) or data.get("type") != "ptz-control-backup":
+        raise ValueError("Dit is geen PTZ Control-back-upbestand")
+    new = data.get("config") or {}
+    if not isinstance(new.get("cameras"), list):
+        raise ValueError("Back-up bevat geen camera's")
+    current = {c["id"]: c for c in load_config().get("cameras", [])}
+    for cam in new["cameras"]:
+        cam.pop("thumbs", None)
+        old = current.get(cam.get("id"), {})
+        if "password" not in cam and old.get("password"):   # back-up zonder wachtwoorden: huidige houden
+            cam["password"] = old["password"]
+    save_config(new)
+    os.makedirs(THUMB_DIR, exist_ok=True)
+    count = 0
+    cams = {c["id"]: c for c in new["cameras"]}
+    for key, b64 in (data.get("thumbs") or {}).items():
+        cam_id, _, n = key.rpartition("/")
+        if cam_id in cams and n.isdigit():
+            with open(thumb_path(cams[cam_id], int(n)), "wb") as f:
+                f.write(base64.b64decode(b64))
+            count += 1
+    broadcast({"type": "config"})
+    return {"cameras": len(new["cameras"]), "thumbs": count, "scenes": len(new.get("scenes") or [])}
+
+
+def _job_update(cam_id, **kw):
+    with JOB_LOCK:
+        JOB["cams"].setdefault(cam_id, {}).update(kw)
+        snapshot = json.loads(json.dumps(JOB))
+    broadcast(snapshot)
+
+
+def start_job(kind, cam_ids, opts):
+    """kind = 'capture' (uit camera lezen) of 'apply' (naar camera terugzetten)."""
+    with JOB_LOCK:
+        if JOB["running"]:
+            raise RuntimeError("Er loopt al een back-uptaak")
+        cfg = load_config()
+        cams = [c for c in cfg.get("cameras", []) if c["id"] in cam_ids]
+        if not cams:
+            raise ValueError("Geen camera's gekozen")
+        JOB.update(running=True, kind=kind, cams={c["id"]: {"status": "wachten", "msg": "", "errors": []} for c in cams})
+    preset_count = int(cfg.get("preset_count") or 12)
+    stamp = now_stamp()
+    results = {}
+
+    def work(cam):
+        cid = cam["id"]
+        stop_tracking(cid, halt=True)
+        try:
+            prog = lambda m: _job_update(cid, status="bezig", msg=m)  # noqa: E731
+            if kind == "capture":
+                cam["thumbs"] = list_thumbs(cam)
+                presets = _backup.preset_list(cam, preset_count, opts.get("presets", "used"))
+                pos, img, errs = _backup.capture_camera(cam, presets, opts.get("positions"), opts.get("image"), prog, stamp)
+                results[cid] = (pos, img)
+                # camera terug naar de preset die LIVE stond
+                back = STATE["last_preset"].get(cid)
+                if back and opts.get("positions"):
+                    try:
+                        run_command(cam, "preset_call", {"n": back})
+                    except Exception:  # noqa: BLE001
+                        pass
+                summary = []
+                if opts.get("positions"):
+                    summary.append(f"{len(pos)} presetposities")
+                if img:
+                    summary.append("beeldinstellingen")
+                msg = "gelezen: " + ", ".join(summary) if summary else "niets gelezen"
+            else:
+                errs = _backup.restore_camera(cam, opts.get("positions"), opts.get("image"), prog)
+                n = len(cam.get("saved_positions") or {}) if opts.get("positions") else 0
+                msg = "teruggezet" + (f": {n} presets" if n else "") + (" + beeld" if opts.get("image") and cam.get("saved_image") else "")
+            _job_update(cid, status="klaar" if not errs else "klaar met meldingen", msg=msg, errors=errs)
+        except OSError as e:
+            _job_update(cid, status="fout", msg=f"Camera niet bereikbaar via VISCA (poort {cam.get('visca_port') or 5678}): {e}")
+        except Exception as e:  # noqa: BLE001
+            _job_update(cid, status="fout", msg=str(e))
+
+    def run_all():
+        threads = [threading.Thread(target=work, args=(c,), daemon=True) for c in cams]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        if kind == "capture" and results:
+            with LOCK:
+                fresh = json.load(open(CONFIG_PATH, encoding="utf-8"))
+                for cam in fresh.get("cameras", []):
+                    if cam["id"] in results:
+                        pos, img = results[cam["id"]]
+                        if pos:
+                            cam.setdefault("saved_positions", {}).update(pos)
+                        if img:
+                            cam["saved_image"] = img
+                _write(fresh)
+            broadcast({"type": "config"})
+        with JOB_LOCK:
+            JOB["running"] = False
+            snapshot = json.loads(json.dumps(JOB))
+        broadcast(snapshot)
+
+    threading.Thread(target=run_all, daemon=True).start()
+
+
 # ---------------------------------------------------------------- web server
 class Handler(BaseHTTPRequestHandler):
     server_version = "PTZControl/1.0"
@@ -383,15 +530,23 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/config":
             cfg = load_config()
             for cam in cfg.get("cameras", []):
-                prefix = "".join(ch for ch in cam["id"] if ch.isalnum() or ch in "-_") + "_"
-                try:
-                    files = os.listdir(THUMB_DIR)
-                except OSError:
-                    files = []
-                cam["thumbs"] = sorted(int(f[len(prefix):-4]) for f in files
-                                       if f.startswith(prefix) and f.endswith(".jpg") and f[len(prefix):-4].isdigit())
+                cam["thumbs"] = list_thumbs(cam)
             cfg["tracking_error"] = tracking_error()
             return self._send(200, cfg)
+        if u.path == "/api/backup":
+            q = parse_qs(u.query)
+            data = make_backup(with_passwords=q.get("passwords", ["1"])[0] == "1")
+            body = json.dumps(data, ensure_ascii=False, indent=1).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Disposition",
+                             f'attachment; filename="ptz-control-backup-{datetime.date.today().isoformat()}.json"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return None
+        if u.path == "/api/job":
+            return self._send(200, JOB)
         if u.path == "/api/state":
             return self._send(200, STATE)
         if u.path == "/api/events":
@@ -426,6 +581,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(f"data: {json.dumps({'type': 'state', **STATE})}\n\n".encode())
+            if JOB["cams"]:
+                self.wfile.write(f"data: {json.dumps(JOB)}\n\n".encode())
             for st in list(TRACK_STATUS.values()):
                 self.wfile.write(f"data: {json.dumps(st)}\n\n".encode())
             self.wfile.flush()
@@ -501,8 +658,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "cameras ontbreekt"})
             body.pop("tracking_error", None)
             body.pop("obs", None)  # YouTube/OBS-koppeling is verwijderd
+            existing = {c["id"]: c for c in load_config().get("cameras", [])}
             for cam in body["cameras"]:
                 cam.pop("thumbs", None)
+                # uitgelezen posities/beeld alleen via de back-uptaken wijzigen, nooit via een (mogelijk verouderd) scherm
+                for key in ("saved_positions", "saved_image"):
+                    cam.pop(key, None)
+                    if key in existing.get(cam.get("id"), {}):
+                        cam[key] = existing[cam["id"]][key]
             save_config(body)
             broadcast({"type": "config"})
             return self._send(200, {"ok": True})
@@ -515,6 +678,32 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": not errors, "errors": errors})
             except IndexError:
                 return self._send(404, {"ok": False, "error": "Onbekende scène"})
+
+        if u.path == "/api/backup/restore":
+            try:
+                return self._send(200, {"ok": True, **restore_backup(body)})
+            except Exception as e:  # noqa: BLE001
+                return self._send(400, {"ok": False, "error": str(e)})
+
+        if u.path in ("/api/backup/capture", "/api/backup/apply"):
+            try:
+                start_job("capture" if u.path.endswith("capture") else "apply", body.get("cams") or [],
+                          {"positions": bool(body.get("positions")), "image": bool(body.get("image")),
+                           "presets": body.get("presets", "used")})
+                return self._send(200, {"ok": True})
+            except Exception as e:  # noqa: BLE001
+                return self._send(409, {"ok": False, "error": str(e)})
+
+        if u.path == "/api/backup/forget":
+            with LOCK:
+                cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+                for cam in cfg.get("cameras", []):
+                    if cam["id"] == body.get("cam"):
+                        cam.pop("saved_positions", None)
+                        cam.pop("saved_image", None)
+                _write(cfg)
+            broadcast({"type": "config"})
+            return self._send(200, {"ok": True})
 
         if u.path == "/api/track":
             try:

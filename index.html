@@ -94,6 +94,17 @@
   .padset { display: grid; gap: 8px; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
   #padCard.flash { border-color: var(--accent); }
   .padset label { display: flex; gap: 6px; align-items: center; }
+  #dlgBackup { width: min(760px, 95vw); }
+  .bsec { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
+  .bsec h4 { margin: 0 0 4px; font-size: 14px; }
+  .bsec .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+  .bcams { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .bcams td, .bcams th { padding: 6px 8px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+  .bcams th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .bstat { font-size: 12px; }
+  .bstat.ok { color: #7ee2a0; } .bstat.warn { color: var(--accent); } .bstat.err { color: var(--live); } .bstat.busy { color: var(--accent); }
+  .warnbox { background: #3a2a10; border: 1px solid var(--accent); color: #f5d49a; border-radius: 8px; padding: 8px 10px;
+    font-size: 13px; margin-top: 8px; }
   .camsec { margin-bottom: 18px; }
   .camsec h3 { font-size: 14px; margin: 0 0 8px; display: flex; gap: 8px; align-items: center; }
   .camsec h3 button { font-size: 12px; }
@@ -167,6 +178,7 @@
   </label>
   <button class="icon" id="btnPad" title="Xbox-controller">🎮 <span id="padState">geen controller</span></button>
   <button class="icon" id="btnJoy">🕹 Joystick</button>
+  <button class="icon" id="btnBackup" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
   <button class="icon" id="btnSettings">⚙ Camera's</button>
 </header>
 
@@ -309,6 +321,52 @@
 </dialog>
 
 
+<dialog id="dlgBackup">
+  <h3>💾 Back-up van presets en camera-instellingen</h3>
+
+  <div class="bsec">
+    <h4>1. Back-upbestand</h4>
+    <div class="small">Cameralijst, presetnamen, scènes, volg-instellingen, thumbnails en (als uitgelezen) presetposities en beeldinstellingen, in één bestand.</div>
+    <div class="row">
+      <button class="primary" id="bkDownload">⬇ Back-up downloaden</button>
+      <label class="small"><input type="checkbox" id="bkPw"> camerawachtwoorden meenemen</label>
+      <span style="flex:1"></span>
+      <button class="icon" id="bkRestoreBtn">⬆ Back-up terugzetten…</button>
+      <input type="file" id="bkFile" accept=".json,application/json" hidden>
+    </div>
+  </div>
+
+  <div class="bsec">
+    <h4>2. Uit de camera's lezen</h4>
+    <div class="small">Leest per preset pan/tilt/zoom/focus en de beeldinstellingen (belichting, witbalans, kleur, scherpte, flip/mirror) uit de camera's zelf, zodat je ze na een reset of op een vervangende camera kunt terugzetten.</div>
+    <div class="warnbox">⚠ Bij presetposities <b>rijdt elke camera langs al zijn presets</b>. Niet doen tijdens een dienst of livestream.</div>
+    <table class="bcams" id="bkTable"></table>
+    <div class="row">
+      <label class="small"><input type="checkbox" id="bkPos" checked> presetposities</label>
+      <label class="small"><input type="checkbox" id="bkImg" checked> beeldinstellingen</label>
+      <select id="bkWhich" class="small" style="background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px">
+        <option value="used">alleen presets met naam/thumbnail</option>
+        <option value="all">alle presets 1 t/m aantal</option>
+      </select>
+      <span style="flex:1"></span>
+      <button class="primary" id="bkCapture">Uit camera's lezen</button>
+    </div>
+  </div>
+
+  <div class="bsec">
+    <h4>3. Naar de camera's terugzetten</h4>
+    <div class="small">Rijdt elke camera naar de bewaarde posities, slaat de presets opnieuw op en zet de beeldinstellingen terug. Gebruikt de camera's die hierboven zijn aangevinkt.</div>
+    <div class="row">
+      <label class="small"><input type="checkbox" id="bkApplyPos" checked> presetposities</label>
+      <label class="small"><input type="checkbox" id="bkApplyImg" checked> beeldinstellingen</label>
+      <span style="flex:1"></span>
+      <button class="icon danger" id="bkApply">Naar camera's terugzetten</button>
+    </div>
+  </div>
+
+  <div class="actions"><span class="small" id="bkJobInfo"></span><button class="primary" id="bkClose">Sluiten</button></div>
+</dialog>
+
 <div id="toast"></div>
 
 <script>
@@ -356,7 +414,7 @@ async function loadConfig() {
   if (view === null && cfg.cameras.length > 1) view = ALL;
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
-  render();
+  render(); renderBackup();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -852,6 +910,69 @@ requestAnimationFrame(padLoop);
 document.addEventListener("visibilitychange", () => { if (document.hidden) padStopAll(); });
 window.addEventListener("blur", padStopAll);
 
+/* ================= back-up ================= */
+let job = { running: false, cams: {} };
+const fmtDate = (s) => s ? new Date(s).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" }) : "";
+function renderBackup() {
+  if (!$("#dlgBackup").open) return;
+  const prevChecked = new Set($$("#bkTable input[data-cam]:checked").map(i => i.dataset.cam));
+  const first = !$("#bkTable").dataset.init;
+  $("#bkTable").innerHTML = `<tr><th></th><th>Camera</th><th>Bewaard in de app</th><th>Status</th></tr>` +
+    cfg.cameras.map(c => {
+      const pos = c.saved_positions || {}, img = c.saved_image;
+      const n = Object.keys(pos).length;
+      const when = img?._captured || Object.values(pos)[0]?._captured;
+      const st = job.cams[c.id];
+      const cls = !st ? "" : st.status === "fout" ? "err" : st.status === "bezig" || st.status === "wachten" ? "busy" : st.errors?.length ? "warn" : "ok";
+      const checked = first || prevChecked.has(c.id) ? "checked" : "";
+      return `<tr><td><input type="checkbox" data-cam="${esc(c.id)}" ${checked}></td>
+        <td><b>${esc(c.name)}</b><br><span class="small">${esc(c.host)}</span></td>
+        <td class="small">${n ? `${n} presetposities` : "geen presetposities"} · ${img ? "beeldinstellingen" : "geen beeld"}${when ? `<br>gelezen ${fmtDate(when)}` : ""}</td>
+        <td><span class="bstat ${cls}">${st ? esc(st.status + (st.msg ? " · " + st.msg : "")) : ""}</span>
+          ${st?.errors?.length ? `<div class="small" style="color:var(--accent)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
+    }).join("");
+  $("#bkTable").dataset.init = "1";
+  $("#bkCapture").disabled = $("#bkApply").disabled = job.running;
+  $("#bkJobInfo").textContent = job.running ? (job.kind === "capture" ? "Bezig met uitlezen…" : "Bezig met terugzetten…") : "";
+}
+const bkSelected = () => $$("#bkTable input[data-cam]:checked").map(i => i.dataset.cam);
+$("#btnBackup").onclick = () => { $("#bkTable").dataset.init = ""; $("#dlgBackup").showModal(); renderBackup(); };
+$("#bkClose").onclick = () => $("#dlgBackup").close();
+$("#bkDownload").onclick = () => { location.href = `/api/backup?passwords=${$("#bkPw").checked ? 1 : 0}`; };
+$("#bkRestoreBtn").onclick = () => $("#bkFile").click();
+$("#bkFile").onchange = async () => {
+  const f = $("#bkFile").files[0]; $("#bkFile").value = "";
+  if (!f) return;
+  let data;
+  try { data = JSON.parse(await f.text()); } catch { return toast("Bestand is geen geldige back-up"); }
+  if (data.type !== "ptz-control-backup") return toast("Dit is geen PTZ Control-back-upbestand");
+  const cams = data.config?.cameras || [];
+  const msg = `Back-up van ${fmtDate(data.created)} terugzetten?\n\n` +
+    cams.map(c => `• ${c.name} (${c.host}): ${Object.keys(c.presets || {}).length} presetnamen, ${Object.keys(c.saved_positions || {}).length} posities${c.saved_image ? ", beeld" : ""}`).join("\n") +
+    `\n• ${(data.config.scenes || []).length} scènes, ${Object.keys(data.thumbs || {}).length} thumbnails\n\n` +
+    `Dit vervangt de huidige instellingen van de app. De camera's zelf veranderen pas als je daarna 'Naar camera's terugzetten' kiest.`;
+  if (!confirm(msg)) return;
+  const r = await post("/api/backup/restore", data);
+  r.ok ? toast(`Teruggezet: ${r.cameras} camera's, ${r.scenes} scènes, ${r.thumbs} thumbnails`, true) : toast(r.error || "Terugzetten mislukt");
+};
+$("#bkCapture").onclick = async () => {
+  const cams = bkSelected(), positions = $("#bkPos").checked, image = $("#bkImg").checked;
+  if (!cams.length || !(positions || image)) return toast("Kies minstens één camera en wat je wilt lezen");
+  if (positions && !confirm(`Let op: ${cams.length} camera('s) rijden nu langs al hun presets.\nNiet doen tijdens een dienst of livestream. Doorgaan?`)) return;
+  const r = await post("/api/backup/capture", { cams, positions, image, presets: $("#bkWhich").value });
+  if (!r.ok) toast(r.error || "Mislukt");
+};
+$("#bkApply").onclick = async () => {
+  const cams = bkSelected(), positions = $("#bkApplyPos").checked, image = $("#bkApplyImg").checked;
+  if (!cams.length || !(positions || image)) return toast("Kies minstens één camera en wat je wilt terugzetten");
+  const names = cams.map(id => camById(id)?.name).join(", ");
+  if (!confirm(`Naar de camera's terugzetten: ${names}\n\n` +
+    (positions ? "• De bewaarde presets in de camera worden OVERSCHREVEN (camera's bewegen).\n" : "") +
+    (image ? "• De beeldinstellingen worden overschreven.\n" : "") + "\nDoorgaan?")) return;
+  const r = await post("/api/backup/apply", { cams, positions, image });
+  if (!r.ok) toast(r.error || "Mislukt");
+};
+
 /* ================= live events ================= */
 function connectEvents() {
   const es = new EventSource("/api/events");
@@ -883,6 +1004,13 @@ function connectEvents() {
       const prevStatus = track[ev.cam]?.status;
       track[ev.cam] = ev;
       if (prevStatus !== ev.status || !ev.on) { renderPresets(); renderSide(); } else renderSide();
+    } else if (ev.type === "job") {
+      const wasRunning = job.running;
+      job = ev; renderBackup();
+      if (wasRunning && !ev.running) {
+        const errs = Object.values(ev.cams).filter(c => c.status === "fout").length;
+        toast(errs ? `Klaar, ${errs} camera('s) met fout` : (ev.kind === "capture" ? "Uitlezen klaar" : "Terugzetten klaar"), !errs);
+      }
     } else if (ev.type === "config") {
       loadConfig();
     }

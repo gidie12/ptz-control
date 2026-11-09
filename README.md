@@ -54,6 +54,20 @@ De knop **🕹 Joystick** in de app laat de URL's zien met het juiste IP; klik o
 `cam` mag een IP-adres, volgnummer (1, 2…) of id zijn. Mogelijke acties: `move`, `stop`, `home`, `zoom`, `focus`, `autofocus`, `onepush_af`, `preset_call`, `preset_set`.
 Met **Volg joystick** (rechtsboven) springt de app automatisch naar de camera die op de joystick gekozen is. Alle geopende tablets blijven onderling gelijk.
 
+## Back-up van presets en camera-instellingen
+Knop **💾 Back-up** rechtsboven:
+
+1. **Back-upbestand downloaden / terugzetten**: cameralijst, presetnamen, scènes, volg-instellingen, thumbnails en (als uitgelezen)
+   presetposities en beeldinstellingen in één `.json`-bestand. Wachtwoorden alleen als je dat aanvinkt; zonder wachtwoorden houdt
+   terugzetten de huidige wachtwoorden.
+2. **Uit de camera's lezen**: per preset pan/tilt/zoom/focus en de beeldinstellingen (belichting, witbalans, kleur, scherpte,
+   flip/mirror). ⚠ De camera's **rijden langs al hun presets**, niet doen tijdens een dienst. Daarna gaat elke camera terug naar de
+   preset die LIVE stond.
+3. **Naar de camera's terugzetten**: rijdt naar de bewaarde posities, slaat de presets opnieuw op en zet het beeld terug.
+   Handig na een fabrieksreset of bij een vervangende camera (pas dan eerst het IP aan bij ⚙ Camera's).
+
+Tip: lees de camera's uit en download een back-up na elke wijziging aan de presets. Dit gaat via VISCA (TCP-poort 5678).
+
 ## Persoon volgen (alleen pan)
 De app kan een spreker volgen die over het podium loopt. Alleen **pan** wordt bijgestuurd; tilt en zoom blijven zoals de preset ze zet.
 
