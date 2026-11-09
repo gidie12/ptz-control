@@ -15,15 +15,11 @@ Protocollen per camera:
 Autofocus/one-push-AF gaan altijd via VISCA (TCP 5678), ook bij http.
 """
 import argparse
-import base64
-import hashlib
 import json
 import os
 import queue
 import socket
-import struct
 import threading
-import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -276,212 +272,6 @@ def run_scene(scene):
 
 
 
-# ---------------------------------------------------------------- OBS (YouTube-stream)
-class OBSClient:
-    """Minimale OBS WebSocket v5-client (OBS 28+), alleen standaardbibliotheek.
-    Houdt verbinding open, herverbindt automatisch, en meldt stream/opname-status aan alle schermen."""
-
-    def __init__(self):
-        self.sock = None
-        self.leftover = {}
-        self.lock = threading.Lock()
-        self.pending = {}
-        self.req_id = 0
-        self.status = {"type": "obs", "configured": False, "connected": False, "streaming": False,
-                       "recording": False, "timecode": "", "error": ""}
-        self.wake = threading.Event()
-        threading.Thread(target=self._loop, daemon=True).start()
-
-    # -- websocket framing
-    def _send_frame(self, text):
-        data = text.encode()
-        mask = os.urandom(4)
-        n = len(data)
-        head = bytes([0x81])
-        if n < 126:
-            head += bytes([0x80 | n])
-        elif n < 65536:
-            head += bytes([0x80 | 126]) + struct.pack(">H", n)
-        else:
-            head += bytes([0x80 | 127]) + struct.pack(">Q", n)
-        masked = bytes(b ^ mask[i % 4] for i, b in enumerate(data))
-        with self.lock:
-            self.sock.sendall(head + mask + masked)
-
-    def _recv_exact(self, n, sock):
-        buf = self.leftover.pop(sock, b"")
-        while len(buf) < n:
-            chunk = sock.recv(n - len(buf))
-            if not chunk:
-                raise ConnectionError("OBS verbinding gesloten")
-            buf += chunk
-        if len(buf) > n:
-            self.leftover[sock] = buf[n:]
-        return buf[:n]
-
-    def _recv_message(self, sock=None):
-        sock = sock or self.sock
-        parts = b""
-        while True:
-            b1, b2 = self._recv_exact(2, sock)
-            op, n = b1 & 0x0F, b2 & 0x7F
-            if n == 126:
-                n = struct.unpack(">H", self._recv_exact(2, sock))[0]
-            elif n == 127:
-                n = struct.unpack(">Q", self._recv_exact(8, sock))[0]
-            mask = self._recv_exact(4, sock) if b2 & 0x80 else None
-            payload = self._recv_exact(n, sock)
-            if mask:
-                payload = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
-            if op == 8:
-                raise ConnectionError("OBS sloot de verbinding")
-            if op == 9:  # ping -> pong
-                with self.lock:
-                    m = os.urandom(4)
-                    sock.sendall(bytes([0x8A, 0x80 | len(payload)]) + m +
-                                      bytes(b ^ m[i % 4] for i, b in enumerate(payload)))
-                continue
-            if op in (1, 0):
-                parts += payload
-                if b1 & 0x80:
-                    return json.loads(parts)
-
-    # -- protocol
-    def _connect(self, cfg):
-        self.leftover = {}
-        host, port, pw = cfg.get("host") or "127.0.0.1", int(cfg.get("port") or 4455), cfg.get("password") or ""
-        self.sock = socket.create_connection((host, port), timeout=5)
-        key = base64.b64encode(os.urandom(16)).decode()
-        self.sock.sendall((f"GET / HTTP/1.1\r\nHost: {host}:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
-                           f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n"
-                           f"Sec-WebSocket-Protocol: obswebsocket.json\r\n\r\n").encode())
-        resp = b""
-        while b"\r\n\r\n" not in resp:
-            chunk = self.sock.recv(1024)
-            if not chunk:
-                raise ConnectionError("Geen antwoord van OBS")
-            resp += chunk
-        if b" 101 " not in resp.split(b"\r\n")[0]:
-            raise ConnectionError("OBS WebSocket weigert verbinding")
-        rest = resp.split(b"\r\n\r\n", 1)[1]
-        if rest:
-            self.leftover[self.sock] = rest
-        hello = self._recv_message()
-        ident = {"rpcVersion": 1, "eventSubscriptions": 64}  # 64 = Outputs-events
-        auth = hello.get("d", {}).get("authentication")
-        if auth:
-            if not pw:
-                raise ConnectionError("OBS vraagt een wachtwoord")
-            secret = base64.b64encode(hashlib.sha256((pw + auth["salt"]).encode()).digest()).decode()
-            ident["authentication"] = base64.b64encode(
-                hashlib.sha256((secret + auth["challenge"]).encode()).digest()).decode()
-        self._send_frame(json.dumps({"op": 1, "d": ident}))
-        msg = self._recv_message()
-        if msg.get("op") != 2:
-            raise ConnectionError("OBS-login mislukt (wachtwoord?)")
-        self.sock.settimeout(None)
-
-    def request(self, rtype, data=None, timeout=5):
-        if not self.status["connected"]:
-            raise ConnectionError("Niet verbonden met OBS")
-        with self.lock:
-            self.req_id += 1
-            rid = str(self.req_id)
-        ev = threading.Event()
-        self.pending[rid] = [ev, None]
-        self._send_frame(json.dumps({"op": 6, "d": {"requestType": rtype, "requestId": rid,
-                                                    "requestData": data or {}}}))
-        if not ev.wait(timeout):
-            self.pending.pop(rid, None)
-            raise TimeoutError("OBS reageert niet")
-        res = self.pending.pop(rid)[1]
-        st = res.get("requestStatus", {})
-        if not st.get("result"):
-            raise RuntimeError(st.get("comment") or f"OBS-fout {st.get('code')}")
-        return res.get("responseData") or {}
-
-    def _set(self, **kw):
-        changed = any(self.status.get(k) != v for k, v in kw.items())
-        self.status.update(kw)
-        if changed:
-            broadcast(dict(self.status))
-
-    def _reader(self, sock):
-        try:
-            while True:
-                msg = self._recv_message(sock)
-                d = msg.get("d", {})
-                if msg.get("op") == 7 and d.get("requestId") in self.pending:
-                    self.pending[d["requestId"]][1] = d
-                    self.pending[d["requestId"]][0].set()
-                elif msg.get("op") == 5:
-                    et, ed = d.get("eventType"), d.get("eventData", {})
-                    if et == "StreamStateChanged":
-                        self._set(streaming=bool(ed.get("outputActive")))
-                    elif et == "RecordStateChanged":
-                        self._set(recording=bool(ed.get("outputActive")))
-        except Exception as e:  # noqa: BLE001
-            if sock is not self.sock:  # oude verbinding na reconnect: negeren
-                return
-            self._set(connected=False, streaming=False, recording=False, timecode="", error=str(e))
-            try:
-                self.sock.close()
-            except OSError:
-                pass
-
-    def _loop(self):
-        while True:
-            cfg = load_config().get("obs") or {}
-            if not cfg.get("enabled"):
-                self._set(configured=False, connected=False, error="")
-                self.wake.wait(5)
-                self.wake.clear()
-                continue
-            self.status["configured"] = True
-            if not self.status["connected"]:
-                try:
-                    self._connect(cfg)
-                    self._set(configured=True, connected=True, error="")
-                    threading.Thread(target=self._reader, args=(self.sock,), daemon=True).start()
-                except Exception as e:  # noqa: BLE001
-                    self._set(configured=True, connected=False, error=str(e))
-                    try:
-                        self.sock and self.sock.close()
-                    except OSError:
-                        pass
-                    self.wake.wait(5)
-                    self.wake.clear()
-                    continue
-            # status/timecode bijwerken
-            try:
-                st = self.request("GetStreamStatus")
-                rec = self.request("GetRecordStatus")
-                self._set(streaming=bool(st.get("outputActive")), recording=bool(rec.get("outputActive")),
-                          timecode=(st.get("outputTimecode") or "")[:8] if st.get("outputActive") else "")
-            except Exception:  # noqa: BLE001
-                pass
-            self.wake.wait(2)
-            self.wake.clear()
-
-    def reconnect(self):
-        try:
-            self.sock and self.sock.close()
-        except OSError:
-            pass
-        self.status["connected"] = False
-        self.wake.set()
-
-    def action(self, name):
-        req = {"start_stream": "StartStream", "stop_stream": "StopStream", "toggle_stream": "ToggleStream",
-               "start_record": "StartRecord", "stop_record": "StopRecord", "toggle_record": "ToggleRecord"}.get(name)
-        if not req:
-            raise ValueError(f"onbekende OBS-actie: {name}")
-        self.request(req)
-        self.wake.set()
-
-
-OBS = None
-
 # ---------------------------------------------------------------- volgen (alleen pan)
 try:
     import tracker as _tracker
@@ -603,7 +393,7 @@ class Handler(BaseHTTPRequestHandler):
             cfg["tracking_error"] = tracking_error()
             return self._send(200, cfg)
         if u.path == "/api/state":
-            return self._send(200, {**STATE, "obs": OBS.status})
+            return self._send(200, STATE)
         if u.path == "/api/events":
             return self._sse()
         if u.path.startswith("/api/joy/"):
@@ -636,7 +426,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(f"data: {json.dumps({'type': 'state', **STATE})}\n\n".encode())
-            self.wfile.write(f"data: {json.dumps(OBS.status)}\n\n".encode())
             for st in list(TRACK_STATUS.values()):
                 self.wfile.write(f"data: {json.dumps(st)}\n\n".encode())
             self.wfile.flush()
@@ -685,9 +474,6 @@ class Handler(BaseHTTPRequestHandler):
                     on = on in ("1", "true", "on")
                 start_tracking(cam) if on else stop_tracking(cam["id"])
                 return self._send(200, {"ok": True, "on": on})
-            if what == "obs":
-                OBS.action(g("action"))
-                return self._send(200, {"ok": True})
             if what == "cmd":
                 cam = find_camera(g("cam") or STATE["active"])
                 args = {k: v[0] for k, v in qs.items() if k not in ("cam", "action")}
@@ -714,11 +500,11 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(body.get("cameras"), list):
                 return self._send(400, {"error": "cameras ontbreekt"})
             body.pop("tracking_error", None)
+            body.pop("obs", None)  # YouTube/OBS-koppeling is verwijderd
             for cam in body["cameras"]:
                 cam.pop("thumbs", None)
             save_config(body)
             broadcast({"type": "config"})
-            OBS.reconnect()
             return self._send(200, {"ok": True})
 
         if u.path == "/api/scene":
@@ -742,16 +528,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(404, {"ok": False, "error": e.args[0]})
             except Exception as e:  # noqa: BLE001
                 return self._send(400, {"ok": False, "error": str(e)})
-
-        if u.path == "/api/obs":
-            try:
-                if body.get("action") == "reconnect":
-                    OBS.reconnect()
-                else:
-                    OBS.action(body.get("action"))
-                return self._send(200, {"ok": True})
-            except Exception as e:  # noqa: BLE001
-                return self._send(502, {"ok": False, "error": str(e)})
 
         if u.path == "/api/thumb":
             try:
@@ -809,9 +585,7 @@ def main():
     ap.add_argument("--open", action="store_true", help="open de bediening in de standaardbrowser")
     args = ap.parse_args()
     load_config()
-    global OBS
     STATE["server"] = f"{local_ip()}:{args.port}"
-    OBS = OBSClient()
     srv = ThreadingHTTPServer((args.bind, args.port), Handler)
     srv.daemon_threads = True
     print(f"PTZ Control draait op http://localhost:{args.port}  en  http://{local_ip()}:{args.port}")

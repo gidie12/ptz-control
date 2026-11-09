@@ -40,12 +40,6 @@ Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (
 Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de LIVE-preset en alle presettegels.
 Klik op de kopregel van een kolom (of Shift+1/2/3) om te kiezen welke camera de pijltjes/handbediening aanstuurt.
 
-## YouTube-stream via OBS
-In OBS Studio (28+): *Extra → WebSocket-serverinstellingen* → server aanzetten, wachtwoord kiezen.
-In de app: **⚙ Camera's → YouTube-stream via OBS** → IP van de OBS-pc, poort 4455, wachtwoord.
-Daarna verschijnt rechtsboven **● Live gaan** (met looptijd tijdens de stream) en **⏺ Rec**. Starten en stoppen vraagt altijd om bevestiging.
-De YouTube-streamsleutel stel je zoals gewoonlijk in OBS in.
-
 ## Joystick koppelen (PT-JOY-G4 / SuperJoy, firmware 4.1.8+)
 De joystick blijft de camera's zelf aansturen. Deze app luistert mee via HTTP-commando's uit de webinterface van de joystick.
 De knop **🕹 Joystick** in de app laat de URL's zien met het juiste IP; klik op een URL om hem te kopiëren.
@@ -55,7 +49,6 @@ De knop **🕹 Joystick** in de app laat de URL's zien met het juiste IP; klik o
 | Automatic Trigger (bij camerawissel) | `http://PC:8080/api/joy/select?cam={{CURRENT_CAM}}` |
 | Custom button: scène | `http://PC:8080/api/joy/scene?n=1` (nummer of naam) |
 | Custom button: preset | `http://PC:8080/api/joy/preset?cam={{CURRENT_CAM}}&n=3` |
-| Custom button: stream aan/uit | `http://PC:8080/api/joy/obs?action=toggle_stream` |
 | Custom button: ander commando | `http://PC:8080/api/joy/cmd?cam={{CURRENT_CAM}}&action=autofocus&on=1` |
 
 `cam` mag een IP-adres, volgnummer (1, 2…) of id zijn. Mogelijke acties: `move`, `stop`, `home`, `zoom`, `focus`, `autofocus`, `onepush_af`, `preset_call`, `preset_set`.

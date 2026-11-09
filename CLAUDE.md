@@ -15,7 +15,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - 🧑 **PTZJoy-joystick** (PTZOptics PT-JOY-G4 / SuperJoy) moet integreren.
 - 🧑 **Xbox-controller** als zelfgebouwde vervanging van de PTZJoy.
 - 🧑 **Persoon volgen: alleen pan** via software. Tilt en zoom nooit aanpassen door de tracker.
-- 🧑 YouTube-stream starten/stoppen. ⚠️ Gebruiker had geen voorkeur hoe; **aangenomen: via OBS Studio** (OBS WebSocket). Als ze vMix of RTMP vanaf de camera gebruiken, moet dit anders.
+- 🧑 **Geen YouTube/stream-bediening in deze software.** Een eerdere OBS-koppeling is op verzoek verwijderd; streamen gebeurt buiten deze app. Niet opnieuw toevoegen zonder expliciete vraag.
 - 🧑 Draait op een **Mac mini (Apple Silicon)** ("livestreams-mac-mini"). Er is ook een **Windows-starter** gevraagd.
 - 🧑 UI, README, commits en communicatie in het **Nederlands**.
 - ⚠️ Het cameramodel is **onbekend** (Move/Studio/G2/G3 niet bevestigd). Daarom geen ingebouwde auto-tracking gebruikt.
@@ -24,17 +24,17 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 
 | Bestand | Rol |
 |---|---|
-| `ptz_control.py` | HTTP-server (alleen stdlib), camera-commando's (HTTP-CGI + VISCA), config, SSE-events, joystick-endpoints, OBS-client, tracking-beheer |
+| `ptz_control.py` | HTTP-server (alleen stdlib), camera-commando's (HTTP-CGI + VISCA), config, SSE-events, joystick-endpoints, tracking-beheer |
 | `index.html` | Volledige UI (vanilla JS, geen build), presets, scènes, handbediening, Xbox-controller, dialogen |
 | `tracker.py` | Volgmodule: RTSP-grabber, persoonsdetectie (YOLO of OpenCV HOG), pan-regelaar |
 | `Installeer.command` / `Installeer.bat` | Maakt `.venv` en installeert `requirements.txt` (`--no-pause` / `/nopause` als ze door de starter worden aangeroepen) |
 | `Start PTZ Control.command` / `.bat` | Eén-klik-start: installeert bij eerste keer, start met `--open` |
-| `cameras.json` | Lokale config (camera's, presets-namen, scènes, OBS). **Bevat wachtwoorden in platte tekst. Nooit committen** (staat in `.gitignore`) |
+| `cameras.json` | Lokale config (camera's, presetnamen, scènes). **Bevat camerawachtwoorden in platte tekst. Nooit committen** (staat in `.gitignore`) |
 | `thumbs/` | Preset-thumbnails (`<camid>_<n>.jpg`), lokaal, niet committen |
 
 - Kern heeft **geen externe packages** nodig; numpy/opencv/ultralytics zijn alleen voor volgen. ⚠️ Python **3.9+** (installers checken dat; de code zelf vermijdt nieuwere syntax).
 - Server luistert op **0.0.0.0:8080**, **zonder authenticatie**. ⚠️ Aanname: vertrouwd kerknetwerk. Iedereen op het LAN kan camera's en de stream bedienen.
-- Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `obs`, `track`, `state`.
+- Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `state`.
 - Per-apparaat-instellingen (snelheden, tegelgrootte, Xbox-opties) staan in **localStorage**, niet op de server.
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
 - **Scènes** = meerdere camera's tegelijk naar een preset (zoals SuperPresets van de joystick).
@@ -58,7 +58,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 
 - ✅ USB op de joystick is **alleen voor firmware**; geen USB-besturing mogelijk.
 - ✅ Joystick bestuurt camera's **zelf**. De app luistert mee via HTTP-commando's uit **Custom Buttons** en **Automatic Triggers** (firmware **4.1.8+**), met variabele `{{CURRENT_CAM}}` (= IP van de gekozen camera).
-- Endpoints (allemaal GET): `/api/joy/select`, `/api/joy/preset`, `/api/joy/scene`, `/api/joy/cmd`, `/api/joy/obs`, `/api/joy/track`. `cam` = id, volgnummer (1-based) of IP.
+- Endpoints (allemaal GET): `/api/joy/select`, `/api/joy/preset`, `/api/joy/scene`, `/api/joy/cmd`, `/api/joy/track`. `cam` = id, volgnummer (1-based) of IP.
 - ⚠️ De pc met de app heeft een **vast IP** nodig, anders kloppen de joystick-URL's niet.
 - ⚠️ Joystick-bewegingen zijn **onzichtbaar** voor de app: als de joystick een camera beweegt terwijl volgen aan staat, werken ze tegen elkaar in.
 
@@ -82,12 +82,10 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Preset-optie "na oproepen automatisch volgen": start **2,5 s** na de preset (aanname: dan is de camera aangekomen).
 - ✅ Getest in een **simulatie** (camera die echt draait op de commando's, spreker loopt heen en weer, tweede persoon staat stil): gemiddeld 9°, max 14° van het midden bij 60° beeldhoek. ⚠️ De simulatie nam **4°/s per snelheidsstap** aan; echte camera's wijken af, dus `track_speed` moet in een repetitie worden afgesteld.
 
-## 7. YouTube via OBS
+## 7. Bewust níet in de software
 
-- ⚠️ Aanname: ze streamen via **OBS Studio 28+**, WebSocket v5 op poort **4455** met wachtwoord. Streamsleutel staat in OBS zelf.
-- Eigen minimale WebSocket-client (stdlib) in `OBSClient`; herverbindt automatisch, pollt elke 2 s `GetStreamStatus`/`GetRecordStatus`, luistert naar Outputs-events (`eventSubscriptions: 64`).
-- ✅ Getest tegen een nagebootste OBS-server (incl. auth). Bug gevonden en opgelost: bytes direct na de handshake werden weggegooid (`leftover`-buffer).
-- Starten en stoppen van de stream vragen in de UI **altijd bevestiging**.
+- 🧑 **YouTube/stream starten en stoppen** (en opnemen). Was eerst gebouwd via OBS WebSocket, daarna op verzoek volledig verwijderd (server, UI, joystick-endpoint). Een oude `obs`-sectie in `cameras.json` wordt bij opslaan weggegooid.
+- 🧑 **Live preview** van de camerabeelden.
 
 ## 8. Installatie en platform
 
@@ -106,6 +104,6 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
   python3 -c "import re;s=open('index.html').read();open('/tmp/a.js','w').write(re.search(r'<script>(.*)</script>',s,re.S).group(1))" && node --check /tmp/a.js
   bash -n Installeer.command && bash -n "Start PTZ Control.command"
   ```
-- **Testen zonder hardware:** gebruik nep-camera's (kleine `ThreadingHTTPServer` die `ptzctrl.cgi`-aanroepen logt en een JPEG op `/snapshot.jpg` geeft), een nep-OBS-WebSocketserver, en voor volgen een `SimGrabber` + `FakeDetector` die `tracker.FrameGrabber` / `_DETECTOR` vervangen. Xbox testen door `navigator.getGamepads` te vervangen in Playwright.
+- **Testen zonder hardware:** gebruik nep-camera's (kleine `ThreadingHTTPServer` die `ptzctrl.cgi`-aanroepen logt en een JPEG op `/snapshot.jpg` geeft), en voor volgen een `SimGrabber` + `FakeDetector` die `tracker.FrameGrabber` / `_DETECTOR` vervangen. Xbox testen door `navigator.getGamepads` te vervangen in Playwright.
 - Wijzig je camera-commando's, controleer dan beide paden (HTTP-CGI én VISCA) en dat `do_action()` tracking correct stopt.
 - Eerst zonder echte hardware getest; **alles met ⚠️ hierboven moet bij de eerste repetitie in de kerk gecontroleerd worden**.

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>PTZ Control</title>
+<link rel="icon" href="data:,">
 <style>
   :root {
     --bg: #111317; --panel: #1a1d23; --panel2: #22262e; --line: #2e333d;
@@ -74,16 +75,6 @@
   .col .tile .meta { padding: 5px 7px; }
   .col .tile .name { font-size: 13px; }
   .col .tile .edit { width: 26px; height: 26px; font-size: 12px; }
-  .live-btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2);
-    cursor: pointer; font-weight: 600; font-size: 13px; white-space: nowrap; }
-  .live-btn.ready { border-color: var(--live); color: var(--live); }
-  .live-btn.on { background: var(--live); border-color: var(--live); color: #fff; animation: pulse 2s infinite; }
-  .live-btn.off { color: var(--muted); font-weight: 400; }
-  .rec-btn.on { background: #5a2a2c; border-color: var(--live); color: #fff; }
-  @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(229,72,77,.25); } }
-  fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 14px 0 0; padding: 10px 12px; }
-  legend { font-size: 13px; color: var(--muted); padding: 0 6px; }
-  .obsrow { display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 6px; margin-top: 8px; }
   .trk { margin-left: 6px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2);
     font-size: 12px; cursor: pointer; white-space: nowrap; }
   .trk.on { background: #12301c; border-color: var(--ok); color: #7ee2a0; }
@@ -173,8 +164,6 @@
     <span id="joyDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
     <input type="checkbox" id="chkFollow" checked> Volg joystick
   </label>
-  <button class="live-btn" id="btnLive" hidden>● Live gaan</button>
-  <button class="icon rec-btn" id="btnRec" hidden title="Opname in OBS">⏺ Rec</button>
   <button class="icon" id="btnPad" title="Xbox-controller">🎮 <span id="padState">geen controller</span></button>
   <button class="icon" id="btnJoy">🕹 Joystick</button>
   <button class="icon" id="btnSettings">⚙ Camera's</button>
@@ -271,16 +260,6 @@
   <button class="icon" id="btnAddCam" style="margin-top:6px">+ Camera toevoegen</button>
   <p class="small">Protocol <b>HTTP-CGI</b> werkt op vrijwel alle PTZOptics-camera's (en geeft thumbnails). Kies <b>VISCA (TCP)</b> als HTTP niet reageert.
     Gebruiker/wachtwoord alleen invullen als de camera om inloggen vraagt.</p>
-  <fieldset>
-    <legend>YouTube-stream via OBS</legend>
-    <label class="small"><input type="checkbox" id="obsOn"> Koppelen met OBS Studio (Extra → WebSocket-serverinstellingen, OBS 28+)</label>
-    <div class="obsrow">
-      <input type="text" id="obsHost" placeholder="IP van OBS-pc (127.0.0.1)">
-      <input type="number" id="obsPort" placeholder="4455">
-      <input type="password" id="obsPw" placeholder="Wachtwoord" autocomplete="new-password">
-    </div>
-    <div class="small" id="obsStatus" style="margin-top:6px"></div>
-  </fieldset>
   <div class="actions">
     <label class="small" style="display:flex;gap:6px;align-items:center">Presets per camera
       <input type="number" id="presetCount" min="1" max="64" value="12" style="width:70px"></label>
@@ -669,8 +648,6 @@ function camRow(c) {
 $("#btnSettings").onclick = () => {
   $("#camList").innerHTML = ""; cfg.cameras.forEach(c => { const r = camRow(c); $("#camList").append(r, r._extra); });
   $("#presetCount").value = cfg.preset_count;
-  const o = cfg.obs || {};
-  $("#obsOn").checked = !!o.enabled; $("#obsHost").value = o.host || ""; $("#obsPort").value = o.port || 4455; $("#obsPw").value = o.password || "";
   $("#dlg").showModal();
 };
 $("#btnAddCam").onclick = () => { const r = camRow({ id: "cam" + Date.now(), name: "Camera " + ($$("#camList .camrow").length + 1), host: "", protocol: "http" }); $("#camList").append(r, r._extra); };
@@ -685,8 +662,6 @@ $("#btnSave").onclick = async () => {
     return o;
   }).filter(c => c.host);
   cfg.preset_count = Math.max(1, Math.min(64, +$("#presetCount").value || 12));
-  cfg.obs = { enabled: $("#obsOn").checked, host: $("#obsHost").value.trim() || "127.0.0.1",
-              port: +$("#obsPort").value || 4455, password: $("#obsPw").value };
   $("#dlg").close(); await saveConfig(); toast("Opgeslagen", true);
 };
 
@@ -699,7 +674,6 @@ $("#btnJoy").onclick = () => {
     ["Custom button: scène", "Alle camera's tegelijk naar scène S1 (nummer of naam).", `${base}/scene?n=1`],
     ["Custom button: preset opslaan + thumbnail", "Slaat de huidige positie op als preset 3 en maakt meteen een thumbnail.", `${base}/cmd?cam={{CURRENT_CAM}}&action=preset_set&n=3`],
     ["Custom button: volgen aan/uit", "Zet volgen (alleen pan) aan of uit voor de camera die op de joystick gekozen is.", `${base}/track?cam={{CURRENT_CAM}}&on=toggle`],
-    ["Custom button: YouTube-stream aan/uit", "Start of stopt de stream in OBS (ook: start_stream, stop_stream, toggle_record).", `${base}/obs?action=toggle_stream`],
     ["Custom button: autofocus aan", "Acties: move, stop, home, zoom, focus, autofocus, onepush_af, preset_call, preset_set.", `${base}/cmd?cam={{CURRENT_CAM}}&action=autofocus&on=1`],
   ];
   $("#joyList").innerHTML = rows.map(([t, d, u]) => `<div class="joyrow"><b>${esc(t)}</b><br><span>${esc(d)}</span><code>${esc(u)}</code></div>`).join("");
@@ -721,167 +695,6 @@ async function toggleTrack(camId) {
   if (!r.ok) toast(r.error || "Volgen mislukt");
 }
 $("#btnTrack").onclick = () => ctrlCam && toggleTrack(ctrlCam);
-
-/* ================= OBS / YouTube ================= */
-let obs = {};
-function renderObs() {
-  const b = $("#btnLive"), r = $("#btnRec");
-  b.hidden = r.hidden = !obs.configured;
-  $("#obsStatus").textContent = !obs.configured ? "" : obs.connected ? "✓ Verbonden met OBS" : "✕ Niet verbonden: " + (obs.error || "");
-  if (!obs.configured) return;
-  b.className = "live-btn " + (!obs.connected ? "off" : obs.streaming ? "on" : "ready");
-  b.textContent = !obs.connected ? "OBS offline" : obs.streaming ? `● LIVE ${obs.timecode || ""} · stoppen` : "● Live gaan";
-  b.title = !obs.connected ? (obs.error || "Geen verbinding met OBS") : "";
-  r.classList.toggle("on", !!obs.recording);
-  r.textContent = obs.recording ? "⏺ Rec aan" : "⏺ Rec";
-  r.disabled = !obs.connected;
-}
-async function obsAction(action) {
-  const r = await post("/api/obs", { action });
-  if (!r.ok) toast(r.error || "OBS-fout");
-}
-$("#btnLive").onclick = () => {
-  if (!obs.connected) return obsAction("reconnect");
-  if (obs.streaming) { if (confirm("De YouTube-stream STOPPEN? Kijkers zien de uitzending eindigen.")) obsAction("stop_stream"); }
-  else if (confirm("Live gaan op YouTube (stream starten in OBS)?")) obsAction("start_stream");
-};
-$("#btnRec").onclick = () => {
-  if (obs.recording) { if (confirm("Opname stoppen?")) obsAction("stop_record"); }
-  else obsAction("start_record");
-};
-
-/* ================= Xbox-controller (Gamepad API) ================= */
-const pad = {
-  idx: null, prev: [], last: { move: null, zoom: null, focus: null }, lastSend: 0, fine: false, sceneIdx: -1,
-  invY: store.get("padInvY") === "1", max: +(store.get("padMax") || 18),
-};
-const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
-$("#padInvY").checked = pad.invY;
-$("#padMax").value = pad.max; $("#padMaxV").textContent = pad.max;
-$("#padInvY").onchange = () => { pad.invY = $("#padInvY").checked; store.set("padInvY", pad.invY ? "1" : "0"); };
-$("#padMax").oninput = () => { pad.max = +$("#padMax").value; $("#padMaxV").textContent = pad.max; store.set("padMax", pad.max); };
-$("#btnPad").onclick = () => $("#dlgPad").showModal();
-$("#btnPadClose").onclick = () => $("#dlgPad").close();
-
-window.addEventListener("gamepadconnected", (e) => { pad.idx = e.gamepad.index; padUI(e.gamepad); toast("Controller verbonden", true); });
-window.addEventListener("gamepaddisconnected", (e) => {
-  if (e.gamepad.index !== pad.idx) return;
-  pad.idx = null; padStopAll(); padUI(null); toast("Controller losgekoppeld");
-});
-function padUI(gp) {
-  $("#btnPad").classList.toggle("on", !!gp);
-  $("#padState").textContent = gp ? "controller" : "geen controller";
-  $("#padInfo").textContent = gp ? `Verbonden: ${gp.id}` : "Verbind de controller via Bluetooth of USB en druk op een knop (de browser ziet hem pas na een knopdruk).";
-}
-function rumble(gp, ms = 120, strong = 0.6) {
-  try { gp.vibrationActuator?.playEffect("dual-rumble", { duration: ms, strongMagnitude: strong, weakMagnitude: strong }); } catch {}
-}
-const dz = (v, d = 0.18) => Math.abs(v) < d ? 0 : Math.sign(v) * (Math.abs(v) - d) / (1 - d);
-const curve = (v) => Math.sign(v) * v * v;   // fijner rond het midden, snel bij volle uitslag
-
-function padStopAll() {
-  if (pad.last.move) cmd("stop");
-  if (pad.last.zoom) cmd("zoom", { dir: "stop" });
-  if (pad.last.focus) cmd("focus", { dir: "stop" });
-  pad.last = { move: null, zoom: null, focus: null };
-}
-function selectByPad(delta) {
-  if (!cfg.cameras.length) return;
-  padStopAll();
-  const i = Math.max(0, cfg.cameras.findIndex(c => c.id === ctrlCam));
-  const c = cfg.cameras[(i + delta + cfg.cameras.length) % cfg.cameras.length];
-  ctrlCam = c.id;
-  if (view !== ALL) view = c.id;
-  render(); toast("🎮 " + c.name, true);
-  post("/api/select", { cam: c.id, origin: "pad" });
-}
-
-function padLoop() {
-  requestAnimationFrame(padLoop);
-  if (pad.idx === null) {
-    const any = [...(navigator.getGamepads?.() || [])].find(g => g);
-    if (!any) return;
-    pad.idx = any.index; padUI(any);
-  }
-  const gp = navigator.getGamepads()[pad.idx];
-  if (!gp || !ctrlCam) return;
-  const btn = (i) => !!gp.buttons[i]?.pressed;
-  const val = (i) => gp.buttons[i]?.value || 0;
-  const down = (i) => btn(i) && !pad.prev[i];
-  const busy = anyDialog() && !$("#dlgPad").open;
-
-  if (!busy) {
-    // ---- knoppen (eenmalig bij indrukken)
-    const page = btn(B.LB) ? 4 : 0;
-    [[B.A, 1], [B.B, 2], [B.X, 3], [B.Y, 4]].forEach(([b, n]) => {
-      if (!down(b)) return;
-      const preset = n + page;
-      if (btn(B.MENU)) {
-        padStopAll();
-        cmd("preset_set", { n: preset }).then(r => { if (r?.ok) { rumble(gp, 350, 1); toast(`Preset ${preset} opgeslagen`, true); } });
-      } else {
-        padStopAll(); presetClick(ctrlCam, preset); rumble(gp, 60, 0.3);
-      }
-    });
-    if (down(B.LEFT)) selectByPad(-1);
-    if (down(B.RIGHT)) selectByPad(+1);
-    if (down(B.DOWN)) { padStopAll(); moved(); cmd("home"); }
-    if (down(B.UP) && cfg.scenes.length) {
-      pad.sceneIdx = (pad.sceneIdx + 1) % cfg.scenes.length;
-      post("/api/scene", { n: pad.sceneIdx + 1 }); toast("Scène: " + cfg.scenes[pad.sceneIdx].name, true);
-    }
-    if (down(B.RB)) toggleTrack(ctrlCam);
-    if (down(B.R3)) { cmd("onepush_af"); setAF(true); }
-    if (down(B.L3)) { pad.fine = !pad.fine; toast(pad.fine ? "Fijn-modus aan" : "Fijn-modus uit", true); rumble(gp, 80, 0.4); }
-    if (down(B.VIEW)) { padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); }
-
-    // ---- analoog: pan/tilt
-    const max = pad.fine ? Math.max(2, Math.round(pad.max / 4)) : pad.max;
-    const x = curve(dz(gp.axes[0] || 0)), y = curve(dz(gp.axes[1] || 0)) * (pad.invY ? -1 : 1);
-    let move = null;
-    if (x || y) {
-      const ang = Math.atan2(-y, x) * 180 / Math.PI;          // 0 = rechts, 90 = omhoog
-      const sector = Math.round(((ang + 360) % 360) / 45) % 8;
-      const dir = ["right", "rightup", "up", "leftup", "left", "leftdown", "down", "rightdown"][sector];
-      const pan = Math.max(1, Math.round(Math.abs(x) * max));
-      const tilt = Math.max(1, Math.round(Math.abs(y) * Math.min(20, max)));
-      move = { dir, pan, tilt };
-    }
-    // ---- zoom (RT in, LT uit)
-    const z = val(B.RT) - val(B.LT);
-    const zoom = Math.abs(z) > 0.08 ? { dir: z > 0 ? "in" : "out", speed: Math.max(1, Math.round(Math.abs(z) * 7)) } : null;
-    // ---- focus (rechter stick verticaal)
-    const fy = dz(gp.axes[3] || 0, 0.35);
-    const focus = fy ? { dir: fy < 0 ? "far" : "near", speed: Math.max(1, Math.round(Math.abs(fy) * 5)) } : null;
-
-    // alleen versturen bij verandering, en hooguit ~12x per seconde
-    const now = performance.now();
-    const key = (o) => o ? JSON.stringify(o) : null;
-    if (now - pad.lastSend > 80) {
-      if (key(move) !== key(pad.last.move)) {
-        if (move) { moved(); cmd("move", move); } else cmd("stop");
-        pad.last.move = move; pad.lastSend = now;
-      }
-      if (key(zoom) !== key(pad.last.zoom)) {
-        if (zoom) { moved(); cmd("zoom", zoom); } else cmd("zoom", { dir: "stop" });
-        pad.last.zoom = zoom; pad.lastSend = now;
-      }
-      if (key(focus) !== key(pad.last.focus)) {
-        if (focus) { setAF(false); cmd("focus", focus); } else cmd("focus", { dir: "stop" });
-        pad.last.focus = focus; pad.lastSend = now;
-      }
-    }
-    const active = !!(move || zoom || focus);
-    $("#btnPad").classList.toggle("act", active);
-    if ($("#dlgPad").open) $("#padLive").textContent =
-      `${camById(ctrlCam)?.name || ""} · ${move ? `${move.dir} ${move.pan}/${move.tilt}` : "stil"}${zoom ? ` · zoom ${zoom.dir} ${zoom.speed}` : ""}${pad.fine ? " · fijn" : ""}`;
-  }
-  pad.prev = gp.buttons.map(b => b.pressed);
-}
-requestAnimationFrame(padLoop);
-// tabblad weg of venster kwijt: niets laten doordraaien
-document.addEventListener("visibilitychange", () => { if (document.hidden) padStopAll(); });
-window.addEventListener("blur", padStopAll);
 
 /* ================= live events ================= */
 function connectEvents() {
@@ -914,8 +727,6 @@ function connectEvents() {
       const prevStatus = track[ev.cam]?.status;
       track[ev.cam] = ev;
       if (prevStatus !== ev.status || !ev.on) { renderPresets(); renderSide(); } else renderSide();
-    } else if (ev.type === "obs") {
-      obs = ev; renderObs();
     } else if (ev.type === "config") {
       loadConfig();
     }
