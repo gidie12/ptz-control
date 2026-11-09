@@ -89,6 +89,15 @@
   .btn.trackbtn.on { background: #12301c; border-color: var(--ok); color: #7ee2a0; }
   #btnPad.on { color: #7ee2a0; border-color: var(--ok); }
   #btnPad.act { background: #12301c; }
+  .menuwrap { position: relative; }
+  #btnPad .caret { font-size: 11px; opacity: .7; margin-left: 2px; }
+  .menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 230px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.45); z-index: 30; display: grid; gap: 2px; }
+  .menu[hidden] { display: none; }
+  .mi { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; background: none; border: 0;
+    color: var(--text); padding: 9px 10px; border-radius: 7px; cursor: pointer; font-size: 14px; }
+  .mi:hover, .mi:focus-visible { background: var(--panel2); outline: none; }
+  .msep { height: 1px; background: var(--line); margin: 4px 2px; }
   .map { display: grid; grid-template-columns: 120px 1fr; gap: 4px 10px; font-size: 12px; margin: 8px 0 0; }
   .map b { color: var(--accent); font-weight: 600; }
   #padMap { align-items: center; }
@@ -191,11 +200,17 @@
     <span id="liveDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
     <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
-  <button class="icon" id="btnPad" title="Xbox-controller">🎮 <span id="padState">geen controller</span></button>
-  <button class="icon" id="btnWall" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm</button>
-  <button class="icon" id="btnBackup" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
-  <button class="icon" id="btnMap" title="Knoppenindeling van de Xbox-controller instellen">🎮 Knoppen</button>
-  <button class="icon" id="btnSettings">⚙ Camera's</button>
+  <div class="menuwrap">
+    <button class="icon" id="btnPad" title="Menu" aria-haspopup="true" aria-expanded="false">🎮 <span id="padState">geen controller</span> <span class="caret">▾</span></button>
+    <div class="menu" id="mainMenu" hidden role="menu">
+      <button class="mi" id="btnPadSet" role="menuitem">🎮 Controller-instellingen</button>
+      <button class="mi" id="btnMap" role="menuitem" title="Knoppenindeling van de Xbox-controller instellen">🕹 Knoppenindeling</button>
+      <div class="msep"></div>
+      <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm <kbd>F</kbd></button>
+      <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
+      <button class="mi" id="btnSettings" role="menuitem">⚙ Camera's</button>
+    </div>
+  </div>
 </header>
 
 <main>
@@ -877,7 +892,17 @@ $("#padSoft").onchange = () => { pad.soft = $("#padSoft").checked; store.set("pa
 $("#padMax").value = pad.max; $("#padMaxV").textContent = pad.max;
 $("#padInvY").onchange = () => { pad.invY = $("#padInvY").checked; store.set("padInvY", pad.invY ? "1" : "0"); };
 $("#padMax").oninput = () => { pad.max = +$("#padMax").value; $("#padMaxV").textContent = pad.max; store.set("padMax", pad.max); };
-$("#btnPad").onclick = () => {
+function setMenu(open) {
+  $("#mainMenu").hidden = !open;
+  $("#btnPad").setAttribute("aria-expanded", open ? "true" : "false");
+}
+$("#btnPad").onclick = (e) => { e.stopPropagation(); setMenu($("#mainMenu").hidden); };
+// keuze in het menu sluit het menu (de eigen onclick van het item doet de rest)
+$$("#mainMenu .mi").forEach(b => b.addEventListener("click", () => setMenu(false)));
+document.addEventListener("click", (e) => { if (!e.target.closest(".menuwrap")) setMenu(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#mainMenu").hidden) setMenu(false); }, true);
+$("#btnPadSet").onclick = () => {
+  if (document.body.classList.contains("wall")) setWall(false);
   const c = $("#padCard"); c.scrollIntoView({ behavior: "smooth", block: "nearest" });
   c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 900);
 };

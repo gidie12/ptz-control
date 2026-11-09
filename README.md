@@ -34,7 +34,7 @@ Open `http://localhost:8080`, of op een tablet `http://<ip-van-deze-pc>:8080` (h
 Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (volgen: zie hieronder). Instellingen komen in `cameras.json`.
 
 ## Eerste keer
-1. **⚙ Camera's**: voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
+1. **🎮 → ⚙ Camera's** (menu rechtsboven): voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
 2. Je bestaande presets op de camera werken meteen. Rechtsklik, lang indrukken of ✎ op een tegel om een naam te geven
    en een **thumbnail** te maken van het huidige beeld.
 3. **＋ Preset opslaan** → tik op een tegel: de huidige positie wordt opgeslagen en er wordt automatisch een thumbnail gemaakt.
@@ -45,7 +45,7 @@ Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom 
 Klik op de kopregel van een kolom (of Shift+1/2/3) om te kiezen welke camera de pijltjes/handbediening aanstuurt.
 Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
 
-**⛶ Volledig scherm** (of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop rechtsonder.
+**⛶ Volledig scherm** (in het menu onder 🎮 rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop rechtsonder.
 De **camerabediening** in de zijbalk klap je in en uit door op de titel te klikken; dat wordt per apparaat onthouden.
 
 
@@ -60,7 +60,7 @@ daarna een naam met ✎. ⚠ De camera's bewegen hierbij: niet tijdens een diens
 en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 100–254.
 
 ## Back-up van presets en camera-instellingen
-Knop **💾 Back-up** rechtsboven:
+**💾 Back-up** in het menu onder 🎮 rechtsboven:
 
 1. **Back-upbestand downloaden / terugzetten**: cameralijst, presetnamen, scènes, volg-instellingen, thumbnails en (als uitgelezen)
    presetposities en beeldinstellingen in één `.json`-bestand. Wachtwoorden alleen als je dat aanvinkt; zonder wachtwoorden houdt
@@ -92,11 +92,11 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De knop **🎮 controller** rechtsboven toont de status; zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening. De knoppenindeling stel je in via **🎮 Knoppen** (naast Back-up).
+De knop **🎮 controller** rechtsboven toont de status en is ook het **menu** (Controller-instellingen, Knoppenindeling, Volledig scherm, Back-up, Camera's). Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Zachte beweging** (standaard aan): de camera trekt geleidelijk op (ca. 1 seconde naar topsnelheid) en de stick reageert fijner rond het midden. Uitzetten geeft direct de volle snelheid.
 
-Sticks en triggers liggen vast. De knoppen stel je per knop in via **🎮 Knoppen** rechtsboven (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
+Sticks en triggers liggen vast. De knoppen stel je per knop in via **🎮 → Knoppenindeling** rechtsboven (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
 
 | Controller | Functie |
 |---|---|
