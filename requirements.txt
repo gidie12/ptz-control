@@ -1,0 +1,6 @@
+# PTZ Control – Python-packages voor de .venv (installeer met Installeer.command)
+# De bediening zelf heeft genoeg aan standaard-Python; deze packages zijn voor 'persoon volgen'.
+numpy>=1.24
+opencv-python>=4.8,<5   # 5.x mist de ingebouwde persoonsdetector (HOG)
+# YOLO-persoonsdetectie (nauwkeuriger); gebruikt automatisch de Apple-chip (MPS) van de Mac mini
+ultralytics>=8.1

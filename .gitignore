@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Lokale instellingen en data (bevat IP-adressen en wachtwoorden van camera's/OBS)
+cameras.json
+cameras.json.tmp
+thumbs/
+
+# YOLO-modelbestand (wordt automatisch gedownload)
+*.pt
+
+# macOS
+.DS_Store
