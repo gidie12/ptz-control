@@ -130,6 +130,28 @@ Zonder pincode kan iedereen op het kerknetwerk de camera's bedienen. Met **Menu 
 
 <img src="docs/screenshots/toegang.png" width="560" alt="Toegang en pincode">
 
+## Foutmelding op alle schermen
+Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op **alle schermen** een rode balk, ook op volledig scherm:
+
+- een **camera niet bereikbaar** (gecontroleerd elke 10 seconden en bij elk commando);
+- de **videomixer niet verbonden** (alleen als de koppeling aan staat);
+- **geen verbinding met PTZ Control** zelf (bijvoorbeeld als de Mac uit of in slaap is).
+
+Is alles weer in orde, dan wordt de balk even groen en verdwijnt hij. **Verbergen** haalt hem weg op dit scherm, tot er een nieuwe fout bij komt. **Bekijk log** opent het activiteitenlog.
+
+<img src="docs/screenshots/foutmelding.png" width="720" alt="Foutmelding bovenaan">
+
+## Oefenstand
+Met **Menu → 🎯 Oefenstand** oefen je zonder dat er iets beweegt in de kerk, handig voor nieuwe vrijwilligers. PTZ Control maakt een tijdelijke kopie van de huidige workspace (camera's, presets, foto's, knoppen) en bedient **nagebootste camera's** in plaats van de echte. Presets oproepen, handbediening, opslaan, ongedaan maken en de Xbox-controller werken zoals altijd; een nieuwe foto toont een getekend beeld met *OEFENEN* erin.
+
+- Geldt voor **alle schermen** tegelijk: een oranje balk en rand laten zien dat je oefent.
+- De **videomixer wordt losgekoppeld** (anders zou IN BEELD verwarren).
+- Wat je verandert, wordt **niet bewaard**. Stoppen via de balk of het menu; daarna is alles weer zoals ervoor.
+- Workspaces wisselen kan niet tijdens de oefenstand. Na een herstart van PTZ Control staat de oefenstand uit.
+- **Niet tijdens een dienst gebruiken**: ook de schermen van anderen gaan dan naar de oefenstand.
+
+<img src="docs/screenshots/oefenstand.png" width="720" alt="Oefenstand">
+
 ## Activiteitenlog
 Met **Menu → 📋 Activiteitenlog** zie je achteraf wat er gebeurd is:
 
@@ -169,7 +191,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, Activiteitenlog, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, Oefenstand, Activiteitenlog, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 

@@ -39,6 +39,7 @@ import youtube as _youtube  # noqa: E402
 import updater as _updater  # noqa: E402
 import midi as _midi  # noqa: E402
 import actlog as _actlog  # noqa: E402
+import oefen as _oefen  # noqa: E402
 from urllib.parse import unquote  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -103,12 +104,18 @@ def ws_load():
 
 def ws_save(data):
     tmp = WS_FILE + ".tmp"
+    if data.get("active") == PRACTICE_ID:           # oefenstand wordt nooit bewaard: na herstart gewoon verder
+        data = {**data, "active": PRACTICE.get("from") or WS_DEFAULT}
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     os.replace(tmp, WS_FILE)
 
 
+# 🧑 Oefenstand: tijdelijke kopie van de actieve workspace met nagebootste camera's (oefen.py), zie §2g.
+PRACTICE_ID = "oefenen"
+PRACTICE = {"on": False, "from": None, "cams": []}
 WS = ws_load()
+shutil.rmtree(os.path.join(WS_DIR, PRACTICE_ID), ignore_errors=True)   # restje van een vorige oefenstand
 CONFIG_PATH, THUMB_DIR = ws_paths(WS["active"])
 LOCK = threading.Lock()
 TIMEOUT = 2.5
@@ -352,6 +359,8 @@ def describe_request(path, body, code, resp):
         msg = "Netwerk doorzocht naar camera's"
     elif path == "/api/log/clear":
         msg = "Activiteitenlog gewist"
+    elif path == "/api/practice":
+        msg = "Oefenstand gestart (echte camera's bewegen niet)" if body.get("on") else "Oefenstand gestopt"
     if msg is None:
         return None
     if not ok:
@@ -917,7 +926,72 @@ def follow_after_preset(cam, delay=2.5):
 # ---------------------------------------------------------------- back-up en herstel
 
 def ws_public():
-    return {"active": WS["active"], "list": WS["list"]}
+    return {"active": ui_ws_id(), "list": WS["list"], "practice": PRACTICE["on"],
+            "practice_from": PRACTICE["from"]}
+
+
+def _practice_pos(n):
+    """Verzonnen maar vaste positie voor een preset die de oefencamera nog niet kent."""
+    return {"pan": ((n * 37) % 41 - 20) * 260, "tilt": ((n * 13) % 9 - 4) * 110,
+            "zoom": (n * 1700) % 12000, "focus": 1000}
+
+
+def practice_start():
+    """Alle schermen naar een kopie van de actieve workspace met nagebootste camera's. De echte camera's
+    krijgen dan geen commando's meer; de videomixer wordt losgekoppeld (tally zou anders verwarren)."""
+    if PRACTICE["on"]:
+        return
+    if JOB.get("running"):
+        raise ValueError("Er loopt nog een taak (uitlezen/terugzetten/laden). Wacht tot die klaar is.")
+    src = WS["active"]
+    s_cfg, s_thumbs = ws_paths(src)
+    d_cfg, d_thumbs = ws_paths(PRACTICE_ID)
+    shutil.rmtree(os.path.dirname(d_cfg), ignore_errors=True)
+    os.makedirs(os.path.dirname(d_cfg), exist_ok=True)
+    cfg = load_config()
+    cams = []
+    try:
+        for cam in cfg.get("cameras", []):
+            fc = _oefen.start_cam(cam.get("name") or cam["id"], label="OEFENEN")
+            known = {int(n): {k: p.get(k, 0) for k in ("pan", "tilt", "zoom", "focus")}
+                     for n, p in (cam.get("saved_positions") or {}).items() if str(n).isdigit()}
+            nums = set(known) | {int(n) for n in (cam.get("presets") or {}) if str(n).isdigit()} | set(list_thumbs(cam, s_thumbs))
+            for n in nums:
+                fc.presets[n] = known.get(n) or _practice_pos(n)
+            cams.append(fc)
+            cam.update(host=f"127.0.0.1:{fc.http_port}", protocol="http", visca_port=fc.visca_port, user="", password="")
+            cam.pop("stream_url", None)
+        if cfg.get("midi"):
+            cfg["midi"] = {**cfg["midi"], "enabled": False}
+        with open(d_cfg, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+        if os.path.isdir(s_thumbs):
+            shutil.copytree(s_thumbs, d_thumbs, dirs_exist_ok=True)
+        PRACTICE.update(on=True, cams=cams)
+        PRACTICE["from"] = src
+        _activate(PRACTICE_ID)
+    except Exception:
+        for fc in cams:
+            fc.stop()
+        PRACTICE.update(on=False, cams=[])
+        PRACTICE["from"] = None
+        raise
+
+
+def practice_stop():
+    """Terug naar de echte camera's; alles wat in de oefenstand veranderd is, vervalt."""
+    if not PRACTICE["on"]:
+        return
+    src = PRACTICE["from"] or WS_DEFAULT
+    cams = PRACTICE["cams"]
+    PRACTICE.update(on=False, cams=[])
+    PRACTICE["from"] = None
+    try:
+        _activate(src)
+    finally:
+        for fc in cams:
+            fc.stop()
+        shutil.rmtree(os.path.join(WS_DIR, PRACTICE_ID), ignore_errors=True)
 
 
 def _ws_slug(name, taken):
@@ -930,11 +1004,22 @@ def _ws_slug(name, taken):
 
 def ws_select(ws_id):
     """Andere workspace actief maken: alles wat met de vorige bezig is stoppen, paden omzetten."""
-    global CONFIG_PATH, THUMB_DIR
     if not any(w["id"] == ws_id for w in WS["list"]):
         raise ValueError("Onbekende workspace")
+    if PRACTICE["on"]:
+        raise ValueError("Stop eerst de oefenstand.")
     if ws_id == WS["active"]:
         return
+    _activate(ws_id)
+
+
+def ui_ws_id():
+    """Workspace-id voor de schermen (localStorage-voorvoegsel): in de oefenstand die van de bron-workspace."""
+    return PRACTICE["from"] if PRACTICE["on"] else WS["active"]
+
+
+def _activate(ws_id):
+    global CONFIG_PATH, THUMB_DIR
     if JOB.get("running"):
         raise ValueError("Er loopt nog een taak (uitlezen/terugzetten/laden). Wacht tot die klaar is.")
     for cam_id in list(TRACKERS) + list(FOLLOW_TIMERS):
@@ -951,7 +1036,7 @@ def ws_select(ws_id):
     with YT._lock:   # livestream van de vorige workspace niet laten hangen
         YT.state.update(channel="", live=False, upcoming=False, video_id=None, title=None, start=None, checked=None, error=None)
     load_config()          # maakt cameras.json aan als de workspace nog leeg is
-    broadcast({"type": "workspace", "active": ws_id})
+    broadcast({"type": "workspace", "active": ui_ws_id(), "practice": PRACTICE["on"]})
     YT.refresh()
     MIDI.refresh()
     with CAMSTATUS_LOCK:          # andere camera's: status, onderweg en ongedaan maken opnieuw
@@ -962,6 +1047,8 @@ def ws_select(ws_id):
 
 def ws_action(body):
     act = body.get("action")
+    if PRACTICE["on"]:
+        raise ValueError("Stop eerst de oefenstand.")
     taken = {w["id"] for w in WS["list"]}
     if act == "select":
         ws_select(str(body.get("id", "")))
@@ -1041,6 +1128,8 @@ def now_stamp():
 
 
 def _ws_name(ws_id):
+    if ws_id == PRACTICE_ID:
+        return "Oefenstand"
     return next((w["name"] for w in WS["list"] if w["id"] == ws_id), ws_id)
 
 
@@ -1072,7 +1161,7 @@ def make_backup(with_passwords=True, ws_id=None):
 def make_backup_all(with_passwords=True):
     """Alle workspaces in één bestand."""
     return {"type": "ptz-control-backup-all", "version": 1, "created": now_stamp(),
-            "with_passwords": with_passwords, "active": WS["active"],
+            "with_passwords": with_passwords, "active": ui_ws_id(),
             "workspaces": [make_backup(with_passwords, w["id"]) for w in WS["list"]]}
 
 
@@ -1496,7 +1585,8 @@ class Handler(BaseHTTPRequestHandler):
             with open(INDEX_PATH, "rb") as f:
                 html = f.read()
             # workspace meegeven vóór er iets geladen wordt (per-apparaat-instellingen zijn per workspace)
-            meta = f'<meta name="ptz-workspace" content="{WS["active"]}">'.encode()
+            meta = (f'<meta name="ptz-workspace" content="{ui_ws_id()}">'
+                    f'<meta name="ptz-practice" content="{1 if PRACTICE["on"] else 0}">').encode()
             return self._send(200, html.replace(b"<head>", b"<head>" + meta, 1), "text/html; charset=utf-8")
         if u.path == "/api/workspaces":
             return self._send(200, ws_public())
@@ -1785,6 +1875,12 @@ class Handler(BaseHTTPRequestHandler):
             except RuntimeError as e:
                 return self._send(400, {"error": str(e)})
             return self._send(200, {"ok": True})
+        if u.path == "/api/practice":
+            try:
+                practice_start() if body.get("on") else practice_stop()
+                return self._send(200, {"ok": True, **ws_public()})
+            except ValueError as e:
+                return self._send(409, {"ok": False, "error": str(e)})
         if u.path == "/api/log/clear":
             return self._send(200, {"ok": True})          # wissen zelf gebeurt in do_POST (daarna één regel "gewist")
         if u.path == "/api/youtube/check":
