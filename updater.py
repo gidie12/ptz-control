@@ -11,7 +11,8 @@ Twee manieren, afhankelijk van hoe de app draait:
   losse app deze map als "draagbaar" blijven gebruiken). Daarna werkt de losse app zichzelf bij.
 - **release**: de losse app (PyInstaller). Nieuwste GitHub-release vergelijken met de ingebouwde versie;
   bijwerken = het bestand voor dit platform downloaden, daarna vervangt een klein hulpscript de .exe/.app zodra
-  deze app gestopt is en start de nieuwe versie (een draaiend programma kan zichzelf niet overschrijven).
+  deze app gestopt is en start de nieuwe versie (een draaiend programma kan zichzelf niet overschrijven;
+  op Windows wordt de oude .exe eerst hernoemd naar `.oud`, dat mag wel terwijl hij nog vastgehouden wordt).
 Alleen stdlib.
 """
 import json
@@ -49,6 +50,7 @@ class Updater:
         self.state = {"type": "update", "mode": self.mode, "current": self._current(), "available": False,
                       "latest": None, "notes": [], "count": 0, "url": None, "can_install": False,
                       "checked": None, "error": None, "installing": False, "progress": None}
+        self._cleanup_old_exe()
 
     # ------------------------------------------------------------ algemeen
     def _detect_mode(self):
@@ -226,6 +228,33 @@ class Updater:
             return exe[: exe.index(".app/Contents/MacOS") + 4]
         return exe
 
+    def _cleanup_old_exe(self):
+        """Windows: het hulpscript zet de oude .exe opzij als `<exe>.oud` (een draaiende .exe kan wel hernoemd maar
+        niet overschreven of gewist worden). Bij de volgende start draait die niet meer en kan hij weg."""
+        if sys.platform != "win32" or self.mode not in ("release", "bron"):
+            return
+        try:
+            os.remove(self._app_path() + ".oud")
+        except OSError:
+            pass
+
+    def _win_pids(self):
+        """Welke processen houden de .exe vast? De onefile-exe van PyInstaller draait als twee processen van
+        hetzelfde bestand: de bootloader (ouder) en de eigenlijke app (dit proces). Op allebei wachten; alleen
+        het ouderproces meenemen als dat echt dezelfde .exe is (bij `bron` is de ouder cmd.exe van de starter)."""
+        pids = [os.getpid()]
+        if sys.platform != "win32" or not self.frozen:
+            return pids
+        ppid = os.getppid()
+        try:
+            out = subprocess.run(["tasklist", "/fi", f"PID eq {ppid}", "/fo", "csv", "/nh"], capture_output=True,
+                                 text=True, timeout=10, creationflags=0x08000000).stdout   # CREATE_NO_WINDOW
+            if os.path.basename(sys.executable).lower() in (out or "").lower():
+                pids.append(ppid)
+        except Exception:  # noqa: BLE001
+            pass
+        return pids
+
     def _check_release(self):
         req = urllib.request.Request(f"{API_BASE}/repos/{REPO}/releases/latest",
                                      headers={"Accept": "application/vnd.github+json", "User-Agent": "PTZ-Control"})
@@ -326,9 +355,16 @@ class Updater:
                 moved = src_cfg if os.path.isfile(src_cfg) and os.path.realpath(moved_to) != os.path.realpath(self.data_dir) else None
                 print(f"Instellingen gekopieerd naar {moved_to}")
             if sys.platform == "win32":
-                script = self._script_windows(app, dest, work, moved)
+                log_dir = self._std_data_dir() if self.mode == "bron" else self.data_dir
+                script = self._script_windows(app, dest, work, moved, self._win_pids(),
+                                              os.path.join(log_dir, "bijwerken.log"))
                 flags = 0x00000008 | 0x00000200 | 0x08000000   # DETACHED_PROCESS | NEW_PROCESS_GROUP | NO_WINDOW
-                subprocess.Popen(["cmd", "/c", script], creationflags=flags, close_fds=True)
+                try:
+                    # CREATE_BREAKAWAY_FROM_JOB: de PyInstaller-bootloader zet de app in een job-object dat bij
+                    # afsluiten alle kindprocessen meeneemt; het hulpscript moet dat overleven.
+                    subprocess.Popen(["cmd", "/c", script], creationflags=flags | 0x01000000, close_fds=True)
+                except OSError:   # job staat losmaken niet toe
+                    subprocess.Popen(["cmd", "/c", script], creationflags=flags, close_fds=True)
             else:
                 new_app = self._unzip_mac(dest, work)
                 script = self._script_mac(app, new_app, work, moved)
@@ -377,27 +413,60 @@ fi
         return path
 
     @staticmethod
-    def _script_windows(exe, new_exe, work, moved=None):
-        """Wacht tot deze .exe gestopt is, zet de nieuwe ervoor in de plaats en start hem."""
+    def _script_windows(exe, new_exe, work, moved=None, pids=None, log=None):
+        """Wacht tot alle processen van deze .exe gestopt zijn (onefile: bootloader + app), zet de oude .exe opzij
+        als `.oud` (hernoemen mag ook als Windows hem nog vasthoudt), zet de nieuwe ervoor in de plaats en start hem.
+        Na 30 s wachten worden alleen díe processen geforceerd gestopt. Lukt het niet, dan komt de oude terug en
+        toont Verkenner de download. Verloop in `bijwerken.log` (naast de instellingen).
+        Wachten met `ping` en niet met `timeout`: het script draait zonder console (DETACHED_PROCESS) en dan stopt
+        `timeout` meteen met een fout, waardoor de wachtlussen in een fractie van een seconde voorbij waren."""
         path = os.path.join(work, "bijwerken.bat")
-        pid = os.getpid()
+        pids = list(pids or [os.getpid()])
+        log = log or os.path.join(work, "bijwerken.log")
         rename = ('move /y "' + moved + '" "' + moved + '.overgezet" >nul') if moved else "rem"
+        # exacte PID-match in de CSV-uitvoer ("1106" mag niet op "11068" matchen)
+        checks = "\n".join(f'tasklist /fi "PID eq {p}" /fo csv /nh 2>nul | find """{p}""" >nul && set "BEZIG={p}"'
+                           for p in pids)
+        kills = "\n".join(f"taskkill /f /pid {p} >nul 2>&1" for p in pids)
         with open(path, "w", encoding="utf-8") as f:
             f.write(f"""@echo off
 chcp 65001 >nul
+set "EXE={exe}"
+set "NEW={new_exe}"
+set "LOG={log}"
+echo [%date% %time%] bijwerken: wachten op proces {" ".join(map(str, pids))} >>"%LOG%"
+set /a w=0
 :wacht
-tasklist /fi "PID eq {pid}" 2>nul | find "{pid}" >nul && (timeout /t 1 /nobreak >nul & goto wacht)
+set "BEZIG="
+{checks}
+if not defined BEZIG goto vrij
+set /a w+=1
+if %w% geq 30 goto forceer
+ping -n 2 127.0.0.1 >nul
+goto wacht
+:forceer
+echo [%date% %time%] proces %BEZIG% stopt niet; geforceerd stoppen >>"%LOG%"
+{kills}
+ping -n 3 127.0.0.1 >nul
+:vrij
+del /f /q "%EXE%.oud" >nul 2>&1
+if exist "%EXE%" move /y "%EXE%" "%EXE%.oud" >nul 2>>"%LOG%"
 set /a n=0
 :kopie
-copy /y "{new_exe}" "{exe}" >nul && goto start
+copy /y "%NEW%" "%EXE%" >nul 2>>"%LOG%" && goto start
 set /a n+=1
-if %n% lss 20 (timeout /t 1 /nobreak >nul & goto kopie)
-start "" explorer /select,"{new_exe}"
-if exist "{exe}" start "" "{exe}" --no-open
+if %n% lss 20 (ping -n 2 127.0.0.1 >nul & goto kopie)
+echo [%date% %time%] nieuwe versie plaatsen mislukt; oude versie blijft >>"%LOG%"
+if not exist "%EXE%" if exist "%EXE%.oud" move /y "%EXE%.oud" "%EXE%" >nul
+start "" explorer /select,"%NEW%"
+if exist "%EXE%" start "" "%EXE%" --no-open
 goto eind
 :start
 {rename}
-start "" "{exe}" --no-open
+echo [%date% %time%] bijgewerkt; nieuwe versie gestart >>"%LOG%"
+start "" "%EXE%" --no-open
+ping -n 4 127.0.0.1 >nul
+del /f /q "%EXE%.oud" >nul 2>&1
 :eind
 """)
         return path

@@ -6,7 +6,7 @@ Eigen webbediening voor PTZOptics-camera's, te bedienen met muis/touch, toetsenb
 
 ## Installeren en starten
 
-**Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in je browser.
+**Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in een eigen venster, zonder adresbalk en tabbladen (app-venster van Chrome of Edge; is geen van beide er, dan een gewoon tabblad in je standaardbrowser). Liever een gewoon tabblad: start met `--tab` of zet `PTZ_BROWSER=tab`.
 
 | | Mac | Windows |
 |---|---|---|
@@ -16,7 +16,7 @@ Eigen webbediening voor PTZOptics-camera's, te bedienen met muis/touch, toetsenb
 | Snelkoppeling opnieuw maken | | in cmd: `"Start PTZ Control.bat" /snelkoppeling` |
 | Vereist | Python 3.9+ (python.org of `brew install python`) | Python 3.9+ (python.org, vink *Add python.exe to PATH* aan, of `winget install -e --id Python.Python.3.12`) |
 
-- **Mac – app-icoon:** *PTZ Control.app* moet in de map van PTZ Control blijven staan (hij start de starter uit die map). Sleep hem naar het Dock; dat maakt alleen een verwijzing. Draait de app al, dan opent een klik alleen de bediening in de browser. Anders opent Terminal met het logboek; dat venster sluiten = stoppen.
+- **Mac – app-icoon:** *PTZ Control.app* moet in de map van PTZ Control blijven staan (hij start de starter uit die map). Sleep hem naar het Dock; dat maakt alleen een verwijzing. Draait de app al, dan opent een klik alleen de bediening (als app-venster). Anders opent Terminal met het logboek; dat venster sluiten = stoppen.
 - **Mac:** meldt macOS "onbekende ontwikkelaar", rechtsklik → **Open** (eenmalig).
 - **Windows – snelkoppeling:** de starter maakt bij de eerste keer de snelkoppeling **PTZ Control** met icoon in het Startmenu en op het bureaublad.
 - **Windows:** vraagt de firewall om toegang, kies **Privénetwerken**, anders kunnen tablets de app niet bereiken.
@@ -60,10 +60,13 @@ Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom 
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → ⌨ Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
 Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
 
-**⛶ Volledig scherm** (in het menu onder 🎮 rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop rechtsonder.
+**⛶ Volledig scherm** (in het menu onder 🎮 rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel).
+Met **◂ Bediening** rechtsboven in de presetbalk (of toets **B**) klap je op volledig scherm rechts de **camerabediening en de Xbox-controller** uit. Staat het YouTube-venster open, dan staat de speler bovenaan in die kolom en de bediening er direct onder; de tegels schuiven op, er wordt niets afgedekt. Nog een keer klikken (**Bediening ▸**) klapt hem weer in. Elk scherm onthoudt of hij open stond.
 De **camerabediening** in de zijbalk klap je in en uit door op de titel te klikken; dat wordt per apparaat onthouden.
 
 ![Volledig scherm](docs/screenshots/volledig-scherm.png)
+
+![Volledig scherm met bediening naast YouTube](docs/screenshots/volledig-scherm-bediening.png)
 
 <img src="docs/screenshots/menu.png" width="440" alt="Menu">
 
@@ -89,12 +92,29 @@ overgeslagen. De positie wordt meteen bewaard voor de back-up; bestaande presetn
 daarna een naam met ✎. ⚠ De camera's bewegen hierbij: niet tijdens een dienst.
 
 **Gereserveerde presets:** PTZOptics gebruikt 90 (home), 95 (OSD-menu) en 91–99 voor vaste functies. De app roept deze nooit op
-en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 100–254.
+en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 100–254. Het OSD-menu open je via
+**Menu → 🖥 OSD-menu camera** (zie hieronder).
 
 ## Presetaantal testen
 Menu → **🧪 Presetaantal testen**. Test per camera hoeveel presets hij echt kan opslaan en oproepen (ca. 1 minuut per
 camera; de camera's bewegen, dus niet tijdens een dienst). Bestaande presets worden daarna exact teruggezet en lege nummers
 weer gewist. Het resultaat (bijv. "max. preset 254 · 244 bruikbaar") blijft bewaard en is later terug te zien.
+
+## OSD-menu van de camera
+Menu → **🖥 OSD-menu camera** bedient het menu van de camera zelf (belichting, kleur, beeld, enzovoort), net als met de
+afstandsbediening. Kies de camera, klik **Menu openen** en navigeer met **▲▼◀▶**, **OK** en **↩ Terug**. Dat kan ook met het
+toetsenbord (pijltjes, Enter = OK, Backspace = terug) of de Xbox-controller (D-pad of linker stick, A = OK, B = terug).
+**📷 Beeld bekijken** haalt één foto van de camera op, zodat je ziet waar je in het menu bent (geen live beeld).
+
+- ⚠ **Het menu staat ook in de livestream.** Zet eerst op de videomixer een andere camera in beeld. Staat de camera
+  *IN BEELD*, dan vraagt de app eerst of je het zeker weet.
+- Zolang het menu open is, staat er **OSD-MENU** bij de camera (op alle schermen) en reageert die camera niet op presets,
+  handbediening, volgen of back-uptaken: die commando's zouden anders door het menu lopen.
+- **Venster sluiten = menu dicht** op de camera. Na 5 minuten zonder OSD-knop neemt de app aan dat het menu dicht is
+  (bijv. dichtgedaan met de afstandsbediening). Wisselen van workspace of afsluiten sluit het menu ook.
+- Werkt via VISCA (TCP-poort 5678), ook als de camera op HTTP-CGI staat.
+
+<img src="docs/screenshots/osd-menu.png" width="560" alt="OSD-menu camera">
 
 ## Tegels instellen
 Boven het presetraster: **Tegels − 12 +** bepaalt hoeveel presettegels je per camera ziet (90–99 worden overgeslagen),
@@ -194,7 +214,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, Oefenstand, Activiteitenlog, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, OSD-menu camera, Oefenstand, Activiteitenlog, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
@@ -286,7 +306,7 @@ Klik op **📍 Standaard ▾** naast de titel. Een workspace is een aparte set c
 - Direct in een bepaalde workspace starten: `python3 ptz_control.py --workspace "Kerk Zwolle"` (ook als extra argument achter `Start PTZ Control`).
 
 ## Sneltoetsen
-Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · Y = YouTube-venster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
+Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · B = bediening rechts (volledig scherm) · Y = YouTube-venster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
 **Alle toetsen zijn aan te passen** via Menu → ⌨ Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
 
 ![Sneltoetsen](docs/screenshots/sneltoetsen.png)

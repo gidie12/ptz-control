@@ -28,6 +28,21 @@ MOVES = {"left": (-1, 0), "right": (1, 0), "up": (0, 1), "down": (0, -1), "leftu
          "leftdown": (-1, -1), "rightdown": (1, -1)}
 
 
+# Nagebootst OSD-menu (verzonnen indeling in de stijl van PTZOptics G2): hoofdmenu → submenu → waarde.
+OSD_MENU = [
+    ("EXPOSURE", [("Mode", ["Auto", "Manual", "SAE", "AAE", "Bright"]), ("ExpComp", ["Off", "On"]),
+                  ("Backlight", ["Off", "On"]), ("Anti-Flicker", ["Off", "50Hz", "60Hz"])]),
+    ("COLOR", [("WB Mode", ["Auto", "Indoor", "Outdoor", "OnePush", "Manual"]),
+               ("Saturation", ["60%", "70%", "80%", "90%", "100%", "110%", "120%"]), ("Hue", [str(i) for i in range(15)])]),
+    ("IMAGE", [("Luminance", [str(i) for i in range(15)]), ("Contrast", [str(i) for i in range(15)]),
+               ("Sharpness", [str(i) for i in range(16)]), ("Flip-H", ["Off", "On"]), ("Flip-V", ["Off", "On"])]),
+    ("P/T/Z", [("SpeedByZoom", ["Off", "On"]), ("Acceleration", ["Low", "High"]), ("Digital Zoom", ["Off", "On"])]),
+    ("NOISE REDUCTION", [("NR-2D", ["Off", "1", "2", "3", "4", "5"]), ("NR-3D", ["Off", "1", "2", "3", "4", "5"])]),
+    ("SETUP", [("Language", ["English"]), ("DVIMode", ["DVI", "HDMI"])]),
+    ("RESTORE DEFAULT", [("Restore", ["No"])]),
+]
+
+
 class Cam:
     def __init__(self, name, label=""):
         self.name = name
@@ -39,6 +54,8 @@ class Cam:
         self.lock = threading.Lock()
         self.log = []
         self.http_port = self.visca_port = None
+        self.osd = {"open": False, "level": 0, "i": 0, "j": 0,
+                    "vals": {(a, b): 0 for a, (_, items) in enumerate(OSD_MENU) for b in range(len(items))}}
         self._stop = threading.Event()
         self._servers = []
         threading.Thread(target=self._mover, daemon=True).start()
@@ -94,6 +111,57 @@ class Cam:
             self.vel = (0, 0, 0)
             self.target.update(pan=0, tilt=0)
 
+    # ---- OSD-menu
+    def osd_set(self, on):
+        with self.lock:
+            self.vel = (0, 0, 0)
+            self.osd.update(open=bool(on), level=0, j=0)
+
+    def osd_key(self, key):
+        """key: up/down/left/right/enter/back. Geeft False als het menu niet open staat."""
+        with self.lock:
+            o = self.osd
+            if not o["open"]:
+                return False
+            items = OSD_MENU[o["i"]][1]
+            if o["level"] == 0:
+                if key in ("up", "down"):
+                    o["i"] = (o["i"] + (1 if key == "down" else -1)) % len(OSD_MENU)
+                elif key in ("right", "enter"):
+                    o.update(level=1, j=0)
+                elif key == "back":
+                    o["open"] = False
+            else:
+                if key in ("up", "down"):
+                    o["j"] = (o["j"] + (1 if key == "down" else -1)) % len(items)
+                elif key in ("left", "right"):
+                    k = (o["i"], o["j"])
+                    o["vals"][k] = (o["vals"][k] + (1 if key == "right" else -1)) % len(items[o["j"]][1])
+                elif key == "back":
+                    o["level"] = 0
+            return True
+
+    def _draw_osd(self, d):
+        o = self.osd
+        if o["level"] == 0:
+            rows = [("MENU", None)] + [(name, None) for name, _ in OSD_MENU]
+            sel = o["i"] + 1
+        else:
+            name, items = OSD_MENU[o["i"]]
+            rows = [(name, None)] + [(n, vals[o["vals"][(o["i"], b)]]) for b, (n, vals) in enumerate(items)]
+            sel = o["j"] + 1
+        x0, y0, lh = 150, 14, 14
+        d.rectangle([x0 - 6, y0 - 4, 314, y0 + lh * len(rows) + 16], fill=(10, 20, 70))
+        for r, (txt, val) in enumerate(rows):
+            y = y0 + r * lh
+            if r == sel:
+                d.rectangle([x0 - 4, y - 1, 312, y + lh - 2], fill=(220, 170, 30))
+            col = (0, 0, 0) if r == sel else (255, 255, 255)
+            d.text((x0, y), txt, fill=col if r else (120, 200, 255))
+            if val is not None:
+                d.text((250, y), val, fill=col)
+        d.text((x0, y0 + lh * len(rows) + 2), "[Home] OK  [Menu] Back", fill=(170, 170, 200))
+
     def jpeg(self):
         if Image is None:
             return TINY_JPEG
@@ -113,6 +181,9 @@ class Cam:
         if self.label:
             txt = self.label + "\n" + txt
         d.text((10, 8), txt, fill=(255, 255, 255))
+        with self.lock:
+            if self.osd["open"]:
+                self._draw_osd(d)
         b = io.BytesIO()
         im.save(b, "JPEG")
         return b.getvalue()
@@ -170,6 +241,20 @@ def visca_server(cam, port=0):
     def handle(m):
         cam.log.append(m.hex(" "))
         ack = b"\x90\x41\xff\x90\x51\xff"
+        if m[:5] == b"\x81\x01\x04\x3f\x02" and len(m) >= 6 and m[5] == 95:   # preset 95 = OSD-menu aan/uit
+            cam.osd_set(not cam.osd["open"])
+            return ack
+        if m[:4] == b"\x81\x01\x06\x06" and len(m) >= 5:          # OSD: 02 aan, 03 uit, 10 wissel, 04 terug, 05 enter
+            if m[4] in (2, 3, 0x10):
+                cam.osd_set({2: True, 3: False}.get(m[4], not cam.osd["open"]))
+            else:
+                cam.osd_key({4: "back", 5: "enter"}.get(m[4], ""))
+            return ack
+        if m[:4] == b"\x81\x01\x06\x01" and len(m) >= 8 and cam.osd["open"]:   # pijltjes in het menu
+            d = {(3, 1): "up", (3, 2): "down", (1, 3): "left", (2, 3): "right"}.get((m[6], m[7]))
+            if d:
+                cam.osd_key(d)
+            return ack
         if m[:4] == b"\x81\x01\x04\x3f" and len(m) >= 6:          # preset reset/set/call
             {0: cam.reset, 1: cam.store, 2: cam.call}.get(m[4], lambda n: None)(m[5])
             return ack
@@ -235,7 +320,9 @@ def http_server(cam, port=0):
             else:
                 q = self.path.split("?", 1)[-1].split("&")
                 cam.log.append(self.path)
-                if len(q) >= 3 and q[0] == "ptzcmd" and q[1] in ("poscall", "posset"):
+                if len(q) >= 3 and q[0] == "ptzcmd" and q[1] == "poscall" and q[2] == "95":
+                    cam.osd_set(not cam.osd["open"])
+                elif len(q) >= 3 and q[0] == "ptzcmd" and q[1] in ("poscall", "posset"):
                     (cam.call if q[1] == "poscall" else cam.store)(int(q[2]))
                 elif len(q) >= 2 and q[0] == "ptzcmd" and q[1] in MOVES:
                     speed = int(q[2]) if len(q) >= 3 and q[2].isdigit() else 5

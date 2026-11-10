@@ -194,7 +194,7 @@
   #btnLock[hidden] { display: none; }
   #btnLock.locked { border-color: var(--accent); color: var(--accent); }
   body.viewonly #btnStore, body.viewonly #btnLoad, body.viewonly .tile .edit, body.viewonly #ctrlCard, body.viewonly #padCard,
-  body.viewonly .colhead .trk, body.viewonly #btnOrderReset, body.viewonly .tilectl { display: none !important; }
+  body.viewonly .colhead .trk, body.viewonly #btnOrderReset, body.viewonly .tilectl, body.viewonly #btnOsd { display: none !important; }
   body.viewonly .tile { cursor: default; }
   #viewBanner { display: none; background: var(--warnbg); color: var(--warntxt); border-bottom: 1px solid var(--accent); padding: 6px 16px;
     font-size: 13px; text-align: center; }
@@ -308,6 +308,23 @@
   .colhead .onair, .tab .onair { background: var(--live); color: #fff; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px;
     white-space: nowrap; flex-shrink: 0; align-self: center; }
   .tab .onair { margin-left: 6px; }
+  /* 🖥 OSD-menu van de camera */
+  .colhead .osdtag, .tab .osdtag { background: var(--accent); color: #111; font-size: 11px; font-weight: 700; border-radius: 4px;
+    padding: 1px 6px; white-space: nowrap; flex-shrink: 0; align-self: center; }
+  .tab .osdtag { margin-left: 6px; }
+  #dlgOsd { width: min(520px, 94vw); }
+  .osdtop { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .osdtop select { width: auto !important; min-width: 160px; }
+  .osdst { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .osdst.on { color: var(--accent); }
+  .osdwrap { display: flex; gap: 18px; align-items: center; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+  .osdpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 6px; }
+  .osdpad button { font-size: 22px; padding: 0; border-radius: 10px; }
+  .osdpad button.ok { font-size: 16px; font-weight: 700; }
+  .osdpad button:disabled, .osdside button:disabled { opacity: .35; }
+  .osdside { display: flex; flex-direction: column; gap: 8px; min-width: 150px; }
+  .osdpad button.hit { outline: 3px solid var(--accent); }
+  #osdImg { display: block; width: 100%; border-radius: 8px; margin-top: 12px; border: 1px solid var(--line); }
   .bsec { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
   .bsec h4 { margin: 0 0 4px; font-size: 14px; }
   .bsec .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
@@ -344,8 +361,17 @@
   body.wall header, body.wall aside { display: none; }
   body.wall main { grid-template-columns: 1fr; padding: 10px; }
   body.wall #presetCard { border: 0; background: none; padding: 0; }
-  #btnWallExit { display: none; position: fixed; bottom: 12px; right: 12px; z-index: 20; background: var(--panel2); color: var(--text); }
-  body.wall #btnWallExit { display: block; }
+  /* knoppen staan in de presetbalk (niet zwevend rechtsonder), zodat ze nooit over een presettegel vallen */
+  #wallBtns { display: none; gap: 8px; }
+  body.wall #wallBtns { display: flex; }
+  #wallBtns .chip { white-space: nowrap; }
+  #btnWallSide.on { background: var(--panel2); color: var(--text); border-color: var(--accent); }   /* niet rood: rood = LIVE */
+  body.viewonly #btnWallSide { display: none; }
+  /* volledig scherm + uitgeklapte bediening: zijbalk als kolom rechts, onder het YouTube-venster (als dat automatisch geplaatst is) */
+  body.wall.wallside aside { display: grid; position: fixed !important; right: 10px; top: var(--sidetop, 10px); bottom: 10px;
+    width: var(--sidew, 340px); grid-template-columns: minmax(0, 1fr) !important; align-content: start; gap: 10px;
+    overflow-y: auto; overscroll-behavior: contain; z-index: 19; }
+  body.wall.wallside main { padding-right: calc(var(--sidew, 340px) + 20px); }
   /* volledig scherm = bedienen: geen presets laden of opslaan */
   body.wall #btnLoad, body.wall #btnStore, body.wall #storeHint { display: none !important; }
   .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 12px; }
@@ -520,6 +546,7 @@
       <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld">🎛 Videomixer (MIDI)</button>
       <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)">🎵 Liederen (ProPresenter)</button>
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
+      <button class="mi" id="btnOsd" role="menuitem" title="Het menu van de camera zelf bedienen (belichting, kleur, beeld). Staat ook in de livestream!">🖥 OSD-menu camera</button>
       <div class="msep"></div>
       <button class="mi" id="btnPractice" role="menuitem" title="Oefenen met nagebootste camera's: de camera's in de kerk bewegen niet">🚧 Oefenstand</button>
       <button class="mi" id="btnLog" role="menuitem" title="Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer">📋 Activiteitenlog<span class="logcount" id="logCount" hidden></span></button>
@@ -559,6 +586,10 @@
         </div>
         <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset">📥 Laden van camera</button>
         <button class="chip" id="btnStore">＋ Preset opslaan</button>
+        <span id="wallBtns">
+          <button class="chip" id="btnWallSide" title="Camerabediening en Xbox-controller rechts tonen (toets B)">◂ Bediening</button>
+          <button class="chip" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
+        </span>
       </div>
     </div>
     <div class="hint" id="storeHint" hidden>Tik op een tegel om de huidige camerapositie daar op te slaan.</div>
@@ -847,7 +878,6 @@
   <div class="ytgrip" id="ytGrip" title="Sleep om de grootte te wijzigen"></div>
 </div>
 
-<button class="icon" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
 <dialog id="dlgMidi">
   <h3>🎛 Videomixer (Roland V-1HD)</h3>
   <p class="small">Via een USB-kabel van de V-1HD naar deze computer ziet PTZ Control welke ingang op de mixer gekozen is (rode knop).
@@ -975,6 +1005,31 @@
   </div>
   <div class="actions"><span class="small muted" id="acInfo"></span><button class="primary" id="acClose">Sluiten</button></div>
 </dialog>
+<dialog id="dlgOsd">
+  <h3>🖥 OSD-menu camera</h3>
+  <p class="small">Het menu van de camera zelf: belichting, kleur, beeld, enzovoort. <b>Het menu staat ook in de livestream.</b>
+    Zet daarom eerst op de videomixer een andere camera in beeld. Zolang het menu open staat, reageert deze camera niet op presets,
+    handbediening of volgen.</p>
+  <div class="osdtop">Camera <select id="osdCam" aria-label="Camera"></select><span class="osdst" id="osdState">Menu dicht</span></div>
+  <div class="warnbox" id="osdLive" hidden></div>
+  <div class="osdwrap">
+    <div class="osdpad" id="osdPad">
+      <span></span><button class="icon" data-k="up" aria-label="Omhoog">▲</button><span></span>
+      <button class="icon" data-k="left" aria-label="Links">◀</button><button class="icon ok" data-k="enter" aria-label="OK (enter)">OK</button><button class="icon" data-k="right" aria-label="Rechts">▶</button>
+      <span></span><button class="icon" data-k="down" aria-label="Omlaag">▼</button><span></span>
+    </div>
+    <div class="osdside">
+      <button class="primary" id="osdToggle">Menu openen</button>
+      <button class="icon" data-k="back" id="osdBack">↩ Terug</button>
+      <button class="icon" id="osdSnap" title="Eén foto van de camera, om te zien waar je in het menu bent (geen live beeld)">📷 Beeld bekijken</button>
+    </div>
+  </div>
+  <img id="osdImg" alt="Beeld van de camera" hidden>
+  <p class="small muted" id="osdHelp" style="margin-top:12px">Toetsenbord: pijltjes, <kbd>Enter</kbd> = OK, <kbd>Backspace</kbd> = terug.
+    Xbox-controller: D-pad of linker stick, <b>A</b> = OK, <b>B</b> = terug. Meestal: ▲▼ kiezen, ▶ of OK openen, ◀▶ waarde wijzigen.
+    Sluit je dit venster, dan gaat het menu op de camera ook dicht.</p>
+  <div class="actions"><span></span><button class="icon" id="osdDone">Sluiten</button></div>
+</dialog>
 <dialog id="dlgLog">
   <h3>📋 Activiteitenlog</h3>
   <p class="small">Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer, wat er op de mixer in beeld stond en welke liederen er gezongen zijn.
@@ -1089,7 +1144,7 @@ function renderTabs() {
   cfg.cameras.forEach((c, i) => {
     const b = document.createElement("button");
     b.className = "tab" + (c.id === view ? " active" : "");
-    b.innerHTML = `${camDot(c.id)}${esc(c.name)}<small>${i + 1}</small>${midiOnAir(c.id) ? '<span class="onair">IN BEELD</span>' : ""}`;
+    b.innerHTML = `${camDot(c.id)}${esc(c.name)}<small>${i + 1}</small>${midiOnAir(c.id) ? '<span class="onair">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag">OSD</span>' : ""}`;
     b.onclick = () => setView(c.id);
     tabs.appendChild(b);
   });
@@ -1174,7 +1229,7 @@ function renderPresets() {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "") + (midiOnAir(c.id) ? " onair" : "");
       const ln = lastPreset[c.id];
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
-        ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⌨ Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}
+        ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⌨ Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}
         <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
@@ -1373,6 +1428,7 @@ const KEY_ACTIONS = {
   stop: ["Stop", "Space", "Overig"], home: ["Home", "KeyH", "Overig"], track: ["Volgen (pan) aan/uit", "KeyT", "Overig"],
   wall: ["Volledig scherm", "KeyF", "Overig"], youtube: ["YouTube-venster tonen/verbergen", "KeyY", "Overig"],
   songs: ["Liederenvenster tonen/verbergen", "KeyL", "Overig"],
+  side: ["Bediening rechts (volledig scherm)", "KeyB", "Overig"],
   ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ["preset_" + n, ["Preset " + n, "Digit" + n, "Presets op de gekozen camera"]])),
 };
 const keyOf = (a) => { const v = (cfg.keymap || {})[a]; return v === "none" ? "" : (v || KEY_ACTIONS[a][1]); };
@@ -1465,6 +1521,7 @@ document.addEventListener("keydown", (e) => {
   else if (a === "wall") setWall(!document.body.classList.contains("wall"));
   else if (a === "youtube") ytToggle();
   else if (a === "songs") songWinToggle();
+  else if (a === "side") { if (document.body.classList.contains("wall")) setWallSide(store.get("wallSide") !== "1"); }
   else if (a === "stop") { cmd("stop"); cmd("zoom", { dir: "stop" }); }
   else if (a.startsWith("preset_")) { if (ctrlCam) presetClick(ctrlCam, +a.slice(7)); }
 });
@@ -1506,8 +1563,40 @@ function setWall(on) {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     if (wallPrevView !== null && wallPrevView !== view && (wallPrevView === ALL || camById(wallPrevView))) setView(wallPrevView);
   }
+  wallSideLayout();
   ytReplace();   // YouTube-venster naar de plek die bij deze weergave hoort
 }
+/* Volledig scherm: camerabediening + Xbox-kaart rechts uitklappen (per apparaat, localStorage.wallSide).
+   Staat het YouTube-venster automatisch geplaatst open, dan komt het bovenaan in dezelfde kolom en de bediening eronder. */
+const wallSideOn = () => document.body.classList.contains("wall") && store.get("wallSide") === "1" && !viewOnly();
+function wallSideW() {
+  const g = ytGeom();
+  let w = 340;
+  if (!ytWin.hidden && g.auto && !ytOpt.wallTop) w = Math.max(w, g.w);
+  return Math.round(Math.max(300, Math.min(w, innerWidth * 0.4)));
+}
+function wallSideLayout() {
+  const on = wallSideOn();
+  document.body.classList.toggle("wallside", on);
+  wallSideBtn();
+  if (!on) return;
+  document.body.style.setProperty("--sidew", wallSideW() + "px");
+  const top = !ytWin.hidden && ytGeom().auto ? Math.round(ytWin.getBoundingClientRect().bottom + 10) : 10;
+  document.body.style.setProperty("--sidetop", Math.min(top, innerHeight - 200) + "px");
+}
+function wallSideBtn() {
+  const on = store.get("wallSide") === "1", b = $("#btnWallSide"); if (!b) return;
+  b.textContent = on ? "Bediening ▸" : "◂ Bediening";
+  b.classList.toggle("on", on);
+  b.title = (on ? "Camerabediening en Xbox-controller verbergen" : "Camerabediening en Xbox-controller rechts tonen")
+    + (keyOf("side") ? ` (toets ${keyLabel(keyOf("side"))})` : "");
+}
+function setWallSide(on) {
+  store.set("wallSide", on ? "1" : "0");
+  wallSideLayout();
+  if (!ytWin.hidden) ytPlace();
+}
+$("#btnWallSide").onclick = () => setWallSide(store.get("wallSide") !== "1");
 $("#btnWall").onclick = () => setWall(true);
 $("#btnWallExit").onclick = () => setWall(false);
 // Esc in de browser verlaat fullscreen; dan ook de weergave terugzetten
@@ -1568,11 +1657,12 @@ function renderKeyHints() {
   const presets = p1 === "Digit1" && p9 === "Digit9" ? "<kbd>1</kbd>–<kbd>9</kbd>" : `${k("preset_1")}…${k("preset_9")}`;
   $("#keyHints").innerHTML = `${presets} preset · ${cfg.cameras.slice(0, 3).map((c, i) => `<kbd>${esc(keyLabel(camHotkey(c, i)))}</kbd>`).join(" ")} camera ·
     ${k("left")}${k("up")}${k("right")}${k("down")} bewegen · ${k("zoom_in")}/${k("zoom_out")} zoom · ${k("focus_far")}/${k("focus_near")} focus ·
-    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("stop")} stop ·
+    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("side")} bediening (volledig scherm) · ${k("stop")} stop ·
     <a href="#" id="keyHintsEdit">aanpassen</a> · rechtsklik of lang drukken op een preset = bewerken`;
   $("#keyHintsEdit").onclick = (e) => { e.preventDefault(); $("#btnKeys").click(); };
   const wk = $("#btnWall kbd"); if (wk) wk.textContent = keyLabel(keyOf("wall"));
   $("#btnWall").title = `Alle camera's op het volledige scherm (toets ${keyLabel(keyOf("wall"))})`;
+  wallSideBtn();
 }
 
 $("#btnSettings").onclick = () => {
@@ -1812,6 +1902,7 @@ function padLoop() {
   const down = (i) => btn(i) && !pad.prev[i];
   const busy = anyDialog();
   if ($("#dlgMap").open) PAD_BUTTONS.forEach(([k]) => { if (down(B[k])) padHit(k); });
+  if ($("#dlgOsd").open && $("#tour").hidden) osdPad(gp, down);
 
   if (!busy) {
     // ---- knoppen (eenmalig bij indrukken), volgens de instelbare indeling
@@ -2035,6 +2126,89 @@ function renderCap() {
   $("#capInfo").textContent = job.running ? (mine ? "Bezig met testen…" : "Er loopt een andere taak…") : "";
 }
 $("#btnCap").onclick = () => { $("#capTable").dataset.init = ""; $("#dlgCap").showModal(); renderCap(); };
+
+/* ================= 🖥 OSD-menu van de camera =================
+   Server (ptz_control.py) stuurt de VISCA-commando's en houdt bij op welke camera het menu open staat (SSE "osd").
+   Zolang het open staat weigert de server presets/handbediening/volgen op die camera. Venster dicht = menu dicht. */
+let osdCamId = null, osdLastKey = 0, osdStick = null;
+const osdIsOpen = () => !!(osdCamId && osdOpen[osdCamId]);
+function osdRender() {
+  const sel = $("#osdCam");
+  if (!sel) return;
+  const opts = (cfg.cameras || []).map(c => `<option value="${esc(c.id)}">${esc(c.name)}${osdOpen[c.id] ? " (menu open)" : ""}</option>`).join("");
+  if (sel.innerHTML !== opts) sel.innerHTML = opts;
+  if (!camById(osdCamId)) osdCamId = ctrlCam || cfg.cameras[0]?.id || null;
+  sel.value = osdCamId || "";
+  const open = osdIsOpen(), c = camById(osdCamId);
+  $("#osdState").textContent = open ? "● Menu open" : "Menu dicht";
+  $("#osdState").classList.toggle("on", open);
+  $("#osdToggle").textContent = open ? "Menu sluiten" : "Menu openen";
+  $("#osdToggle").className = open ? "icon danger" : "primary";
+  $$("#osdPad button, #osdBack").forEach(b => b.disabled = !open);
+  const live = c && midiOnAir(c.id);
+  $("#osdLive").hidden = !live;
+  if (live) $("#osdLive").innerHTML = `⚠ <b>${esc(c.name)}</b> staat nu <b>IN BEELD</b> op de videomixer: het menu komt in de livestream.`;
+}
+async function osdKey(k) {
+  if (!osdCamId) return;
+  if (k !== "open" && k !== "close" && !osdIsOpen()) return;
+  const b = $(`#osdPad [data-k="${k}"]`) || (k === "back" ? $("#osdBack") : null);
+  if (b) { b.classList.add("hit"); setTimeout(() => b.classList.remove("hit"), 150); }
+  const j = await cmd("osd", { key: k }, osdCamId);
+  if (j?.ok && k !== "close" && !$("#osdImg").hidden) setTimeout(osdSnap, 400);
+  return j;
+}
+async function osdToggle() {
+  const c = camById(osdCamId);
+  if (!c) return;
+  if (osdIsOpen()) return osdKey("close");
+  if (midiOnAir(c.id) && !confirm(`${c.name} staat IN BEELD op de videomixer. Het OSD-menu komt dan in de livestream. Toch openen?`)) return;
+  const j = await osdKey("open");
+  if (j?.ok) { osdOpen[c.id] = true; osdRender(); }
+}
+async function osdSnap() {
+  if (!osdCamId) return;
+  const img = $("#osdImg");
+  img.hidden = false;
+  img.src = `/api/snapshot?cam=${encodeURIComponent(osdCamId)}&t=${Date.now()}`;
+}
+$("#osdImg").onerror = () => { $("#osdImg").hidden = true; toast("Geen beeld van de camera"); };
+async function osdCloseCam(id) { if (id && osdOpen[id]) await cmd("osd", { key: "close" }, id); }
+$("#btnOsd").onclick = () => {
+  osdCamId = ctrlCam || cfg.cameras[0]?.id || null;
+  $("#osdImg").hidden = true; $("#osdImg").removeAttribute("src");
+  osdRender(); $("#dlgOsd").showModal(); $("#osdToggle").focus();
+};
+$("#osdCam").onchange = async (e) => {
+  const prev = osdCamId;
+  await osdCloseCam(prev);                    // nooit twee menu's tegelijk open laten staan
+  osdCamId = e.target.value; $("#osdImg").hidden = true; osdRender();
+};
+$("#osdToggle").onclick = osdToggle;
+$("#osdSnap").onclick = osdSnap;
+$$("#osdPad button, #osdBack").forEach(b => b.onclick = () => osdKey(b.dataset.k));
+$("#osdDone").onclick = () => $("#dlgOsd").close();
+$("#dlgOsd").addEventListener("close", () => { osdCloseCam(osdCamId); });   // ook bij Esc: menu op de camera dicht
+$("#dlgOsd").addEventListener("keydown", (e) => {
+  const k = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Enter: "enter", NumpadEnter: "enter", Backspace: "back" }[e.code];
+  if (!k || e.target.tagName === "SELECT") return;
+  if (k === "enter" && !osdIsOpen()) return;   // Enter op een knop werkt dan gewoon als klik
+  e.preventDefault();
+  const now = performance.now();
+  if (now - osdLastKey < 140) return;          // toets vasthouden: niet sneller dan ~7 per seconde
+  osdLastKey = now; osdKey(k);
+});
+/* Xbox-controller in het OSD-venster: D-pad of linker stick (één stap per duw), A = OK, B = terug */
+function osdPad(gp, down) {
+  if (down(B.UP)) osdKey("up"); else if (down(B.DOWN)) osdKey("down");
+  else if (down(B.LEFT)) osdKey("left"); else if (down(B.RIGHT)) osdKey("right");
+  if (down(B.A)) osdKey("enter");
+  if (down(B.B)) osdKey("back");
+  const x = gp.axes[0] || 0, y = gp.axes[1] || 0;
+  const dir = Math.abs(x) > 0.6 || Math.abs(y) > 0.6 ? (Math.abs(x) > Math.abs(y) ? (x > 0 ? "right" : "left") : (y > 0 ? "down" : "up")) : null;
+  if (dir && dir !== osdStick) osdKey(dir);
+  if (!dir && (Math.abs(x) < 0.3 && Math.abs(y) < 0.3)) osdStick = null; else if (dir) osdStick = dir;
+}
 $("#capClose").onclick = () => $("#dlgCap").close();
 $("#capStart").onclick = async () => {
   const cams = $$("#capTable input[data-cam]:checked").map(i => i.dataset.cam);
@@ -2115,9 +2289,18 @@ function ytPlace(g = ytGeom()) {
     ytReserve(0); ytResKey = null; ytReserveTop(ytH(w));
     ytWin.style.width = w + "px"; ytWin.style.left = Math.round((innerWidth - w) / 2) + "px"; ytWin.style.top = "10px";
     $("#ytAutoBtn").hidden = true;
+    wallSideLayout();
     return;
   }
   ytReserveTop(0);
+  if (g.auto && wall && wallSideOn() && !ytWin.hidden) {
+    // bediening rechts uitgeklapt: speler bovenaan in dezelfde kolom, bediening eronder (wallSideLayout)
+    w = wallSideW(); ytReserve(0); ytResKey = null;
+    ytWin.style.width = w + "px"; ytWin.style.left = (innerWidth - w - 10) + "px"; ytWin.style.top = "10px";
+    $("#ytAutoBtn").hidden = true;
+    wallSideLayout();
+    return;
+  }
   // sleutel van de indeling: alleen als die verandert, opnieuw kijken of de strook nog nodig is (anders gaat hij heen en weer)
   const key = [wall, cfg.preset_count, cfg.tile_size, view, cfg.cameras.length, innerWidth, innerHeight, g.w].join("|");
   const strip = () => { w = Math.min(g.w, Math.round(innerWidth * 0.35)); ytReserve(w); ytResKey = key; x = innerWidth - w - 10; y = 10; };
@@ -2131,6 +2314,7 @@ function ytPlace(g = ytGeom()) {
   } else ytReserve(0);
   ytWin.style.width = w + "px"; ytWin.style.left = x + "px"; ytWin.style.top = y + "px";
   $("#ytAutoBtn").hidden = g.auto;
+  wallSideLayout();
 }
 function ytSaveGeom(kind) {
   const r = ytWin.getBoundingClientRect(), old = ytGeomRaw();
@@ -2205,7 +2389,7 @@ function ytRender() {
 }
 function ytShow(on) {
   ytWin.hidden = !on;
-  if (!on) { ytReserve(0); ytReserveTop(0); }
+  if (!on) { ytReserve(0); ytReserveTop(0); wallSideLayout(); }
   if (on) ytPlace();
   ytRender();
 }
@@ -2308,7 +2492,7 @@ ytDrag($("#ytHead"), (r, dx, dy) => {
 ytDrag($("#ytGrip"), (r, dx) => {
   ytWin.style.width = Math.max(220, Math.min(r.width + dx, innerWidth - r.left)) + "px";
 });
-addEventListener("resize", () => { if (!ytWin.hidden) ytPlace(); });
+addEventListener("resize", () => { if (!ytWin.hidden) ytPlace(); else wallSideLayout(); });
 addEventListener("scroll", ytReplace, { passive: true });
 new ResizeObserver(ytReplace).observe($("#presetArea"));
 new MutationObserver(ytReplace).observe($("#presetArea"), { childList: true, subtree: true });
@@ -2507,6 +2691,8 @@ function connectEvents() {
       midiUpdate(ev);
     } else if (ev.type === "liederen") {
       songsUpdate(ev);
+    } else if (ev.type === "osd") {
+      osdOpen = ev.cams || {}; renderTabs(); renderPresets(); osdRender();
     } else if (ev.type === "moving") {
       if (ev.moving) moving[ev.cam] = { n: ev.n }; else delete moving[ev.cam];
       renderPresets();
@@ -2532,7 +2718,7 @@ function connectEvents() {
    moving: SSE "moving" (server leest de camerapositie na een preset tot hij stilstaat).
    camst: SSE "camstatus" (server probeert elke 10 s een verbinding met elke camera).
    cfg.cameras[i].preset_colors {n: kleur} en preset_order [n…] staan in cameras.json (gedeeld). */
-let moving = {}, camst = {}, editColor = "", dragSrc = null;
+let moving = {}, camst = {}, editColor = "", dragSrc = null, osdOpen = {};
 const PCOLORS = ["rood", "oranje", "geel", "groen", "blauw", "paars"];
 function camDot(id) {
   const st = camst[id];
@@ -2617,6 +2803,7 @@ async function accessLoad() {
 }
 function accessApply() {
   document.body.classList.toggle("viewonly", viewOnly());
+  wallSideLayout();
   const b = $("#btnLock");
   b.hidden = !access.pin_set;
   b.classList.toggle("locked", viewOnly());
@@ -3285,7 +3472,8 @@ const TOUR_STEPS = [
       <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. We lopen ze kort langs.</p>` },
   { target: ["#btnKeys"], menu: "main", title: "⌨ Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
-  { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>` },
+  { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
+    <p>Met <b>◂ Bediening</b> rechtsonder (toets <kbd>${esc(keyLabel(keyOf("side")) || "B")}</kbd>) klap je rechts de camerabediening en de Xbox-controller uit. Staat het YouTube-venster open, dan komt de bediening er direct onder, in dezelfde kolom.</p>` },
   { target: ["#btnBackup"], menu: "main", title: "💾 Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
@@ -3298,6 +3486,7 @@ const TOUR_STEPS = [
   { target: ["#btnAccess"], menu: "main", title: "🔒 Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>🔒 Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
   { target: ["#btnTablet"], menu: "main", title: "📱 Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },
   { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
+  { target: ["#btnOsd"], menu: "main", title: "🖥 OSD-menu camera", text: () => `<p>Bedien het <b>menu van de camera zelf</b> (belichting, kleur, beeld…) met pijltjes, <b>OK</b> en <b>Terug</b>, met het toetsenbord of de Xbox-controller (D-pad, A, B). <i>📷 Beeld bekijken</i> haalt één foto op zodat je ziet waar je bent.</p><p><b>Het menu staat ook in de livestream</b>: zet eerst een andere camera in beeld. Staat de camera IN BEELD, dan vraagt de app eerst of je het zeker weet. Zolang het menu open is staat er <b>OSD-MENU</b> bij de camera en reageert hij niet op presets of volgen. Venster dicht = menu dicht.</p>` },
   { target: ["#btnTheme"], menu: "main", title: "☀ / 🌙 Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
   { target: ["#btnTour"], menu: "main", title: "🎓 Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
   { target: ["#btnUpd"], menu: "main", title: "🔄 Op updates controleren", text: () => `<p>Kijkt meteen of er een nieuwe versie van PTZ Control is. De app doet dit ook zelf, elke 6 uur.</p>` },

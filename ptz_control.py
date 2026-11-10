@@ -309,6 +309,8 @@ def describe_request(path, body, code, resp):
             msg = _preset_label(cam or {}, args.get("n")) + " opgeslagen"
         elif a == "autofocus":
             msg = "Autofocus " + ("aan" if args.get("on") else "uit")
+        elif a == "osd":
+            msg = {"open": "OSD-menu geopend", "close": "OSD-menu gesloten"}.get(args.get("key"), "OSD-menu bediend")
         else:
             msg = CMD_LABEL.get(a, f"Commando {a}")
     elif path == "/api/preset/undo":
@@ -518,11 +520,100 @@ def visca_command(cam, action, a):
 
 
 def run_command(cam, action, args):
+    if action == "osd":
+        return osd_command(cam, args.get("key"))
     if cam.get("protocol") == "http":
         result = http_command(cam, action, args)
         if result is not None:
             return result
     return visca_command(cam, action, args)
+
+
+# ---------------------------------------------------------------- OSD-menu van de camera
+# 🧑 Het OSD-menu (On Screen Display) van de camera bedienen vanuit de app (op verzoek, 10 nov 2026).
+# ⚠️ Altijd via VISCA over TCP 5678 (zoals autofocus), bron: PTZOptics G2 VISCA over IP Command List:
+#   openen = preset 95 oproepen (wisselt aan/uit), sluiten 81 01 06 06 03, navigeren = pan/tilt met snelheid 0E,
+#   enter 81 01 06 06 05, terug 81 01 06 06 04. Niet getest op de camera's in de kerk.
+# Het menu staat ook in de livestream; daarom houdt de server bij op welke camera het open staat en weigert hij
+# daar andere bewegingen (die zouden door het menu navigeren) tot het weer dicht is.
+OSD_KEYS = {
+    "open": "81 01 04 3F 02 5F FF",
+    "close": "81 01 06 06 03 FF",
+    "up": "81 01 06 01 0E 0E 03 01 FF",
+    "down": "81 01 06 01 0E 0E 03 02 FF",
+    "left": "81 01 06 01 0E 0E 01 03 FF",
+    "right": "81 01 06 01 0E 0E 02 03 FF",
+    "enter": "81 01 06 06 05 FF",
+    "back": "81 01 06 06 04 FF",
+}
+OSD = {}                 # cam_id -> tijdstip van het laatste OSD-commando (= menu staat open)
+OSD_LOCK = threading.Lock()
+OSD_TTL = float(os.environ.get("PTZ_OSD_TTL", 300))   # s zonder OSD-commando → aannemen dat het menu dicht is
+OSD_ALLOWED = {"osd", "stop"}                          # mag ook als het menu open staat
+
+
+def osd_snapshot():
+    with OSD_LOCK:
+        return {"type": "osd", "cams": {cid: True for cid in OSD}}
+
+
+def osd_expire():
+    """Na OSD_TTL zonder OSD-commando nemen we aan dat het menu dicht is (camera-time-out of afstandsbediening)."""
+    now = time.time()
+    with OSD_LOCK:
+        gone = [cid for cid, t in OSD.items() if now - t > OSD_TTL]
+        for cid in gone:
+            OSD.pop(cid, None)
+    if gone:
+        broadcast(osd_snapshot())
+
+
+def osd_is_open(cam_id):
+    osd_expire()
+    with OSD_LOCK:
+        return cam_id in OSD
+
+
+def osd_command(cam, key):
+    if key not in OSD_KEYS:
+        raise ValueError(f"onbekende OSD-toets: {key}")
+    cid = cam["id"]
+    was_open = osd_is_open(cid)
+    if key not in ("open", "close") and not was_open:
+        raise ValueError("Het OSD-menu staat niet open. Open het eerst.")
+    res = ""
+    if not (key == "open" and was_open):   # al open: niet nog eens preset 95 (dat zou het menu juist sluiten)
+        if key == "open":
+            if cid in TRACKERS or cid in FOLLOW_TIMERS:   # volgen stuurt pan-commando's: die zouden door het menu lopen
+                stop_tracking(cid, halt=True, quiet=True)
+            moving_cancel(cid)
+        try:
+            res = visca_send(cam, OSD_KEYS[key])
+        except OSError as e:
+            raise ValueError(f"Het OSD-menu gaat via VISCA (TCP-poort {cam.get('visca_port') or 5678}) en die reageert niet ({e})")
+    with OSD_LOCK:
+        if key == "close":
+            OSD.pop(cid, None)
+        else:
+            OSD[cid] = time.time()
+    if was_open != (key != "close"):
+        broadcast(osd_snapshot())
+    return res
+
+
+def osd_close_all():
+    """Alle open OSD-menu's sluiten (workspace wisselen, oefenstand, afsluiten). Fouten negeren."""
+    with OSD_LOCK:
+        ids = list(OSD)
+    for cid in ids:
+        try:
+            visca_send(find_camera(cid), OSD_KEYS["close"])
+        except Exception:  # noqa: BLE001
+            pass
+    with OSD_LOCK:
+        OSD.clear()
+    if ids:
+        broadcast(osd_snapshot())
 
 
 def thumb_path(cam, n, tdir=None):
@@ -571,6 +662,10 @@ def do_action(cam, action, args, info=None):
         if n in _backup.RESERVED:
             raise ValueError(f"Preset {n} is gereserveerd door PTZOptics (90 = home, 95 = OSD-menu, 91–99 vast). "
                              "Gebruik 1–89 of 100–254.")
+    if action not in OSD_ALLOWED and not (action in ("zoom", "focus") and args.get("dir") == "stop") \
+            and osd_is_open(cam["id"]):
+        raise ValueError(f"Het OSD-menu staat open op {cam.get('name') or 'deze camera'}. "
+                         "Sluit het eerst (Menu → 🖥 OSD-menu camera).")
     if action in STOPS_TRACKING and (cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS):
         stop_tracking(cam["id"], halt=False)
     if action in ("move", "stop", "home", "preset_call", "preset_set"):
@@ -691,6 +786,7 @@ def camstatus_loop():
                 for k in list(CAMSTATUS):
                     if k not in ids:
                         CAMSTATUS.pop(k)
+            osd_expire()
             ts = [threading.Thread(target=camstatus_probe, args=(c,), daemon=True) for c in cams if c.get("host")]
             for t in ts:
                 t.start()
@@ -769,6 +865,8 @@ def undo_preset(cam, n):
         raise ValueError("Ongedaan maken kan niet meer (te lang geleden of oude positie onbekend).")
     if JOB.get("running"):
         raise ValueError("Er loopt een taak; probeer het daarna.")
+    if osd_is_open(cam["id"]):
+        raise ValueError("Het OSD-menu staat open op deze camera: sluit het eerst.")
     UNDO.pop((cam["id"], n), None)
     if cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS:
         stop_tracking(cam["id"], halt=True)
@@ -896,6 +994,8 @@ def start_tracking(cam):
     err = tracking_error()
     if err:
         raise RuntimeError(err)
+    if osd_is_open(cam["id"]):
+        raise RuntimeError("Het OSD-menu staat open op deze camera: sluit het eerst.")
     stop_tracking(cam["id"], halt=True, quiet=True)
     with TRACK_LOCK:
         if _DETECTOR is None:
@@ -1040,6 +1140,7 @@ def _activate(ws_id):
     global CONFIG_PATH, THUMB_DIR
     if JOB.get("running"):
         raise ValueError("Er loopt nog een taak (uitlezen/terugzetten/laden). Wacht tot die klaar is.")
+    osd_close_all()               # menu niet open laten staan op camera's van de vorige workspace
     for cam_id in list(TRACKERS) + list(FOLLOW_TIMERS):
         try:
             stop_tracking(cam_id, halt=True, quiet=True)
@@ -1439,6 +1540,9 @@ def start_job(kind, cam_ids, opts):
         cams = [c for c in cfg.get("cameras", []) if c["id"] in cam_ids]
         if not cams:
             raise ValueError("Geen camera's gekozen")
+        busy = [c.get("name") or c["id"] for c in cams if osd_is_open(c["id"])]
+        if busy:
+            raise ValueError("Het OSD-menu staat open op " + ", ".join(busy) + ": sluit het eerst.")
         JOB.update(running=True, kind=kind, cams={c["id"]: {"status": "wachten", "msg": "", "errors": []} for c in cams})
     preset_count = int(cfg.get("preset_count") or 12)
     stamp = now_stamp()
@@ -1742,6 +1846,7 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(f"data: {json.dumps(LD.snapshot())}\n\n".encode())
             with CAMSTATUS_LOCK:
                 self.wfile.write(f"data: {json.dumps({'type': 'camstatus', 'cams': dict(CAMSTATUS)})}\n\n".encode())
+            self.wfile.write(f"data: {json.dumps(osd_snapshot())}\n\n".encode())
             for cid in list(MOVING):
                 self.wfile.write(f"data: {json.dumps({'type': 'moving', 'cam': cid, 'moving': True})}\n\n".encode())
             self.wfile.flush()
@@ -1900,7 +2005,7 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/quit":
             # 🧑 app afsluiten vanuit het menu (de losse Mac-app heeft geen venster om te sluiten)
             self._send(200, {"ok": True})
-            threading.Timer(0.3, lambda: os._exit(0)).start()
+            threading.Timer(0.3, lambda: (osd_close_all(), os._exit(0))).start()   # OSD-menu niet open laten staan
             return None
 
         if u.path == "/api/update/check":
@@ -2094,6 +2199,51 @@ def _log_naar_bestand():
             pass
 
 
+def _app_browser():
+    """Pad naar Chrome/Edge/Chromium/Brave (die kennen --app), of None."""
+    import shutil  # noqa: PLC0415
+    kand = []
+    if sys.platform == "darwin":
+        for naam, exe in (("Google Chrome", "Google Chrome"), ("Microsoft Edge", "Microsoft Edge"),
+                          ("Chromium", "Chromium"), ("Brave Browser", "Brave Browser")):
+            for root in ("/Applications", os.path.expanduser("~/Applications")):
+                kand.append(os.path.join(root, naam + ".app", "Contents", "MacOS", exe))
+    elif sys.platform == "win32":
+        roots = [os.environ.get(k) for k in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA")]
+        for root in filter(None, roots):
+            kand += [os.path.join(root, "Google", "Chrome", "Application", "chrome.exe"),
+                     os.path.join(root, "Microsoft", "Edge", "Application", "msedge.exe"),
+                     os.path.join(root, "BraveSoftware", "Brave-Browser", "Application", "brave.exe")]
+    else:
+        for naam in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser",
+                     "microsoft-edge", "brave-browser"):
+            w = shutil.which(naam)
+            if w:
+                kand.append(w)
+    return next((k for k in kand if os.path.isfile(k)), None)
+
+
+def open_bediening(url):
+    """Bediening openen als eigen app-venster (Chrome/Edge --app: geen adresbalk of tabbladen).
+
+    Terugval: gewoon tabblad in de standaardbrowser. PTZ_BROWSER=tab forceert het tabblad."""
+    exe = None if os.environ.get("PTZ_BROWSER", "").lower() == "tab" else _app_browser()
+    if exe:
+        try:
+            import subprocess  # noqa: PLC0415
+            kw = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "stdin": subprocess.DEVNULL}
+            if sys.platform == "win32":
+                kw["creationflags"] = 0x00000008 | 0x00000200   # DETACHED_PROCESS | NEW_PROCESS_GROUP
+            else:
+                kw["start_new_session"] = True
+            subprocess.Popen([exe, f"--app={url}"], **kw)  # noqa: S603
+            return
+        except OSError:
+            pass
+    import webbrowser  # noqa: PLC0415
+    webbrowser.open(url)
+
+
 def _tray(url, lan_url):
     """Icoon in de menubalk (Mac) / het systeemvak (Windows): openen, map, afsluiten. Blokkeert.
 
@@ -2118,7 +2268,7 @@ def _tray(url, lan_url):
 
     img = Image.open(os.path.join(RES_DIR, "icon.png"))
     menu = pystray.Menu(
-        pystray.MenuItem("Bediening openen", lambda *_: webbrowser.open(url), default=True),
+        pystray.MenuItem("Bediening openen", lambda *_: open_bediening(url), default=True),
         pystray.MenuItem(f"Andere schermen: {lan_url}", lambda *_: webbrowser.open(lan_url)),
         pystray.MenuItem("Map met instellingen openen", lambda *_: open_map()),
         pystray.Menu.SEPARATOR,
@@ -2134,10 +2284,13 @@ def main():
     ap.add_argument("--bind", default="0.0.0.0")
     ap.add_argument("--open", action="store_true", help="open de bediening in de standaardbrowser")
     ap.add_argument("--no-open", action="store_true", help="losse app: browser níet openen")
+    ap.add_argument("--tab", action="store_true", help="bediening in een gewoon browsertabblad openen i.p.v. een app-venster")
     ap.add_argument("--no-tray", action="store_true", help="losse app: geen icoon in menubalk/systeemvak")
     ap.add_argument("--workspace", help="starten in deze workspace (naam of id)")
     args = ap.parse_args()
     _log_naar_bestand()
+    if args.tab:
+        os.environ["PTZ_BROWSER"] = "tab"
     if FROZEN and not args.no_open:
         args.open = True   # dubbelklik op de app = bediening openen
     url = f"http://localhost:{args.port}"
@@ -2149,8 +2302,7 @@ def main():
             urllib.request.urlopen(url + "/api/state", timeout=2).read()
             print(f"PTZ Control draait al op {url}")
             if args.open:
-                import webbrowser
-                webbrowser.open(url)
+                open_bediening(url)
             return
         except Exception:  # noqa: BLE001
             _melding(f"Poort {args.port} is bezet door een ander programma. PTZ Control kan niet starten.")
@@ -2179,8 +2331,7 @@ def main():
     print(f"Instellingen en foto's: {DATA_DIR}  (workspace: {WS['active']})")
     print("Stoppen met Ctrl+C (of dit venster sluiten)")
     if args.open:
-        import webbrowser
-        threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+        threading.Timer(1.0, lambda: open_bediening(url)).start()
     if FROZEN and not args.no_tray:
         threading.Thread(target=srv.serve_forever, daemon=True, name="http").start()
         if _tray(url, lan_url):
