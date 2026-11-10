@@ -1,4 +1,4 @@
-import sys
+import sys, urllib.request
 from playwright.sync_api import sync_playwright
 OUT = sys.argv[1]; URL = "http://127.0.0.1:8080/?notour"
 YT = "ytUpdate({type:'youtube', channel:'@kerkzwolle', live:true, upcoming:false, video_id:null, title:'Kerkdienst zondag 10:00', checked:'09:58:12', error:null});"
@@ -20,6 +20,10 @@ LOG = """(() => { const d = new Date(); d.setHours(9, 41, 0, 0); const t0 = d.ge
  [1130, 'actie', 'iPad Jan (192.168.100.23)', 'Links', 'Preset 2 (Preekstoel) opgeroepen'],
  [1160, 'systeem', 'systeem', '', 'Mixer: Links in beeld'],
  [1300, 'fout', 'Telefoon (192.168.100.40)', '', 'Bediening geweigerd: geen pincode ingevoerd', 2],
+ [950, 'lied', 'Voordienst app', '', 'Liederen geladen: Zondag 10 november (4 liederen): Opwekking 733; Psalm 42:1 en 3; 10.000 redenen; Opwekking 710'],
+ [960, 'lied', 'ProPresenter', '', 'Playlist: Zondag 10:00 (7 items): Welkom en mededelingen; Opwekking 733; Psalm 42:1 en 3; 10.000 redenen; Preek: Ruth 1; Opwekking 710; Zegen'],
+ [1020, 'lied', 'ProPresenter', '', '▶ Opwekking 733 - Heer, U bent mijn leven (2 van 7 in Zondag 10:00, voordienst nr. 1)'],
+ [1380, 'lied', 'ProPresenter', '', '▶ Psalm 42:1 en 3 (3 van 7 in Zondag 10:00, voordienst nr. 2)'],
  [1500, 'actie', 'Mac regie (deze computer)', 'Midden', 'Persoon volgen aan'],
 ]; logEntries = new Map(r.map((x, i) => [i + 1, { id: i + 1, t: t0 + x[0], kind: x[1], who: x[2], cam: x[3], msg: x[4], n: x[5] || 1, last: t0 + x[0] + 40 }]));
 $('#logDevName').value = 'Mac regie'; logCams(); logRender(); })()"""
@@ -45,6 +49,9 @@ with sync_playwright() as p:
     pg.evaluate("undoOffer('Midden · Preset 3 opgeslagen', 'midden', 3)"); pg.wait_for_timeout(300)
     pg.screenshot(path=f"{OUT}/ongedaan-maken.png", clip={"x": 420, "y": 760, "width": 600, "height": 140}); pg.evaluate("$('#undoNote').hidden = true")
     pg.click("#btnPad"); pg.click("#btnMidi"); pg.wait_for_timeout(1500); pg.screenshot(path=f"{OUT}/videomixer.png"); pg.click("#midiClose")
+    urllib.request.urlopen("http://127.0.0.1:50001/test/trigger?i=4").read(); pg.wait_for_timeout(2500)
+    pg.click("#btnPad"); pg.click("#btnSongs"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/liederen.png")
+    pg.locator("#dlgSongs").evaluate("d => d.scrollTop = 99999"); pg.wait_for_timeout(200); pg.screenshot(path=f"{OUT}/voordienst-app.png"); pg.click("#songsClose")
     pg.click("#btnPad"); pg.click("#btnAccess"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/toegang.png"); pg.click("#acClose")
     pg.click("#btnPad"); pg.click("#btnLog"); pg.wait_for_timeout(400); pg.evaluate(LOG); pg.wait_for_timeout(200)
     pg.screenshot(path=f"{OUT}/activiteitenlog.png"); pg.click("#logClose")

@@ -70,5 +70,8 @@ for ci, (cid, name, ps) in enumerate(cams):
                                                         else "paars" if n in ("Band", "Piano", "Drums", "Gitaar", "Zang", "Zangers", "Band breed") else "")] if c}})
     for i, (_, k) in enumerate(ps):
         scene(k, ci * 10 + i).save(f"{out}/thumbs/{cid}_{i + 1}.jpg", quality=86)
+# 🎵 liederen: nep-ProPresenter (docs/tools/nep_propresenter.py, poort 50001) + nep-Voordienst app (nep_voordienst.py, poort 50020)
+cfg["liederen"] = {"pp": {"enabled": True, "host": "127.0.0.1", "port": 50001},
+                   "voordienst": {"enabled": True, "url": "http://127.0.0.1:50020/api/liederen", "token": "test-token-123"}}
 json.dump(cfg, open(out + "/cameras.json", "w"), indent=1)
 print("ok")

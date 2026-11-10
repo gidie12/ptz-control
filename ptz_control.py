@@ -38,6 +38,7 @@ import backup as _backup  # noqa: E402
 import youtube as _youtube  # noqa: E402
 import updater as _updater  # noqa: E402
 import midi as _midi  # noqa: E402
+import liederen as _liederen  # noqa: E402
 import actlog as _actlog  # noqa: E402
 import oefen as _oefen  # noqa: E402
 from urllib.parse import unquote  # noqa: E402
@@ -331,6 +332,8 @@ def describe_request(path, body, code, resp):
         msg = "Bijwerken gestart"
     elif path == "/api/midi/config":
         msg = "Videomixer-instellingen gewijzigd"
+    elif path == "/api/liederen/config":
+        msg = "Liederen-instellingen gewijzigd"
     elif path == "/api/midi/record":
         msg = "Verkenning videomixer " + ("gestart" if body.get("on") else "gestopt")
     elif path == "/api/backup/restore":
@@ -386,6 +389,14 @@ def _midi_cams():
 
 
 MIDI = _midi.Watcher(_midi_cfg, _midi_cams, broadcast)
+
+
+# ---------------------------------------------------------------- liederen (ProPresenter + Voordienst app → activiteitenlog)
+def _liederen_cfg():
+    return load_config().get("liederen") or {}
+
+
+LD = _liederen.Watcher(_liederen_cfg, broadcast, lambda msg, kind, who: ACTLOG.add(msg, kind, who=who))
 
 
 # ---------------------------------------------------------------- updates
@@ -782,8 +793,11 @@ def undo_preset(cam, n):
 # ---------------------------------------------------------------- hulp bij instellen (wizard)
 def camtest(c):
     """Test een (nog niet opgeslagen) camera: bereikbaar, VISCA-poort, snapshot."""
+    pw = c.get("password") or ""
+    if not pw and c.get("id"):          # bestaande camera: de UI kent het wachtwoord niet, dus het opgeslagen gebruiken
+        pw = next((x.get("password") or "" for x in load_config().get("cameras", []) if x.get("id") == c.get("id")), "")
     cam = {"id": "test", "host": str(c.get("host") or "").strip(), "protocol": c.get("protocol") or "http",
-           "visca_port": c.get("visca_port") or 5678, "user": c.get("user") or "", "password": c.get("password") or ""}
+           "visca_port": c.get("visca_port") or 5678, "user": c.get("user") or "", "password": pw}
     if not cam["host"]:
         raise ValueError("Vul een IP-adres in")
     res = {"http": False, "visca": False, "snapshot": False, "error": ""}
@@ -1039,6 +1053,7 @@ def _activate(ws_id):
     broadcast({"type": "workspace", "active": ui_ws_id(), "practice": PRACTICE["on"]})
     YT.refresh()
     MIDI.refresh()
+    LD.refresh()
     with CAMSTATUS_LOCK:          # andere camera's: status, onderweg en ongedaan maken opnieuw
         CAMSTATUS.clear()
     MOVING.clear()
@@ -1148,6 +1163,7 @@ def make_backup(with_passwords=True, ws_id=None):
     if not with_passwords:
         for cam in cfg.get("cameras", []):
             cam.pop("password", None)
+        ((cfg.get("liederen") or {}).get("voordienst") or {}).pop("token", None)
     thumbs = {}
     for cam in cfg.get("cameras", []):
         for n in list_thumbs(cam, tdir):
@@ -1342,9 +1358,15 @@ def restore_backup(data, ws_id=None):
     cfg_path, tdir = ws_paths(ws_id)
     try:
         with open(cfg_path, encoding="utf-8") as f:
-            current = {c["id"]: c for c in json.load(f).get("cameras", [])}
+            cur_cfg = json.load(f)
+        current = {c["id"]: c for c in cur_cfg.get("cameras", [])}
     except (OSError, ValueError):
-        current = {}
+        cur_cfg, current = {}, {}
+    # back-up zonder wachtwoorden: token van de Voordienst app houden
+    new_vd = (new.get("liederen") or {}).get("voordienst")
+    old_tok = ((cur_cfg.get("liederen") or {}).get("voordienst") or {}).get("token")
+    if isinstance(new_vd, dict) and "token" not in new_vd and old_tok:
+        new_vd["token"] = old_tok
     for cam in new["cameras"]:
         cam.pop("thumbs", None)
         old = current.get(cam.get("id"), {})
@@ -1594,8 +1616,12 @@ class Handler(BaseHTTPRequestHandler):
             cfg = load_config()
             for cam in cfg.get("cameras", []):
                 cam["thumbs"] = list_thumbs(cam)
+                # 🔑 camerawachtwoord nooit naar een scherm (ook meekijkers zien GET's); alleen of er een is
+                cam["password_set"] = bool(cam.pop("password", ""))
             cfg["tracking_error"] = tracking_error()
             cfg["first_run"] = first_run(cfg)
+            if cfg.get("liederen"):           # zonder token (de UI gebruikt /api/liederen; POST /api/config behoudt hem)
+                cfg["liederen"] = _liederen.public_cfg(cfg["liederen"])
             return self._send(200, cfg)
         if u.path == "/api/access":
             return self._send(200, {"pin_set": pin_set(), "unlocked": self._authorized(), "local": is_local(self.client_address[0])})
@@ -1657,6 +1683,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"type": "camstatus", "cams": dict(CAMSTATUS)})
         if u.path == "/api/midi":
             return self._send(200, {**MIDI.snapshot(), "config": _midi.norm_cfg(_midi_cfg())})
+        if u.path == "/api/liederen":
+            return self._send(200, {**LD.snapshot(), "config": _liederen.public_cfg(_liederen_cfg())})
         if u.path == "/api/midi/log":
             seq = int(parse_qs(u.query).get("since", ["0"])[0] or 0)
             return self._send(200, MIDI.log_since(seq))
@@ -1707,6 +1735,7 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(f"data: {json.dumps(YT.snapshot())}\n\n".encode())
             self.wfile.write(f"data: {json.dumps(UPD.snapshot())}\n\n".encode())
             self.wfile.write(f"data: {json.dumps(MIDI.snapshot())}\n\n".encode())
+            self.wfile.write(f"data: {json.dumps(LD.snapshot())}\n\n".encode())
             with CAMSTATUS_LOCK:
                 self.wfile.write(f"data: {json.dumps({'type': 'camstatus', 'cams': dict(CAMSTATUS)})}\n\n".encode())
             for cid in list(MOVING):
@@ -1834,9 +1863,19 @@ class Handler(BaseHTTPRequestHandler):
             body.pop("midi", None)
             if old_cfg.get("midi"):
                 body["midi"] = old_cfg["midi"]
+            # liederen-koppeling idem: alleen via /api/liederen/config
+            body.pop("liederen", None)
+            if old_cfg.get("liederen"):
+                body["liederen"] = old_cfg["liederen"]
             existing = {c["id"]: c for c in old_cfg.get("cameras", [])}
             for cam in body["cameras"]:
                 cam.pop("thumbs", None)
+                # 🔑 wachtwoord: leeg of niet meegestuurd = het opgeslagen houden; zonder gebruikersnaam = geen wachtwoord
+                cam.pop("password_set", None)
+                if not str(cam.get("password") or ""):
+                    cam["password"] = existing.get(cam.get("id"), {}).get("password", "")
+                if not str(cam.get("user") or "").strip():
+                    cam["password"] = ""
                 # uitgelezen posities/beeld alleen via de back-uptaken wijzigen, nooit via een (mogelijk verouderd) scherm
                 for key in ("saved_positions", "saved_image", "preset_capacity"):
                     cam.pop(key, None)
@@ -1910,6 +1949,21 @@ class Handler(BaseHTTPRequestHandler):
             MIDI.config_changed(old_midi, cfg["midi"])
             broadcast({"type": "config"})
             return self._send(200, {"ok": True, "config": cfg["midi"]})
+        if u.path == "/api/liederen/config":
+            with LOCK:
+                cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+                old = _liederen.norm_cfg(cfg.get("liederen"))
+                new = {k: {**old[k], **(body.get(k) if isinstance(body.get(k), dict) else {})} for k in old}
+                bvd = body.get("voordienst") if isinstance(body.get("voordienst"), dict) else {}
+                # 🔑 token alleen bij een nieuwe waarde (de UI krijgt hem nooit terug), of wissen
+                new["voordienst"]["token"] = (bvd.get("token") or ("" if bvd.get("token_clear") else old["voordienst"]["token"]))
+                cfg["liederen"] = _liederen.norm_cfg(new)
+                _write(cfg)
+            LD.refresh()
+            broadcast({"type": "config"})
+            return self._send(200, {"ok": True, "config": _liederen.public_cfg(cfg["liederen"])})
+        if u.path == "/api/liederen/check":
+            return self._send(200, {"ok": True, **LD.check_now()})
         if u.path == "/api/midi/fake_press" and _midi.FAKE:   # alleen met PTZ_MIDI_FAKE (tests)
             _midi.FAKE.press("B" if body.get("bus") == "B" else "A", clamp(body.get("n", 1), 1, 4))
             return self._send(200, {"ok": True})
@@ -2112,6 +2166,7 @@ def main():
     YT.start()
     UPD.start()
     MIDI.start()
+    LD.start()
     threading.Thread(target=camstatus_loop, daemon=True, name="camstatus").start()
     if os.environ.get("PTZ_AUTOBK", "").lower() not in ("0", "uit", "off"):
         threading.Thread(target=autobackup_loop, daemon=True, name="autobackup").start()

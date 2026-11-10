@@ -289,6 +289,21 @@
   .mixstat.ok { color: var(--oktxt); } .mixstat.err { color: var(--live); } .mixstat.off { color: var(--muted); }
   #midiLog { background: var(--logbg); border: 1px solid var(--line); border-radius: 8px; height: 180px; overflow: auto; margin: 8px 0 0;
     padding: 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; white-space: pre; user-select: text; -webkit-user-select: text; }
+  /* 🎵 Liederen (ProPresenter + Voordienst app) */
+  #dlgSongs { width: min(720px, 95vw); }
+  #dlgSongs input[type=text], #dlgSongs input[type=number] { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel2); color: var(--text); font: inherit; min-width: 0; }
+  .songlist { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; max-height: 210px; overflow: auto;
+    border: 1px solid var(--line); border-radius: 8px; }
+  .songlist li { padding: 5px 10px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+  .songlist li:first-child { border-top: 0; }
+  .songlist li .sn { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
+  .songlist li.hdr { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding-top: 8px; }
+  .songlist li.now { background: var(--okbg); color: var(--oktxt); font-weight: 600; }
+  .songlist li.now .sn::before { content: "▶ "; }
+  .songnow { font-size: 14px; margin-top: 8px; }
+  .logt tr.lied td.lm { color: var(--text); }
+  .logt tr.lied td.lw { color: var(--accent); }
   .col.onair { outline: 2px solid var(--live); outline-offset: 4px; border-radius: 8px; }
   .colhead .onair, .tab .onair { background: var(--live); color: #fff; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px;
     white-space: nowrap; flex-shrink: 0; align-self: center; }
@@ -486,6 +501,7 @@
       <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
       <button class="mi" id="btnSettings" role="menuitem">📷 Camera's</button>
       <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld">🎛 Videomixer (MIDI)</button>
+      <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)">🎵 Liederen (ProPresenter)</button>
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
       <div class="msep"></div>
       <button class="mi" id="btnPractice" role="menuitem" title="Oefenen met nagebootste camera's: de camera's in de kerk bewegen niet">🚧 Oefenstand</button>
@@ -832,6 +848,39 @@
   </div>
   <div class="actions"><span></span><button class="primary" id="midiClose">Sluiten</button></div>
 </dialog>
+<dialog id="dlgSongs">
+  <h3>🎵 Liederen</h3>
+  <p class="small">PTZ Control leest welke nummers er gezongen worden uit <b>ProPresenter</b> en/of de <b>Voordienst app</b>.
+    Elk nummer komt in het <b>📋 Activiteitenlog</b> (soort <i>Liederen</i>), met de plek in de playlist. De camera's bewegen hierdoor niet.</p>
+  <div class="bsec">
+    <h4>ProPresenter</h4>
+    <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ppOn"> Koppeling met ProPresenter aan</label>
+    <div class="row small">Computer (IP-adres) <input type="text" id="ppHost" maxlength="120" placeholder="bijv. 192.168.100.20" style="width:170px">
+      poort <input type="number" id="ppPort" min="1" max="65535" style="width:84px"></div>
+    <div class="small muted" style="margin-top:6px">In ProPresenter: <i>Instellingen → Netwerk</i> → <b>Netwerk inschakelen</b> aanzetten; daar staan ook het IP-adres en de poort.
+      Draait ProPresenter op deze computer, vul dan <code>127.0.0.1</code> in.</div>
+    <div class="mixstat off" id="ppStat"></div>
+    <div class="songnow" id="ppNow"></div>
+    <ol class="songlist" id="ppList" hidden></ol>
+  </div>
+  <div class="bsec">
+    <h4>Voordienst app</h4>
+    <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="dbOn"> Liederen uit de Voordienst app lezen</label>
+    <div class="row small">API-adres van de liederen <input type="text" id="dbUrl" maxlength="500" placeholder="https://…/api/liederen" style="flex:1;min-width:220px"></div>
+    <div class="small muted" style="margin-top:6px">Elke 30 seconden opnieuw gelezen. Verwacht JSON met <code>"liederen": [...]</code> (of <code>items</code>/<code>songs</code>), of tekst met één lied per regel.
+      Staat een nummer uit de Voordienst app in ProPresenter op het scherm, dan komt het voordienstnummer erbij in het log.
+      Zonder token mag het ook een <code>.json</code>/<code>.txt</code>-bestand op deze computer zijn.</div>
+    <div class="row small">API-token <input type="password" id="dbToken" maxlength="2000" autocomplete="new-password" placeholder="(optioneel)" style="flex:1;min-width:220px">
+      <button class="icon" id="dbTokenClear" title="Opgeslagen token wissen" hidden>Wissen</button></div>
+    <div class="small muted" style="margin-top:6px">Het token wordt meegestuurd als <code>Authorization: Bearer …</code>. Maak het aan in de Voordienst app;
+      PTZ Control laat het daarna nooit meer zien (ook niet in een back-up zonder wachtwoorden).</div>
+    <div class="mixstat off" id="dbStat"></div>
+    <ol class="songlist" id="dbList" hidden></ol>
+  </div>
+  <div class="actions"><span style="display:flex;gap:8px"><button class="icon" id="songsCheck">↻ Nu controleren</button>
+    <button class="icon" id="songsLog">📋 In het log bekijken</button></span>
+    <button class="primary" id="songsClose">Sluiten</button></div>
+</dialog>
 <dialog id="dlgCap">
   <h3>🧪 Presetaantal testen</h3>
   <p class="small">Test per camera hoeveel presets hij echt kan opslaan en oproepen. Voor elk testnummer: preset oproepen,
@@ -891,10 +940,10 @@
 </dialog>
 <dialog id="dlgLog">
   <h3>📋 Activiteitenlog</h3>
-  <p class="small">Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer en wat er op de mixer in beeld stond.
+  <p class="small">Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer, wat er op de mixer in beeld stond en welke liederen er gezongen zijn.
     Handbediening en herhalingen binnen een minuut worden samengevoegd (×2, ×3 …). Geldt voor alle workspaces.</p>
   <div id="logFilter">
-    <select id="logKind" aria-label="Soort"><option value="">Alles</option><option value="actie">Acties</option><option value="fout">Fouten</option><option value="systeem">Systeem</option></select>
+    <select id="logKind" aria-label="Soort"><option value="">Alles</option><option value="actie">Acties</option><option value="fout">Fouten</option><option value="systeem">Systeem</option><option value="lied">Liederen</option></select>
     <select id="logCam" aria-label="Camera"></select>
     <input type="text" id="logSearch" autocomplete="off" placeholder="Zoeken (tekst, apparaat, preset…)">
   </div>
@@ -1432,7 +1481,8 @@ function camRow(c) {
       <option value="visca" ${c.protocol === "visca" ? "selected" : ""}>VISCA (TCP)</option></select>
     <input type="number" data-f="visca_port" value="${c.visca_port || 5678}">
     <input type="text" data-f="user" value="${esc(c.user || "")}" placeholder="optioneel" autocomplete="off">
-    <input type="password" data-f="password" value="${esc(c.password || "")}" placeholder="optioneel" autocomplete="new-password">
+    <input type="password" data-f="password" value="" placeholder="${c.password_set ? "•••••• (opgeslagen)" : "optioneel"}" autocomplete="new-password"
+      title="${c.password_set ? "Leeg laten = opgeslagen wachtwoord houden. Gebruiker leegmaken = wachtwoord weg." : ""}">
     <button class="icon" title="Verwijderen">✕</button>`;
   const d2 = document.createElement("div"); d2.className = "camrow2";
   d2.innerHTML = `
@@ -1501,7 +1551,7 @@ $("#btnSave").onclick = async () => {
     return o;
   }).filter(c => c.host);
   cfg.preset_count = Math.max(1, Math.min(244, +$("#presetCount").value || 12));
-  $("#dlg").close(); await saveConfig(); toast("Opgeslagen", true);
+  $("#dlg").close(); await saveConfig(); await loadConfig(); toast("Opgeslagen", true);   // opnieuw laden: wachtwoorden niet in het geheugen houden
 };
 
 
@@ -2413,6 +2463,8 @@ function connectEvents() {
       ytUpdate(ev);
     } else if (ev.type === "midi") {
       midiUpdate(ev);
+    } else if (ev.type === "liederen") {
+      songsUpdate(ev);
     } else if (ev.type === "moving") {
       if (ev.moving) moving[ev.cam] = { n: ev.n }; else delete moving[ev.cam];
       renderPresets();
@@ -2764,7 +2816,7 @@ function wzRow(c = {}) {
   d.querySelector("[data-a=test]").onclick = async () => {
     const res = d.querySelector(".wzres"), host = d.querySelector("[data-f=host]").value.trim();
     res.className = "wzres"; res.textContent = "testen…";
-    const r = await post("/api/camtest", { host, protocol: d.querySelector("[data-f=protocol]").value, visca_port: c.visca_port || 5678, user: c.user, password: c.password });
+    const r = await post("/api/camtest", { id: c.id, host, protocol: d.querySelector("[data-f=protocol]").value, visca_port: c.visca_port || 5678, user: c.user });
     if (!r?.ok) { res.className = "wzres err"; res.textContent = r?.error || "mislukt"; return; }
     const ok = r.snapshot || r.visca;
     res.className = "wzres " + (ok ? "ok" : "err");
@@ -2972,6 +3024,71 @@ $("#btnUpd").onclick = async () => {
 };
 fetch("/api/update").then(r => r.ok ? r.json() : null).then(st => st && updUpdate(st)).catch(() => {});
 
+/* ---- 🎵 Liederen (ProPresenter + Voordienst app) ----
+   Server (liederen.py) leest de API van ProPresenter en de Voordienst app (optioneel met bearer token) en zet elk nummer in het activiteitenlog.
+   Instellingen in cfg.liederen (per workspace), alleen te wijzigen via /api/liederen/config. */
+let songs = null, songsCfg = null;
+function songsUpdate(ev) { songs = ev; if ($("#dlgSongs").open) songsRender(); }
+async function songsLoad() {
+  const j = await (await fetch("/api/liederen")).json();
+  songsCfg = j.config; delete j.config; songs = j;
+}
+async function songsSave(part) {
+  const j = await post("/api/liederen/config", part);
+  if (j && j.config) { songsCfg = j.config; songsRender(); } else if (j && !j.need_pin) toast(j?.error || "Opslaan mislukt");
+}
+function songsStat(el, cls, txt) { el.className = "mixstat " + cls; el.textContent = txt; }
+function songsRender() {
+  if (!songsCfg || !songs) return;
+  const pc = songsCfg.pp, ps = songs.pp || {}, dc = songsCfg.voordienst, ds = songs.voordienst || {};
+
+  $("#ppOn").checked = pc.enabled; $("#dbOn").checked = dc.enabled;
+  if (document.activeElement !== $("#ppHost")) $("#ppHost").value = pc.host;
+  if (document.activeElement !== $("#ppPort")) $("#ppPort").value = pc.port;
+  if (document.activeElement !== $("#dbUrl")) $("#dbUrl").value = dc.url;
+  if (document.activeElement !== $("#dbToken")) { $("#dbToken").value = ""; $("#dbToken").placeholder = dc.token_set ? "•••••• (opgeslagen)" : "(optioneel)"; }
+  $("#dbTokenClear").hidden = !dc.token_set;
+  ["#ppOn", "#ppHost", "#ppPort", "#dbOn", "#dbUrl", "#dbToken", "#dbTokenClear"].forEach(s => $(s).disabled = viewOnly());
+  const chk = (st) => st.checked ? ` · ${st.checked}` : "";
+  if (!pc.enabled) songsStat($("#ppStat"), "off", "Uit.");
+  else if (!pc.host) songsStat($("#ppStat"), "err", "Vul het IP-adres van de ProPresenter-computer in.");
+  else if (ps.connected) songsStat($("#ppStat"), "ok", `● Verbonden met ${ps.version || "ProPresenter"}${chk(ps)}`);
+  else songsStat($("#ppStat"), "err", (ps.error ? "Niet verbonden: " + ps.error : "Verbinden…") + chk(ps));
+  const on = pc.enabled && ps.connected;
+  $("#ppNow").innerHTML = on ? (ps.current ? `Op het scherm: <b>${esc(ps.current.name)}</b>` : `<span class="muted">Niets op het scherm.</span>`)
+    + (ps.playlist ? ` <span class="muted">· playlist ${esc(ps.playlist.name || "")}</span>` : "") : "";
+  let n = 0;
+  const items = on ? (ps.items || []) : [];
+  $("#ppList").hidden = !items.length;
+  $("#ppList").innerHTML = items.map(i => i.header ? `<li class="hdr">${esc(i.name)}</li>`
+    : `<li class="${n === ps.pos ? "now" : ""}"><span class="sn">${++n}</span>${esc(i.name)}</li>`).join("");
+  if (!dc.enabled) songsStat($("#dbStat"), "off", "Uit.");
+  else if (!dc.url) songsStat($("#dbStat"), "err", "Vul het API-adres van de liederen in.");
+  else if (ds.ok) songsStat($("#dbStat"), "ok", `● ${ds.title ? ds.title + ": " : ""}${ds.items.length} lied${ds.items.length === 1 ? "" : "eren"}${chk(ds)}`);
+  else songsStat($("#dbStat"), "err", (ds.error ? "Niet te lezen: " + ds.error : "Lezen…") + chk(ds));
+  const di = dc.enabled && ds.ok ? ds.items : [], cur = ds.playing ?? ds.current;
+  $("#dbList").hidden = !di.length;
+  $("#dbList").innerHTML = di.map((t, i) => `<li class="${i === cur ? "now" : ""}"><span class="sn">${i + 1}</span>${esc(t)}</li>`).join("");
+}
+$("#btnSongs").onclick = async () => { await songsLoad(); $("#dlgSongs").showModal(); songsRender(); };
+$("#songsClose").onclick = () => $("#dlgSongs").close();
+$("#ppOn").onchange = (e) => songsSave({ pp: { enabled: e.target.checked } });
+$("#ppHost").onchange = (e) => songsSave({ pp: { host: e.target.value.trim() } });
+$("#ppPort").onchange = (e) => songsSave({ pp: { port: +e.target.value } });
+$("#dbOn").onchange = (e) => songsSave({ voordienst: { enabled: e.target.checked } });
+$("#dbUrl").onchange = (e) => songsSave({ voordienst: { url: e.target.value.trim() } });
+$("#dbToken").onchange = (e) => { if (e.target.value.trim()) songsSave({ voordienst: { token: e.target.value.trim() } }).then(() => { e.target.value = ""; }); };
+$("#dbTokenClear").onclick = () => songsSave({ voordienst: { token_clear: true } });
+$("#songsCheck").onclick = async () => {
+  $("#songsCheck").disabled = true;
+  const j = await post("/api/liederen/check", {});
+  $("#songsCheck").disabled = false;
+  if (j && j.pp) { delete j.ok; songs = j; songsRender(); }
+};
+$("#songsLog").onclick = async () => {
+  $("#dlgSongs").close(); await $("#btnLog").onclick(); $("#logKind").value = "lied"; logRender();
+};
+
 /* ---- 🎓 Rondleiding ----
    🧑 Elke functie hoort hier een stap te hebben. Voeg je iets toe of haal je iets weg: werk TOUR_STEPS bij (zie CLAUDE.md §2a). */
 const TOUR_STEPS = [
@@ -3024,6 +3141,7 @@ const TOUR_STEPS = [
   { target: ["#alertBar"], show: () => { alertDemo = true; alertCheck(); }, hide: () => { alertDemo = false; $("#alertBar").classList.remove("show"); alertPrev = new Map(); alertCheck(); },
     title: "⚠ Foutmelding op alle schermen", text: () => `<p>Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op <b>alle schermen</b> een rode balk, ook op volledig scherm: een <b>camera niet bereikbaar</b>, de <b>videomixer niet verbonden</b>, of <b>geen verbinding met PTZ Control</b> zelf.</p><p>Is het opgelost, dan wordt de balk even groen en verdwijnt hij. Met <b>Verbergen</b> haal je hem weg tot er een nieuwe fout bij komt; <b>Bekijk log</b> opent het activiteitenlog.</p>` },
   { target: ["#btnPractice"], menu: "main", title: "🚧 Oefenstand", text: () => `<p>Oefenen zonder dat er iets beweegt in de kerk: PTZ Control schakelt over op <b>nagebootste camera's</b> met dezelfde camera's, presets en foto's. Handig voor nieuwe vrijwilligers.</p><p>Geldt voor <b>alle schermen</b> (oranje balk en rand), de videomixer wordt losgekoppeld en wat je verandert wordt niet bewaard. Stoppen via de balk of hier. <b>Niet tijdens een dienst.</b></p>` },
+  { target: ["#btnSongs"], menu: "main", title: "🎵 Liederen", text: () => `<p>Koppel <b>ProPresenter</b> (via het netwerk) en/of de <b>Voordienst app</b> (API-adres met token). PTZ Control ziet dan welk nummer er op het scherm staat en zet elk nummer in het <b>activiteitenlog</b>, met de plek in de playlist en het nummer uit de Voordienst app.</p><p>Zo zie je na de dienst precies wat er gezongen is. De camera's bewegen hierdoor niet.</p>` },
   { target: ["#btnLog"], menu: "main", title: "📋 Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
   { target: ["#btnAccess"], menu: "main", title: "🔒 Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>🔒 Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
   { target: ["#btnTablet"], menu: "main", title: "📱 Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },

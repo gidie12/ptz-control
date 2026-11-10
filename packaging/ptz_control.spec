@@ -22,7 +22,7 @@ a = Analysis(  # noqa: F821
     [os.path.join(ROOT, "ptz_control.py")],
     pathex=[ROOT],
     datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, ".")],
-    hiddenimports=["backup", "youtube", "updater", "tracker", "midi", "roland_v1hd", "actlog", "oefen", "mido", "mido.backends.rtmidi", "rtmidi", "certifi", "pystray", "PIL.Image"]
+    hiddenimports=["backup", "youtube", "updater", "tracker", "midi", "roland_v1hd", "actlog", "oefen", "liederen", "mido", "mido.backends.rtmidi", "rtmidi", "certifi", "pystray", "PIL.Image"]
     + (["pystray._win32"] if sys.platform == "win32" else ["pystray._darwin", "AppKit", "Foundation"] if sys.platform == "darwin" else []),
     # YOLO/torch is te groot voor de losse app: volgen gebruikt daar de OpenCV-persoonsdetector (HOG)
     excludes=["ultralytics", "torch", "torchvision", "matplotlib", "tkinter", "pandas", "scipy", "IPython", "pytest"],
