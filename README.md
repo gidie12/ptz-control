@@ -6,7 +6,7 @@ Eigen webbediening voor PTZOptics-camera's, te bedienen met muis/touch, toetsenb
 
 ## Installeren en starten
 
-**Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in je browser.
+**Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in een eigen venster, zonder adresbalk en tabbladen (app-venster van Chrome of Edge; is geen van beide er, dan een gewoon tabblad in je standaardbrowser). Liever een gewoon tabblad: start met `--tab` of zet `PTZ_BROWSER=tab`.
 
 | | Mac | Windows |
 |---|---|---|
@@ -16,7 +16,7 @@ Eigen webbediening voor PTZOptics-camera's, te bedienen met muis/touch, toetsenb
 | Snelkoppeling opnieuw maken | | in cmd: `"Start PTZ Control.bat" /snelkoppeling` |
 | Vereist | Python 3.9+ (python.org of `brew install python`) | Python 3.9+ (python.org, vink *Add python.exe to PATH* aan, of `winget install -e --id Python.Python.3.12`) |
 
-- **Mac – app-icoon:** *PTZ Control.app* moet in de map van PTZ Control blijven staan (hij start de starter uit die map). Sleep hem naar het Dock; dat maakt alleen een verwijzing. Draait de app al, dan opent een klik alleen de bediening in de browser. Anders opent Terminal met het logboek; dat venster sluiten = stoppen.
+- **Mac – app-icoon:** *PTZ Control.app* moet in de map van PTZ Control blijven staan (hij start de starter uit die map). Sleep hem naar het Dock; dat maakt alleen een verwijzing. Draait de app al, dan opent een klik alleen de bediening (als app-venster). Anders opent Terminal met het logboek; dat venster sluiten = stoppen.
 - **Mac:** meldt macOS "onbekende ontwikkelaar", rechtsklik → **Open** (eenmalig).
 - **Windows – snelkoppeling:** de starter maakt bij de eerste keer de snelkoppeling **PTZ Control** met icoon in het Startmenu en op het bureaublad.
 - **Windows:** vraagt de firewall om toegang, kies **Privénetwerken**, anders kunnen tablets de app niet bereiken.
