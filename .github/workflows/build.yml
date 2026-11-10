@@ -30,7 +30,7 @@ jobs:
         include:
           - os: windows-latest
             naam: windows
-          - os: macos-14            # Apple Silicon (arm64), zoals de Mac mini
+          - os: macos-15            # Apple Silicon (arm64), zoals de Mac mini (macos-14 is per 2 nov 2026 uitgefaseerd)
             naam: macos
     runs-on: ${{ matrix.os }}
     env:
