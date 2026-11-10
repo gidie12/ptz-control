@@ -8,8 +8,9 @@ cameras.json
 cameras.json.tmp
 thumbs/
 
-# YOLO-modelbestand (wordt automatisch gedownload)
+# YOLO-modelbestanden (worden gedownload: *.pt door ultralytics, models/ door packaging/haal_model.py)
 *.pt
+models/
 
 # macOS
 .DS_Store

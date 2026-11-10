@@ -175,7 +175,12 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 
 - 🧑 **Alleen pan.** De tracker stuurt uitsluitend `left`/`right` (tilt-snelheid 1, geen tilt-richting) en `ptzstop`. Nooit tilt of zoom wijzigen.
 - ⚠️ Videobron: **`rtsp://<ip>:554/2`** (substream), per camera aan te passen. Niet geverifieerd op hun camera's; RTSP moet aan staan.
-- Detectie: **YOLOv8n via `ultralytics`** als geïnstalleerd (device: `cuda` → `mps` → `cpu`), anders **OpenCV HOG**.
+- Detectie, in deze volgorde: **YOLOv8n via `ultralytics`** als geïnstalleerd (device: `cuda` → `mps` → `cpu`); anders **YOLOX-tiny als ONNX via `cv2.dnn`** (geen torch) als `yolox_tiny.onnx` gevonden wordt (`PTZ_PERSON_MODEL`, of `models/` in `RES_DIR`/`HERE`/`DATA_DIR`); anders **OpenCV HOG**. Status-event `track` heeft `detector` (`yolo`/`yolox`/`hog`) en `note` (waarom geen YOLOX); de UI toont dat onder de volgknop.
+- 🧑 **Half silhouet moet werken**: er wordt vaak ingezoomd (10 nov 2026). ✅ Gevonden bij de gebruiker: losse app bleef op *zoekt persoon* staan. Oorzaak: de losse app had alleen HOG, en die herkent **alleen hele personen** (top tot teen, venster 64×128 op een tot 480 px verkleind beeld). Op een half silhouet vindt HOG niets (getest: 0 op zidane.jpg, YOLOX 2). **HOG niet meer als hoofddetector gebruiken.**
+- YOLOX-tiny (Megvii, **Apache 2.0**, 20 MB, invoer 416, release `0.1.1rc0`, sha256 in `packaging/haal_model.py`): voorbewerking zoals YOLOX (links-boven inpassen, rand 114, BGR, geen normalisatie), uitvoer `(N, 85)` met grid/stride-decodering (8/16/32), score = obj × klasse 0, `NMSBoxes` 0.45. YOLOv8-gewichten bewust niet meegeleverd (AGPL). `models/` staat in `.gitignore`; de build haalt het model op en de spec weigert te bouwen zonder.
+- Personen kleiner dan 10% van de beeldhoogte worden genegeerd (`MIN_HEIGHT`, was 15%).
+- ✅ Getest in een **simulatie met de echte YOLOX-detector** (half silhouet uit zidane.jpg in een getekend beeld, camera draait 4°/s per stap, spreker ±12° met ~6°/s): uitgezoomd (60°) gem. 9%/max 15% van de beeldbreedte uit het midden, ingezoomd 18° gem. 10%/max 17%, 13° gem. 10%/max 18%, nooit buiten beeld, ~11 beelden/s op de CPU van de bouwomgeving. Met HOG: 0 commando's, 47% van de tijd buiten beeld.
+- Bewust **geen** lagere pan-snelheid bij inzoomen: geprobeerd (zoom via VISCA, snelheid tot 20%), maar in de simulatie kon de camera een snelle spreker dan niet bijhouden (gem. 27%, max 49%). Niet opnieuw toevoegen zonder test op echte camera's.
 - ✅ **`opencv-python` moet < 5**: versie 5.x mist `HOGDescriptor` (gevonden bij testen). Vastgezet in `requirements.txt`.
 - Doelkeuze: grootste persoon (meestal de spreker vooraan), daarna dezelfde persoon blijven volgen (max. sprong 0.22 beeldbreedte). Kwijt >0.4 s → pan stoppen; >2.5 s → nieuw doel kiezen.
 - Regelaar: dode zone 0.10 met hysterese (stopt bij 0.05), snelheid evenredig tot `track_speed` (standaard 6), optie `track_invert` voor ondersteboven gemonteerde camera.
@@ -242,7 +247,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Opent zelf de browser (tenzij `--no-open`). Poort bezet en het is PTZ Control → alleen browser openen en stoppen; anders melding (MessageBox / `osascript`).
 - **Icoon in systeemvak/menubalk** via `pystray` (hoofdthread; server in een thread): openen, LAN-adres, map openen, afsluiten. Zonder pystray draait hij gewoon door. ⚠️ pystray op macOS (PyObjC) en Windows niet getest.
 - 🧑 **⏻ PTZ Control afsluiten** in het 🎮-menu (`POST /api/quit` → `os._exit(0)` na 0,3 s), voor alle versies.
-- **Geen YOLO/torch** in de losse app (te groot); volgen valt terug op OpenCV-HOG (`opencv-python-headless<5`).
+- **Geen YOLOv8/torch** in de losse app (te groot); volgen gebruikt daar **YOLOX-tiny via `cv2.dnn`** (`models/yolox_tiny.onnx` → `RES_DIR/models/`, `opencv-python-headless<5`). De workflow draait `packaging/haal_model.py` en `packaging/test_detector.py` (moet YOLOX gebruiken en ≥ 2 personen vinden op zidane.jpg uit het ultralytics-pakket; die foto gaat niet mee in de app). ⚠️ `cv2.dnn` met dit model in de PyInstaller-app op de Mac niet zelf geprobeerd.
 - ⚠️ Niet ondertekend door Apple/Microsoft: Gatekeeper (Systeeminstellingen → Privacy en beveiliging → *Toch openen*, of `xattr -dr com.apple.quarantine`) en SmartScreen vragen eenmalig om bevestiging.
 
 ## 9b. Videomixer: Roland V-1HD via MIDI (sinds v1.0.3; verkend op branch `verken/midi-roland`)

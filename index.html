@@ -1207,7 +1207,10 @@ function renderSide() {
   b.classList.toggle("on", !!t.on);
   b.textContent = t.on ? `🎯 Volgen aan · ${t.status || ""}` : "🎯 Volgen (pan)";
   $("#trackInfo").textContent = cfg.tracking_error ? "Volgen niet beschikbaar: " + cfg.tracking_error
-    : t.on && t.fps ? `${t.detector === "yolo" ? "YOLO" : "OpenCV"} · ${t.fps} beelden/s` : "";
+    : t.on && t.fps ? [
+        ({yolo: "YOLO", yolox: "YOLOX"})[t.detector] || "OpenCV (alleen hele personen)",
+        `${t.fps} beelden/s`,
+      ].filter(Boolean).join(" · ") + (t.note && t.detector === "hog" ? ` — ${t.note}` : "") : "";
 }
 
 /* ================= preset acties ================= */
