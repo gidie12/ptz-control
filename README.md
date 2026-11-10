@@ -101,7 +101,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De knop **🎮 controller** rechtsboven toont de status en is ook het **menu** (Controller-instellingen, Knoppenindeling, Volledig scherm, Back-up, Camera's). Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De knop **🎮 controller** rechtsboven toont de status en is ook het **menu** (Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen, thema, Instellingen). Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Zachte beweging** (standaard aan): de camera trekt geleidelijk op (ca. 1 seconde naar topsnelheid) en de stick reageert fijner rond het midden. Uitzetten geeft direct de volle snelheid.
 

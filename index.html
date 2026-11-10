@@ -306,7 +306,6 @@
   <div class="menuwrap">
     <button class="icon" id="btnPad" title="Menu · geen controller verbonden" aria-haspopup="true" aria-expanded="false"><span class="padico" aria-hidden="true">🎮<i></i></span>Menu <span class="caret">▾</span></button>
     <div class="menu" id="mainMenu" hidden role="menu">
-      <button class="mi" id="btnPadSet" role="menuitem">🎮 Controller-instellingen</button>
       <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen">⌨ Sneltoetsen</button>
       <div class="msep"></div>
       <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm <kbd>F</kbd></button>
@@ -1200,11 +1199,6 @@ $("#btnPad").onclick = (e) => { e.stopPropagation(); setMenu($("#mainMenu").hidd
 $$("#mainMenu .mi").forEach(b => b.addEventListener("click", () => setMenu(false)));
 document.addEventListener("click", (e) => { if (!e.target.closest(".menuwrap")) setMenu(false); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#mainMenu").hidden) setMenu(false); }, true);
-$("#btnPadSet").onclick = () => {
-  if (document.body.classList.contains("wall")) setWall(false);
-  const c = $("#padCard"); c.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 900);
-};
 
 window.addEventListener("gamepadconnected", (e) => { pad.idx = e.gamepad.index; padUI(e.gamepad); toast("Controller verbonden", true); });
 window.addEventListener("gamepaddisconnected", (e) => {
