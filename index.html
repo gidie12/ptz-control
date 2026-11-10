@@ -361,8 +361,16 @@
   body.wall header, body.wall aside { display: none; }
   body.wall main { grid-template-columns: 1fr; padding: 10px; }
   body.wall #presetCard { border: 0; background: none; padding: 0; }
-  #btnWallExit { display: none; position: fixed; bottom: 12px; right: 12px; z-index: 20; background: var(--panel2); color: var(--text); }
-  body.wall #btnWallExit { display: block; }
+  #wallBtns { display: none; position: fixed; bottom: 12px; right: 12px; z-index: 20; gap: 8px; }
+  body.wall #wallBtns { display: flex; }
+  #wallBtns .icon { background: var(--panel2); color: var(--text); }
+  #btnWallSide.on { border-color: var(--accent); }
+  body.viewonly #btnWallSide { display: none; }
+  /* volledig scherm + uitgeklapte bediening: zijbalk als kolom rechts, onder het YouTube-venster (als dat automatisch geplaatst is) */
+  body.wall.wallside aside { display: grid; position: fixed !important; right: 10px; top: var(--sidetop, 10px); bottom: 62px;
+    width: var(--sidew, 340px); grid-template-columns: minmax(0, 1fr) !important; align-content: start; gap: 10px;
+    overflow-y: auto; overscroll-behavior: contain; z-index: 19; }
+  body.wall.wallside main { padding-right: calc(var(--sidew, 340px) + 20px); }
   /* volledig scherm = bedienen: geen presets laden of opslaan */
   body.wall #btnLoad, body.wall #btnStore, body.wall #storeHint { display: none !important; }
   .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 12px; }
@@ -865,7 +873,10 @@
   <div class="ytgrip" id="ytGrip" title="Sleep om de grootte te wijzigen"></div>
 </div>
 
-<button class="icon" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
+<div id="wallBtns">
+  <button class="icon" id="btnWallSide" title="Camerabediening en Xbox-controller rechts tonen (toets B)">◂ Bediening</button>
+  <button class="icon" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
+</div>
 <dialog id="dlgMidi">
   <h3>🎛 Videomixer (Roland V-1HD)</h3>
   <p class="small">Via een USB-kabel van de V-1HD naar deze computer ziet PTZ Control welke ingang op de mixer gekozen is (rode knop).
@@ -1413,6 +1424,7 @@ const KEY_ACTIONS = {
   stop: ["Stop", "Space", "Overig"], home: ["Home", "KeyH", "Overig"], track: ["Volgen (pan) aan/uit", "KeyT", "Overig"],
   wall: ["Volledig scherm", "KeyF", "Overig"], youtube: ["YouTube-venster tonen/verbergen", "KeyY", "Overig"],
   songs: ["Liederenvenster tonen/verbergen", "KeyL", "Overig"],
+  side: ["Bediening rechts (volledig scherm)", "KeyB", "Overig"],
   ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ["preset_" + n, ["Preset " + n, "Digit" + n, "Presets op de gekozen camera"]])),
 };
 const keyOf = (a) => { const v = (cfg.keymap || {})[a]; return v === "none" ? "" : (v || KEY_ACTIONS[a][1]); };
@@ -1505,6 +1517,7 @@ document.addEventListener("keydown", (e) => {
   else if (a === "wall") setWall(!document.body.classList.contains("wall"));
   else if (a === "youtube") ytToggle();
   else if (a === "songs") songWinToggle();
+  else if (a === "side") { if (document.body.classList.contains("wall")) setWallSide(store.get("wallSide") !== "1"); }
   else if (a === "stop") { cmd("stop"); cmd("zoom", { dir: "stop" }); }
   else if (a.startsWith("preset_")) { if (ctrlCam) presetClick(ctrlCam, +a.slice(7)); }
 });
@@ -1546,8 +1559,40 @@ function setWall(on) {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     if (wallPrevView !== null && wallPrevView !== view && (wallPrevView === ALL || camById(wallPrevView))) setView(wallPrevView);
   }
+  wallSideLayout();
   ytReplace();   // YouTube-venster naar de plek die bij deze weergave hoort
 }
+/* Volledig scherm: camerabediening + Xbox-kaart rechts uitklappen (per apparaat, localStorage.wallSide).
+   Staat het YouTube-venster automatisch geplaatst open, dan komt het bovenaan in dezelfde kolom en de bediening eronder. */
+const wallSideOn = () => document.body.classList.contains("wall") && store.get("wallSide") === "1" && !viewOnly();
+function wallSideW() {
+  const g = ytGeom();
+  let w = 340;
+  if (!ytWin.hidden && g.auto && !ytOpt.wallTop) w = Math.max(w, g.w);
+  return Math.round(Math.max(300, Math.min(w, innerWidth * 0.4)));
+}
+function wallSideLayout() {
+  const on = wallSideOn();
+  document.body.classList.toggle("wallside", on);
+  wallSideBtn();
+  if (!on) return;
+  document.body.style.setProperty("--sidew", wallSideW() + "px");
+  const top = !ytWin.hidden && ytGeom().auto ? Math.round(ytWin.getBoundingClientRect().bottom + 10) : 10;
+  document.body.style.setProperty("--sidetop", Math.min(top, innerHeight - 200) + "px");
+}
+function wallSideBtn() {
+  const on = store.get("wallSide") === "1", b = $("#btnWallSide"); if (!b) return;
+  b.textContent = on ? "Bediening ▸" : "◂ Bediening";
+  b.classList.toggle("on", on);
+  b.title = (on ? "Camerabediening en Xbox-controller verbergen" : "Camerabediening en Xbox-controller rechts tonen")
+    + (keyOf("side") ? ` (toets ${keyLabel(keyOf("side"))})` : "");
+}
+function setWallSide(on) {
+  store.set("wallSide", on ? "1" : "0");
+  wallSideLayout();
+  if (!ytWin.hidden) ytPlace();
+}
+$("#btnWallSide").onclick = () => setWallSide(store.get("wallSide") !== "1");
 $("#btnWall").onclick = () => setWall(true);
 $("#btnWallExit").onclick = () => setWall(false);
 // Esc in de browser verlaat fullscreen; dan ook de weergave terugzetten
@@ -1608,11 +1653,12 @@ function renderKeyHints() {
   const presets = p1 === "Digit1" && p9 === "Digit9" ? "<kbd>1</kbd>–<kbd>9</kbd>" : `${k("preset_1")}…${k("preset_9")}`;
   $("#keyHints").innerHTML = `${presets} preset · ${cfg.cameras.slice(0, 3).map((c, i) => `<kbd>${esc(keyLabel(camHotkey(c, i)))}</kbd>`).join(" ")} camera ·
     ${k("left")}${k("up")}${k("right")}${k("down")} bewegen · ${k("zoom_in")}/${k("zoom_out")} zoom · ${k("focus_far")}/${k("focus_near")} focus ·
-    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("stop")} stop ·
+    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("side")} bediening (volledig scherm) · ${k("stop")} stop ·
     <a href="#" id="keyHintsEdit">aanpassen</a> · rechtsklik of lang drukken op een preset = bewerken`;
   $("#keyHintsEdit").onclick = (e) => { e.preventDefault(); $("#btnKeys").click(); };
   const wk = $("#btnWall kbd"); if (wk) wk.textContent = keyLabel(keyOf("wall"));
   $("#btnWall").title = `Alle camera's op het volledige scherm (toets ${keyLabel(keyOf("wall"))})`;
+  wallSideBtn();
 }
 
 $("#btnSettings").onclick = () => {
@@ -2239,9 +2285,18 @@ function ytPlace(g = ytGeom()) {
     ytReserve(0); ytResKey = null; ytReserveTop(ytH(w));
     ytWin.style.width = w + "px"; ytWin.style.left = Math.round((innerWidth - w) / 2) + "px"; ytWin.style.top = "10px";
     $("#ytAutoBtn").hidden = true;
+    wallSideLayout();
     return;
   }
   ytReserveTop(0);
+  if (g.auto && wall && wallSideOn() && !ytWin.hidden) {
+    // bediening rechts uitgeklapt: speler bovenaan in dezelfde kolom, bediening eronder (wallSideLayout)
+    w = wallSideW(); ytReserve(0); ytResKey = null;
+    ytWin.style.width = w + "px"; ytWin.style.left = (innerWidth - w - 10) + "px"; ytWin.style.top = "10px";
+    $("#ytAutoBtn").hidden = true;
+    wallSideLayout();
+    return;
+  }
   // sleutel van de indeling: alleen als die verandert, opnieuw kijken of de strook nog nodig is (anders gaat hij heen en weer)
   const key = [wall, cfg.preset_count, cfg.tile_size, view, cfg.cameras.length, innerWidth, innerHeight, g.w].join("|");
   const strip = () => { w = Math.min(g.w, Math.round(innerWidth * 0.35)); ytReserve(w); ytResKey = key; x = innerWidth - w - 10; y = 10; };
@@ -2255,6 +2310,7 @@ function ytPlace(g = ytGeom()) {
   } else ytReserve(0);
   ytWin.style.width = w + "px"; ytWin.style.left = x + "px"; ytWin.style.top = y + "px";
   $("#ytAutoBtn").hidden = g.auto;
+  wallSideLayout();
 }
 function ytSaveGeom(kind) {
   const r = ytWin.getBoundingClientRect(), old = ytGeomRaw();
@@ -2329,7 +2385,7 @@ function ytRender() {
 }
 function ytShow(on) {
   ytWin.hidden = !on;
-  if (!on) { ytReserve(0); ytReserveTop(0); }
+  if (!on) { ytReserve(0); ytReserveTop(0); wallSideLayout(); }
   if (on) ytPlace();
   ytRender();
 }
@@ -2432,7 +2488,7 @@ ytDrag($("#ytHead"), (r, dx, dy) => {
 ytDrag($("#ytGrip"), (r, dx) => {
   ytWin.style.width = Math.max(220, Math.min(r.width + dx, innerWidth - r.left)) + "px";
 });
-addEventListener("resize", () => { if (!ytWin.hidden) ytPlace(); });
+addEventListener("resize", () => { if (!ytWin.hidden) ytPlace(); else wallSideLayout(); });
 addEventListener("scroll", ytReplace, { passive: true });
 new ResizeObserver(ytReplace).observe($("#presetArea"));
 new MutationObserver(ytReplace).observe($("#presetArea"), { childList: true, subtree: true });
@@ -2743,6 +2799,7 @@ async function accessLoad() {
 }
 function accessApply() {
   document.body.classList.toggle("viewonly", viewOnly());
+  wallSideLayout();
   const b = $("#btnLock");
   b.hidden = !access.pin_set;
   b.classList.toggle("locked", viewOnly());
@@ -3411,7 +3468,8 @@ const TOUR_STEPS = [
       <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. We lopen ze kort langs.</p>` },
   { target: ["#btnKeys"], menu: "main", title: "⌨ Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
-  { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>` },
+  { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
+    <p>Met <b>◂ Bediening</b> rechtsonder (toets <kbd>${esc(keyLabel(keyOf("side")) || "B")}</kbd>) klap je rechts de camerabediening en de Xbox-controller uit. Staat het YouTube-venster open, dan komt de bediening er direct onder, in dezelfde kolom.</p>` },
   { target: ["#btnBackup"], menu: "main", title: "💾 Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
