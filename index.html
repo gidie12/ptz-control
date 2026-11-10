@@ -281,11 +281,6 @@
     background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%,
       transparent 70%, var(--muted) 70%, var(--muted) 78%, transparent 78%); opacity: .8; }
   #dlgPrefs { width: min(560px, 95vw); }
-  #dlgPrefs .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-  #dlgPrefs .seg button { background: var(--panel2); border: 0; padding: 7px 14px; cursor: pointer; font-size: 13px; }
-  #dlgPrefs .seg button + button { border-left: 1px solid var(--line); }
-  #dlgPrefs .seg button.on { background: var(--accent); color: var(--onaccent); font-weight: 600; }
-  #ytChannel:disabled { opacity: .55; cursor: not-allowed; }
   #dlgPrefs label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
   #toast.good { background: var(--okbg); border-color: var(--ok); }
 </style>
@@ -544,22 +539,7 @@
       starten en stoppen van de stream gebeurt buiten deze app.</div>
     <label class="small" style="display:block;margin-top:10px">Kanaal <span class="muted">(geldt voor alle schermen)</span>
       <input type="text" id="ytChannel" placeholder="@kerknaam, kanaal-id (UC…), kanaallink of link naar de stream" maxlength="200"></label>
-    <div class="small" id="ytLockNote" style="margin-top:6px;color:var(--accent)" hidden>🔒 Er loopt nu een stream. Het kanaal kun je pas wijzigen als die afgelopen is.</div>
     <div class="small" id="ytPrefStatus" style="margin-top:6px"></div>
-    <div class="small" style="margin-top:10px"><b>Venster</b> <span class="muted">· dit apparaat</span></div>
-    <label class="chk"><input type="checkbox" id="ytAuto"> Venster automatisch openen als het kanaal live gaat</label>
-    <label class="chk"><input type="checkbox" id="ytWallTop"> Bij volledig scherm boven de camera's <span class="muted">(de tegels schuiven omlaag)</span></label>
-    <label class="chk"><input type="checkbox" id="ytSound"> Met geluid starten <span class="muted">(standaard zonder, de browser kan geluid blokkeren)</span></label>
-    <div class="row" style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">
-      <span class="small">Grootte</span>
-      <span class="seg" id="ytSizeSeg">
-        <button data-w="260">Klein</button><button data-w="360">Middel</button><button data-w="520">Groot</button>
-      </span>
-      <button class="icon" id="ytResetPos" title="Venster zoekt zelf een vrije plek naast of onder de tegels">Automatisch plaatsen</button>
-    </div>
-    <div class="small muted" style="margin-top:6px">Standaard zoekt het venster zelf een vrije plek naast of onder de presettegels en past het zich aan
-      als het aantal tegels verandert (de grootte is dan het maximum). Sleep je het aan de titelbalk, dan blijft het op die plek staan;
-      ⌖ in de titelbalk of <i>Automatisch plaatsen</i> zet het terug.</div>
   </div>
   <div class="actions"><span></span>
     <span style="display:flex;gap:8px"><button class="icon" id="prefsCancel">Sluiten</button>
@@ -1577,7 +1557,6 @@ function ytPlace(g = ytGeom()) {
     w = Math.floor(Math.max(220, Math.min(g.w, innerWidth - 20, (innerHeight * 0.45 - 31) * 16 / 9)));
     ytReserve(0); ytResKey = null; ytReserveTop(ytH(w));
     ytWin.style.width = w + "px"; ytWin.style.left = Math.round((innerWidth - w) / 2) + "px"; ytWin.style.top = "10px";
-    $$("#ytSizeSeg button").forEach(b => b.classList.toggle("on", Math.abs(+b.dataset.w - g.w) < 2));
     $("#ytAutoBtn").hidden = true;
     return;
   }
@@ -1594,7 +1573,6 @@ function ytPlace(g = ytGeom()) {
     else { ytReserve(0); w = Math.min(g.w, innerWidth - 32); x = innerWidth - w - 16; y = innerHeight - ytH(w) - 16; }   // rechtsonder (over de zijbalk)
   } else ytReserve(0);
   ytWin.style.width = w + "px"; ytWin.style.left = x + "px"; ytWin.style.top = y + "px";
-  $$("#ytSizeSeg button").forEach(b => b.classList.toggle("on", Math.abs(+b.dataset.w - g.w) < 2));
   $("#ytAutoBtn").hidden = g.auto;
 }
 function ytSaveGeom(kind) {
@@ -1625,7 +1603,6 @@ function ytEmbedUrl(id) {
 }
 function ytRender() {
   const btn = $("#btnYt"), shown = !ytWin.hidden;
-  if ($("#dlgPrefs").open) { $("#ytChannel").disabled = !!yt.live; $("#ytLockNote").hidden = !yt.live; }
   btn.classList.toggle("live", !!yt.live);
   btn.classList.toggle("upcoming", !yt.live && !!yt.upcoming);
   btn.classList.toggle("shown", shown);
@@ -1709,7 +1686,7 @@ function ytMenuRender() {
     <div class="msep"></div>
     <button class="mi" data-y="check" role="menuitem" ${yt.channel ? "" : "disabled"}>⟳ Nu controleren</button>
     <button class="mi" data-y="open" role="menuitem" ${yt.channel ? "" : "disabled"}>↗ Openen op YouTube</button>
-    <button class="mi" data-y="prefs" role="menuitem">⚙ Kanaal instellen…${yt.live ? ' <span title="Vergrendeld tijdens een stream">🔒</span>' : ""}</button>`;
+    <button class="mi" data-y="prefs" role="menuitem">⚙ Kanaal instellen…</button>`;
 }
 function ytMenuOpen(open) {
   if (open) { setMenu(false); ytMenuRender(); }
@@ -1788,15 +1765,9 @@ addEventListener("blur", () => setTimeout(() => {
 /* ---- ⚙ Instellingen ---- */
 function openPrefs() {
   $("#ytChannel").value = (cfg.youtube || {}).channel || "";
-  $("#ytChannel").disabled = !!yt.live;
-  $("#ytLockNote").hidden = !yt.live;
-  $("#ytAuto").checked = ytOpt.auto;
-  $("#ytSound").checked = ytOpt.sound;
-  $("#ytWallTop").checked = ytOpt.wallTop;
   $("#ytPrefStatus").textContent = !yt.channel ? "" : yt.error ? yt.error
     : (yt.live ? "● Nu live: " + (yt.title || "") : yt.upcoming ? "Gepland: " + (yt.title || "") : "Niet live")
       + (yt.checked ? " · gecontroleerd " + yt.checked : "");
-  ytPlace();
   $("#dlgPrefs").showModal();
 }
 $("#btnPrefs").onclick = openPrefs;
@@ -1816,27 +1787,14 @@ function ytSetWallTop(on) {
   if (on && ytGeomRaw().auto === false) store.set("ytGeom", JSON.stringify({ w: ytGeom().w }));
   if (!ytWin.hidden) ytPlace();
 }
-$("#ytWallTop").onchange = () => ytSetWallTop($("#ytWallTop").checked);
-$("#ytAuto").onchange = () => store.set("ytAuto", $("#ytAuto").checked ? "1" : "0");
-$("#ytSound").onchange = () => { store.set("ytSound", $("#ytSound").checked ? "1" : "0"); ytShownVid = "_"; ytRender(); };
-$$("#ytSizeSeg button").forEach(b => b.onclick = () => {
-  const g = ytGeom(); g.w = +b.dataset.w;
-  store.set("ytGeom", JSON.stringify(g)); ytPlace(ytGeom());
-});
-$("#ytResetPos").onclick = () => { store.set("ytGeom", JSON.stringify({ w: ytGeom().w })); ytPlace(); };
 $("#prefsSave").onclick = async () => {
   const chan = $("#ytChannel").value.trim();
-  if (chan !== ((cfg.youtube || {}).channel || "") && yt.live) {
-    $("#ytChannel").value = (cfg.youtube || {}).channel || "";
-    return toast("Er loopt een stream: het kanaal kan nu niet gewijzigd worden");
-  }
   if (chan !== ((cfg.youtube || {}).channel || "")) {
     const prev = cfg.youtube;
     cfg.youtube = { channel: chan };
     const clean = JSON.parse(JSON.stringify(cfg)); clean.cameras.forEach(c => delete c.thumbs);
     const r = await post("/api/config", clean);
     if (r.error) { cfg.youtube = prev; return toast(r.error); }
-    if (r.youtube_locked) { cfg.youtube = prev; $("#dlgPrefs").close(); return toast("Er loopt een stream: het kanaal is niet gewijzigd"); }
     const st = await fetch("/api/youtube").catch(() => null);
     if (st && st.status === 404) { ytUpdate({ ...yt, channel: chan, error: YT_OLD }); $("#dlgPrefs").close(); return toast(YT_OLD); }
     if (chan) { yt = { ...yt, channel: chan, checked: null, error: null }; ytRender(); }

@@ -746,10 +746,6 @@ class Handler(BaseHTTPRequestHandler):
             old_cfg = load_config()
             old_yt = (old_cfg.get("youtube") or {}).get("channel", "")
             yt = body.get("youtube") if isinstance(body.get("youtube"), dict) else old_cfg.get("youtube")
-            yt_locked = False
-            if yt and YT.snapshot().get("live") and str(yt.get("channel") or "").strip() != old_yt:
-                # 🧑 kanaal niet wijzigen zolang er een stream loopt (ook niet via een verouderd scherm)
-                yt, yt_locked = old_cfg.get("youtube"), True
             if yt:
                 chan = str(yt.get("channel") or "").strip()[:200]
                 if chan:
@@ -772,7 +768,7 @@ class Handler(BaseHTTPRequestHandler):
             broadcast({"type": "config"})
             if (body.get("youtube") or {}).get("channel", "") != old_yt:
                 YT.refresh()
-            return self._send(200, {"ok": True, "youtube_locked": yt_locked})
+            return self._send(200, {"ok": True})
 
         if u.path == "/api/quit":
             # 🧑 app afsluiten vanuit het menu (de losse Mac-app heeft geen venster om te sluiten)
