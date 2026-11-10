@@ -142,7 +142,7 @@ Is alles weer in orde, dan wordt de balk even groen en verdwijnt hij. **Verberge
 <img src="docs/screenshots/foutmelding.png" width="720" alt="Foutmelding bovenaan">
 
 ## Oefenstand
-Met **Menu → 🎯 Oefenstand** oefen je zonder dat er iets beweegt in de kerk, handig voor nieuwe vrijwilligers. PTZ Control maakt een tijdelijke kopie van de huidige workspace (camera's, presets, foto's, knoppen) en bedient **nagebootste camera's** in plaats van de echte. Presets oproepen, handbediening, opslaan, ongedaan maken en de Xbox-controller werken zoals altijd; een nieuwe foto toont een getekend beeld met *OEFENEN* erin.
+Met **Menu → 🚧 Oefenstand** oefen je zonder dat er iets beweegt in de kerk, handig voor nieuwe vrijwilligers. PTZ Control maakt een tijdelijke kopie van de huidige workspace (camera's, presets, foto's, knoppen) en bedient **nagebootste camera's** in plaats van de echte. Presets oproepen, handbediening, opslaan, ongedaan maken en de Xbox-controller werken zoals altijd; een nieuwe foto toont een getekend beeld met *OEFENEN* erin.
 
 - Geldt voor **alle schermen** tegelijk: een oranje balk en rand laten zien dat je oefent.
 - De **videomixer wordt losgekoppeld** (anders zou IN BEELD verwarren).
