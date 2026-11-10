@@ -125,13 +125,6 @@
   .btn.trackbtn { height: 44px; font-size: 14px; margin-top: 8px; width: 100%; }
   .btn.trackbtn.on { background: var(--okbg); border-color: var(--ok); color: var(--oktxt); }
   /* Menuknop met controllerstatus: grijs icoon = geen controller, kleur + groen bolletje = verbonden, pulseert bij bewegen */
-  #btnPad .padico { position: relative; display: inline-block; margin-right: 7px; filter: grayscale(1); opacity: .45; transition: opacity .2s, filter .2s; }
-  #btnPad .padico i { position: absolute; right: -3px; bottom: -1px; width: 8px; height: 8px; border-radius: 50%;
-    background: var(--muted); border: 2px solid var(--bg); }
-  #btnPad.on { border-color: var(--ok); color: var(--text); }
-  #btnPad.on .padico { filter: none; opacity: 1; }
-  #btnPad.on .padico i { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-  #btnPad.act .padico i { animation: padpulse .6s ease-in-out infinite alternate; }
   @keyframes padpulse { to { transform: scale(1.35); box-shadow: 0 0 10px var(--ok); } }
   .menuwrap { position: relative; }
   #btnPad .caret { font-size: 11px; opacity: .7; margin-left: 2px; }
@@ -152,6 +145,8 @@
   .padbadge { background: var(--okbg); color: var(--oktxt); border: 1px solid var(--ok); border-radius: 999px;
     padding: 1px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .padbadge[hidden] { display: none; }
+  .padbadge.act { animation: badgepulse .6s ease-in-out infinite alternate; }
+  @keyframes badgepulse { to { box-shadow: 0 0 8px var(--ok); } }   /* knippert zacht tijdens bewegen */
   .padset label { display: flex; gap: 6px; align-items: center; }
   #dlgBackup { width: min(760px, 95vw); }
   #dlgMap { width: min(720px, 95vw); }
@@ -315,7 +310,7 @@
     <div class="menu" id="ytMenu" hidden role="menu"></div>
   </div>
   <div class="menuwrap">
-    <button class="icon" id="btnPad" title="Menu · geen controller verbonden" aria-haspopup="true" aria-expanded="false"><span class="padico" aria-hidden="true">🎮<i></i></span>Menu <span class="caret">▾</span></button>
+    <button class="icon" id="btnPad" title="Menu" aria-haspopup="true" aria-expanded="false">Menu <span class="caret">▾</span></button>
     <div class="menu" id="mainMenu" hidden role="menu">
       <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen">⌨ Sneltoetsen</button>
       <div class="msep"></div>
@@ -1275,10 +1270,8 @@ window.addEventListener("gamepaddisconnected", (e) => {
 });
 function padUI(gp) {
   if (!gp) $("#padLive").textContent = "";
-  $("#btnPad").classList.toggle("on", !!gp);
   $("#padBadge").hidden = !gp;
   if (gp) $("#padBadge").title = gp.id;
-  $("#btnPad").title = gp ? "Menu · controller verbonden" : "Menu · geen controller verbonden";
   $("#padInfo").textContent = gp ? gp.id.replace(/\s*\(.*?\)\s*/g, " ").trim() || gp.id : "Verbind de controller via Bluetooth of USB en druk op een knop (de browser ziet hem pas na een knopdruk).";
 }
 function rumble(gp, ms = 120, strong = 0.6) {
@@ -1397,7 +1390,7 @@ function padLoop() {
       }
     }
     const active = !!(move || zoom || focus);
-    $("#btnPad").classList.toggle("act", active);
+    $("#padBadge").classList.toggle("act", active);
     const live = `${camById(ctrlCam)?.name || ""} · ${move ? `${move.dir} ${move.pan}/${move.tilt}` : "stil"}${zoom ? ` · zoom ${zoom.dir} ${zoom.speed}` : ""}${pad.fine ? " · fijn" : ""}`;
     if ($("#padLive").textContent !== live) $("#padLive").textContent = live;
   }
