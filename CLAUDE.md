@@ -208,7 +208,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - 🧑 Videomixer is een **Roland V-1HD** (bevestigd 10 nov 2026). Doel: uitzoeken hoe MIDI-koppeling kan; nog **geen functie in de app**.
 - ✅ Uit de Remote Control Guide: USB-MIDI + DIN; bij een ingangsknop CC0/CC32 + program change (bank 0 = A, 1 = B, 50H = memory), fader CC17; SysEx RQ1 voor fader/video sel (`71 00 xx`) en knoplampjes (`73 02 xx`). Details in `docs/midi-roland-v1hd.md`.
 - 🧑 **De fader wordt nooit gebruikt** (staat vast aan één kant): live = laatst gekozen ingang op de live rij (`V1HDState.live(live_bus)`).
-- 🧑 **Rode knop = live.** Hoofdroute voor tally: knoplampjes via SysEx `73 02 xx` uitlezen (rood = program); program change alleen voor snelle reactie.
+- 🧑 **Lampjes: standaard groen, gekozen ingang rood = live** (groen ≠ preview). Hoofdroute voor tally: knoplampjes via SysEx `73 02 xx` uitlezen (rood = program); program change alleen voor snelle reactie.
 - ⚠️ Niet getest op de echte mixer: welke rij live is, A/B- vs PGM/PST-modus, betekenis van de lampjes-bytes, 14-bit-codering van de fader. Eerst `docs/tools/midi_verken.py` op de Mac mini draaien.
 - `roland_v1hd.py` (decoder, stdlib) en `docs/tools/midi_verken.py` (mido/python-rtmidi, nog niet in `requirements.txt`).
 

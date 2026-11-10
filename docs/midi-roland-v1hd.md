@@ -28,12 +28,12 @@ Bron: Roland *V-1HD Remote Control Guide* (versie 1.00, 2015).
 
 Er bestaat geen kant-en-klaar tally-bericht. 🧑 **De fader wordt nooit gebruikt**: hij staat vast aan één kant, dus één rij is altijd live en een knop in die rij schakelt direct. Daarmee:
 
-🧑 **Rode knop op de mixer = live.**
+🧑 **Lampjes op de mixer: standaard groen, de gekozen (live) ingang wordt rood.** Groen betekent hier dus 'niet live', niet 'klaargezet'.
 
 1. **Uit de lampjes** (hoofdroute): `73 02 xx` geeft de kleur van elke knop (VDOSEL A-1..4 / B-1..4). De ingang waarvan het lampje rood is = live, precies zoals de regie het ziet. Nog uitzoeken: welk byte bij welke knop hoort en welke waarde 'rood' is. Elke ~0,5 s opvragen, plus direct na elk program change-bericht.
 2. **Uit de knoppen** (snel, als aanvulling): elke druk geeft bank + program change, dus de app reageert meteen; het lampje bevestigt daarna.
 
-Open: brandt er op de andere rij een groen lampje (klaargezet), en wordt dat gebruikt?
+Te bevestigen met de log: is er altijd precies één knop rood?
 
 ## Testen op de Mac mini
 
@@ -46,7 +46,7 @@ Open: brandt er op de andere rij een groen lampje (klaargezet), en wordt dat geb
 Op de mixer: `MIDI OUT` op **OUT**, device-ID noteren. Dan rustig:
 
 1. de fader laten staan zoals in de dienst;
-2. op de A-rij ingang 1, 2, 3, 4 drukken; idem op de B-rij; noteer per druk welke knop rood en welke groen brandt;
+2. op de A-rij ingang 1, 2, 3, 4 drukken; idem op de B-rij; noteer per druk welke knop rood wordt;
 3. memory 1 en 2 kiezen;
 4. het script stoppen en opnieuw starten (dan vraagt het de beginstand op).
 
