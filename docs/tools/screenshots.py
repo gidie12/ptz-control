@@ -50,6 +50,7 @@ with sync_playwright() as p:
     pg.screenshot(path=f"{OUT}/ongedaan-maken.png", clip={"x": 420, "y": 760, "width": 600, "height": 140}); pg.evaluate("$('#undoNote').hidden = true")
     pg.click("#btnPad"); pg.click("#btnMidi"); pg.wait_for_timeout(1500); pg.screenshot(path=f"{OUT}/videomixer.png"); pg.click("#midiClose")
     urllib.request.urlopen("http://127.0.0.1:50001/test/trigger?i=4").read(); pg.wait_for_timeout(2500)
+    pg.keyboard.press("l"); pg.wait_for_timeout(600); pg.screenshot(path=f"{OUT}/liederenvenster.png"); pg.keyboard.press("l"); pg.wait_for_timeout(200)
     pg.click("#btnPad"); pg.click("#btnSongs"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/liederen.png")
     pg.locator("#dlgSongs").evaluate("d => d.scrollTop = 99999"); pg.wait_for_timeout(200); pg.screenshot(path=f"{OUT}/voordienst-app.png"); pg.click("#songsClose")
     pg.click("#btnPad"); pg.click("#btnAccess"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/toegang.png"); pg.click("#acClose")

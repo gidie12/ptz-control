@@ -259,11 +259,12 @@ Met Menu → **🎵 Liederen (ProPresenter)** ziet PTZ Control welke nummers er 
    "huidig": 2}
   ```
   `liederen` mag ook `items`, `songs` of `nummers` heten, en de items mogen objecten zijn (`{"type": "lied", "titel": "…"}`; staan er ook andere soorten in, dan tellen alleen de liederen). `huidig` (nummer vanaf 1, of de naam) is optioneel. Tekst met één lied per regel werkt ook, en zonder token mag het ook een `.json`/`.txt`-bestand op deze computer zijn.
-- Het venster toont de playlist en de liederen uit de Voordienst app met het nummer dat nu op het scherm staat. **↻ Nu controleren** leest beide meteen opnieuw; **📋 In het log bekijken** opent het log met alleen de liederen.
+- **Liederenvenster** (net als het YouTube-venster): zodra er iets gekoppeld is, staat in de kop een knop **🎵** met het nummer dat nu op het scherm staat. Klik erop, of druk op **L**, voor een klein venster met **Nu**, **Hierna** en de hele playlist (het huidige nummer groen). Verslepen aan de titelbalk, groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek en of het venster open was. Met **⇄** wissel je tussen de playlist uit ProPresenter en de lijst uit de Voordienst app, met **⚙** open je de instellingen. Werkt ook op volledig scherm.
+- Het instellingenvenster toont de playlist en de liederen uit de Voordienst app met het nummer dat nu op het scherm staat. **↻ Nu controleren** leest beide meteen opnieuw; **📋 In het log bekijken** opent het log met alleen de liederen.
 
 De instellingen gelden voor alle schermen en worden per workspace en in de back-up bewaard.
 
-<img src="docs/screenshots/liederen.png" width="720" alt="Liederen: ProPresenter"> <img src="docs/screenshots/voordienst-app.png" width="720" alt="Liederen: Voordienst app">
+<img src="docs/screenshots/liederenvenster.png" width="720" alt="Liederenvenster"> <img src="docs/screenshots/liederen.png" width="720" alt="Liederen: ProPresenter"> <img src="docs/screenshots/voordienst-app.png" width="720" alt="Liederen: Voordienst app">
 
 ## Licht of donker
 Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.

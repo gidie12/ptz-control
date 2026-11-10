@@ -440,6 +440,22 @@
   .ytgrip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; z-index: 2;
     background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%,
       transparent 70%, var(--muted) 70%, var(--muted) 78%, transparent 78%); opacity: .8; }
+  /* 🎵 Liederenvenster (net als het YouTube-venster: verplaatsbaar en schaalbaar) */
+  #btnSongBar { display: flex; gap: 6px; align-items: center; font-size: 13px; max-width: 260px; }
+  #btnSongBar .sbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #btnSongBar.on { border-color: var(--ok); }
+  #songWin { position: fixed; z-index: 24; width: 300px; height: 320px; right: 16px; bottom: 16px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); overflow: hidden;
+    display: flex; flex-direction: column; min-width: 220px; min-height: 140px; }
+  #songWin[hidden] { display: none; }
+  #songWin .ytbadge { background: var(--muted); }
+  #songWin.on .ytbadge { background: var(--ok); color: #fff; }
+  .songnowbox { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .songnowbox .snow { font-size: 17px; font-weight: 700; line-height: 1.25; }
+  .songnowbox .snext { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .songnowbox .snext b { color: var(--text); font-weight: 600; }
+  #songWinList { flex: 1; overflow: auto; margin: 0; border: 0; border-radius: 0; max-height: none; }
+  #songWinSrc { font-size: 11px; color: var(--muted); padding: 4px 12px 6px; border-top: 1px solid var(--line); }
   #dlgPrefs { width: min(560px, 95vw); }
   #dlgPrefs label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
   #toast.good { background: var(--okbg); border-color: var(--ok); }
@@ -488,6 +504,7 @@
     <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
   <button class="icon" id="btnLock" hidden title="Pincode / alleen kijken">🔒</button>
+  <button class="icon" id="btnSongBar" hidden title="Liederenvenster tonen/verbergen (L)"><span>🎵</span><span class="sbl" id="songBarLbl">Liederen</span></button>
   <div class="menuwrap" id="ytWrap">
     <button class="icon" id="btnYt" aria-haspopup="true" aria-expanded="false"><span class="ytdot"></span><span id="ytLbl">YouTube</span> <span class="caret">▾</span></button>
     <div class="menu" id="ytMenu" hidden role="menu"></div>
@@ -801,6 +818,21 @@
     <span style="display:flex;gap:8px"><button class="icon" id="prefsCancel">Sluiten</button>
     <button class="primary" id="prefsSave">Opslaan</button></span></div>
 </dialog>
+
+<!-- 🎵 Liederen: klein venster (verplaatsbaar, schaalbaar) -->
+<div id="songWin" hidden>
+  <div class="ythead" id="songHead">
+    <span class="ytbadge" id="songBadge">LIEDEREN</span>
+    <span class="yttitle" id="songTitle">Liederen</span>
+    <button id="songSrcBtn" title="Wisselen tussen ProPresenter en de Voordienst app" hidden>⇄</button>
+    <button id="songSet" title="Instellingen (Menu → 🎵 Liederen)">⚙</button>
+    <button id="songClose" title="Venster sluiten (L)">✕</button>
+  </div>
+  <div class="songnowbox"><div class="snow" id="songNow"></div><div class="snext" id="songNext"></div></div>
+  <ol class="songlist" id="songWinList"></ol>
+  <div id="songWinSrc"></div>
+  <div class="ytgrip" id="songGrip" title="Sleep om de grootte te wijzigen"></div>
+</div>
 
 <!-- YouTube: klein venster (verplaatsbaar, schaalbaar) -->
 <div id="ytWin" hidden>
@@ -1332,6 +1364,7 @@ const KEY_ACTIONS = {
   focus_far: ["Focus ver", "KeyW", "Zoom en focus", true], focus_near: ["Focus dichtbij", "KeyS", "Zoom en focus", true],
   stop: ["Stop", "Space", "Overig"], home: ["Home", "KeyH", "Overig"], track: ["Volgen (pan) aan/uit", "KeyT", "Overig"],
   wall: ["Volledig scherm", "KeyF", "Overig"], youtube: ["YouTube-venster tonen/verbergen", "KeyY", "Overig"],
+  songs: ["Liederenvenster tonen/verbergen", "KeyL", "Overig"],
   ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ["preset_" + n, ["Preset " + n, "Digit" + n, "Presets op de gekozen camera"]])),
 };
 const keyOf = (a) => { const v = (cfg.keymap || {})[a]; return v === "none" ? "" : (v || KEY_ACTIONS[a][1]); };
@@ -1423,6 +1456,7 @@ document.addEventListener("keydown", (e) => {
   else if (a === "track") { if (ctrlCam) toggleTrack(ctrlCam); }
   else if (a === "wall") setWall(!document.body.classList.contains("wall"));
   else if (a === "youtube") ytToggle();
+  else if (a === "songs") songWinToggle();
   else if (a === "stop") { cmd("stop"); cmd("zoom", { dir: "stop" }); }
   else if (a.startsWith("preset_")) { if (ctrlCam) presetClick(ctrlCam, +a.slice(7)); }
 });
@@ -1526,7 +1560,7 @@ function renderKeyHints() {
   const presets = p1 === "Digit1" && p9 === "Digit9" ? "<kbd>1</kbd>–<kbd>9</kbd>" : `${k("preset_1")}…${k("preset_9")}`;
   $("#keyHints").innerHTML = `${presets} preset · ${cfg.cameras.slice(0, 3).map((c, i) => `<kbd>${esc(keyLabel(camHotkey(c, i)))}</kbd>`).join(" ")} camera ·
     ${k("left")}${k("up")}${k("right")}${k("down")} bewegen · ${k("zoom_in")}/${k("zoom_out")} zoom · ${k("focus_far")}/${k("focus_near")} focus ·
-    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("stop")} stop ·
+    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("stop")} stop ·
     <a href="#" id="keyHintsEdit">aanpassen</a> · rechtsklik of lang drukken op een preset = bewerken`;
   $("#keyHintsEdit").onclick = (e) => { e.preventDefault(); $("#btnKeys").click(); };
   const wk = $("#btnWall kbd"); if (wk) wk.textContent = keyLabel(keyOf("wall"));
@@ -3028,7 +3062,7 @@ fetch("/api/update").then(r => r.ok ? r.json() : null).then(st => st && updUpdat
    Server (liederen.py) leest de API van ProPresenter en de Voordienst app (optioneel met bearer token) en zet elk nummer in het activiteitenlog.
    Instellingen in cfg.liederen (per workspace), alleen te wijzigen via /api/liederen/config. */
 let songs = null, songsCfg = null;
-function songsUpdate(ev) { songs = ev; if ($("#dlgSongs").open) songsRender(); }
+function songsUpdate(ev) { songs = ev; if ($("#dlgSongs").open) songsRender(); songWinRender(); }
 async function songsLoad() {
   const j = await (await fetch("/api/liederen")).json();
   songsCfg = j.config; delete j.config; songs = j;
@@ -3089,6 +3123,110 @@ $("#songsLog").onclick = async () => {
   $("#dlgSongs").close(); await $("#btnLog").onclick(); $("#logKind").value = "lied"; logRender();
 };
 
+/* ---- 🎵 Liederenvenster: net als het YouTube-venster (klein, verplaatsbaar, schaalbaar), per apparaat ----
+   Toont wat nu op het scherm staat en wat hierna komt, met de playlist uit ProPresenter of de lijst uit de Voordienst app.
+   localStorage: songOpen ("1"), songGeom {x, y, w, h}, songSrc ("pp" | "vd"). Knop #btnSongBar in de kop, toets L. */
+const songWin = $("#songWin");
+function songLists() {
+  const ps = songs?.pp || {}, ds = songs?.voordienst || {};
+  const out = {};
+  if (ps.enabled && ps.connected) {
+    let n = 0;
+    out.pp = { label: "ProPresenter" + (ps.playlist?.name ? " · " + ps.playlist.name : ""),
+      items: (ps.items || []).map(i => i.header ? { name: i.name, header: true } : { name: i.name, n: ++n }),
+      cur: ps.pos, now: ps.current?.name || "" };
+  }
+  if (ds.enabled && ds.ok) out.vd = { label: "Voordienst app" + (ds.title ? " · " + ds.title : ""),
+    items: ds.items.map((t, i) => ({ name: t, n: i + 1 })), cur: ds.playing ?? ds.current, now: "" };
+  return out;
+}
+function songWinRender() {
+  const L = songLists(), any = !!(songs?.pp?.enabled || songs?.voordienst?.enabled);
+  const ppNow = L.pp?.now || "";
+  const btn = $("#btnSongBar");
+  btn.hidden = !any;
+  btn.classList.toggle("on", !!ppNow);
+  $("#songBarLbl").textContent = ppNow || "Liederen";
+  if (!any && !songWin.hidden) songWin.hidden = true;
+  if (songWin.hidden) return;
+  const keys = Object.keys(L);
+  let src = store.get("songSrc");
+  if (!keys.includes(src)) src = keys[0];
+  $("#songSrcBtn").hidden = keys.length < 2;
+  const cur = src ? L[src] : null;
+  const songsOnly = cur ? cur.items.filter(i => !i.header) : [];
+  const i = cur?.cur;
+  const nowName = ppNow || (i != null && songsOnly[i] ? songsOnly[i].name : "");
+  const next = i != null ? songsOnly[i + 1] : null;
+  songWin.classList.toggle("on", !!nowName);
+  $("#songBadge").textContent = nowName ? "NU" : "LIEDEREN";
+  $("#songTitle").textContent = cur ? cur.label : "Liederen";
+  $("#songNow").innerHTML = nowName ? esc(nowName) : `<span class="muted" style="font-weight:400;font-size:14px">${keys.length ? "Niets op het scherm" : "Nog geen verbinding met ProPresenter of de Voordienst app"}</span>`;
+  $("#songNext").innerHTML = next ? `Hierna: <b>${esc(next.name)}</b>` : "";
+  $("#songWinList").innerHTML = cur ? cur.items.map(it => it.header ? `<li class="hdr">${esc(it.name)}</li>`
+    : `<li class="${it.n - 1 === i ? "now" : ""}"><span class="sn">${it.n}</span>${esc(it.name)}</li>`).join("") : "";
+  $("#songWinSrc").textContent = keys.length ? (cur.label.startsWith("ProPresenter") && songs.pp?.checked ? "bijgewerkt " + songs.pp.checked
+    : songs.voordienst?.checked ? "bijgewerkt " + songs.voordienst.checked : "") : "Instellen via ⚙";
+  const nowEl = $("#songWinList li.now");
+  if (nowEl && nowEl.dataset.k !== String(i)) { nowEl.dataset.k = String(i); nowEl.scrollIntoView({ block: "center" }); }
+}
+function songGeom() { try { return JSON.parse(store.get("songGeom") || "{}"); } catch { return {}; } }
+function songPlace() {
+  const g = songGeom();
+  if (g.w) songWin.style.width = Math.min(g.w, innerWidth - 8) + "px";
+  if (g.h) songWin.style.height = Math.min(g.h, innerHeight - 8) + "px";
+  if (g.x == null) { songWin.style.left = songWin.style.top = ""; songWin.style.right = "16px"; songWin.style.bottom = "16px"; return; }
+  const r = songWin.getBoundingClientRect();
+  songWin.style.right = songWin.style.bottom = "";
+  songWin.style.left = Math.max(0, Math.min(g.x, innerWidth - r.width)) + "px";
+  songWin.style.top = Math.max(0, Math.min(g.y, innerHeight - r.height)) + "px";
+}
+function songWinShow(on) {
+  songWin.hidden = !on;
+  try { on ? store.set("songOpen", "1") : store.set("songOpen", "0"); } catch { /* geen opslag */ }
+  if (on) { songPlace(); songWinRender(); const n = $("#songWinList li.now"); if (n) n.scrollIntoView({ block: "center" }); }
+}
+function songWinToggle() {
+  if (!(songs?.pp?.enabled || songs?.voordienst?.enabled)) { $("#btnSongs").click(); return; }   // nog niets ingesteld
+  songWinShow(songWin.hidden);
+}
+function songDrag(el, onMove) {
+  el.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || e.target.closest("button")) return;
+    e.preventDefault();
+    const r = songWin.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+    el.setPointerCapture(e.pointerId);
+    songWin.style.right = songWin.style.bottom = ""; songWin.style.left = r.left + "px"; songWin.style.top = r.top + "px";
+    const move = (m) => onMove(r, m.clientX - sx, m.clientY - sy);
+    const up = () => {
+      el.removeEventListener("pointermove", move);
+      const b = songWin.getBoundingClientRect();
+      store.set("songGeom", JSON.stringify({ x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height) }));
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up, { once: true });
+    el.addEventListener("pointercancel", up, { once: true });
+  });
+}
+songDrag($("#songHead"), (r, dx, dy) => {
+  songWin.style.left = Math.max(0, Math.min(r.left + dx, innerWidth - r.width)) + "px";
+  songWin.style.top = Math.max(0, Math.min(r.top + dy, innerHeight - r.height)) + "px";
+});
+songDrag($("#songGrip"), (r, dx, dy) => {
+  songWin.style.width = Math.max(220, Math.min(r.width + dx, innerWidth - r.left)) + "px";
+  songWin.style.height = Math.max(140, Math.min(r.height + dy, innerHeight - r.top)) + "px";
+});
+addEventListener("resize", () => { if (!songWin.hidden) songPlace(); });
+$("#btnSongBar").onclick = () => songWinToggle();
+$("#songClose").onclick = () => songWinShow(false);
+$("#songSet").onclick = () => $("#btnSongs").click();
+$("#songSrcBtn").onclick = () => {
+  const keys = Object.keys(songLists()), cur = keys.includes(store.get("songSrc")) ? store.get("songSrc") : keys[0];
+  store.set("songSrc", keys[(keys.indexOf(cur) + 1) % keys.length]); songWinRender();
+};
+fetch("/api/liederen").then(r => r.json()).then(j => { delete j.config; if (!songs) songs = j; songWinRender();
+  if (store.get("songOpen") === "1" && (songs.pp?.enabled || songs.voordienst?.enabled)) songWinShow(true); }).catch(() => {});
+
 /* ---- 🎓 Rondleiding ----
    🧑 Elke functie hoort hier een stap te hebben. Voeg je iets toe of haal je iets weg: werk TOUR_STEPS bij (zie CLAUDE.md §2a). */
 const TOUR_STEPS = [
@@ -3129,6 +3267,7 @@ const TOUR_STEPS = [
   { target: ["#ytWrap"], title: "📺 YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
       <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream).</p>
       <p>Het venster kun je slepen aan de titelbalk en groter maken met de hoek rechtsonder. Starten en stoppen van de stream gebeurt buiten deze app.</p>` },
+  { target: ["#btnSongBar", "#btnPad"], title: "🎵 Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → 🎵 Liederen</b>.</p>` },
   { target: ["#wsWrap"], title: "📍 Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
       <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. We lopen ze kort langs.</p>` },
