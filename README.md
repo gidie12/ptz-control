@@ -2,6 +2,8 @@
 
 Eigen webbediening voor PTZOptics-camera's, te bedienen met muis/touch, toetsenbord of een Xbox-controller.
 
+![Hoofdscherm met drie camera's](docs/screenshots/hoofdscherm.png)
+
 ## Installeren en starten
 
 **Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in je browser.
@@ -34,10 +36,18 @@ Open `http://localhost:8080`, of op een tablet `http://<ip-van-deze-pc>:8080` (h
 Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (volgen: zie hieronder). Instellingen komen in `cameras.json`.
 
 ## Eerste keer
-1. **🎮 → ⚙ Camera's** (menu rechtsboven): voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
+1. **Menu → 📷 Camera's** (menu rechtsboven): voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
 2. Je bestaande presets op de camera werken meteen. Rechtsklik, lang indrukken of ✎ op een tegel om een naam te geven
    en een **thumbnail** te maken van het huidige beeld.
 3. **＋ Preset opslaan** → tik op een tegel: de huidige positie wordt opgeslagen en er wordt automatisch een thumbnail gemaakt.
+
+## Rondleiding
+De eerste keer dat je de bediening op een apparaat opent, start vanzelf een **rondleiding** die elke functie stap voor stap aanwijst
+(presets, opslaan, laden, handbediening, volgen, Xbox-controller, sneltoetsen, YouTube en elk menu-item). Tijdens de rondleiding
+reageren de camera's niet. Volgende: **→** of **Enter**, vorige: **←**, stoppen: **Esc**.
+Later nog eens bekijken: **Menu → 🎓 Rondleiding**.
+
+![Rondleiding](docs/screenshots/rondleiding.png)
 
 ## Meerdere camera's tegelijk
 Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de LIVE-preset en alle presettegels.
@@ -46,6 +56,10 @@ Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als erge
 
 **⛶ Volledig scherm** (in het menu onder 🎮 rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop rechtsonder.
 De **camerabediening** in de zijbalk klap je in en uit door op de titel te klikken; dat wordt per apparaat onthouden.
+
+![Volledig scherm](docs/screenshots/volledig-scherm.png)
+
+<img src="docs/screenshots/menu.png" width="440" alt="Menu">
 
 
 ## Presets laden van de camera
@@ -59,7 +73,7 @@ daarna een naam met ✎. ⚠ De camera's bewegen hierbij: niet tijdens een diens
 en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 100–254.
 
 ## Presetaantal testen
-Menu 🎮 → **🧪 Presetaantal testen**. Test per camera hoeveel presets hij echt kan opslaan en oproepen (ca. 1 minuut per
+Menu → **🧪 Presetaantal testen**. Test per camera hoeveel presets hij echt kan opslaan en oproepen (ca. 1 minuut per
 camera; de camera's bewegen, dus niet tijdens een dienst). Bestaande presets worden daarna exact teruggezet en lege nummers
 weer gewist. Het resultaat (bijv. "max. preset 254 · 244 bruikbaar") blijft bewaard en is later terug te zien.
 
@@ -82,6 +96,8 @@ foto buiten beeld, dan zie je een melding; klik erop om ze te tonen.
 
 Tip: lees de camera's uit en download een back-up na elke wijziging aan de presets. Dit gaat via VISCA (TCP-poort 5678).
 
+![Back-up](docs/screenshots/back-up.png)
+
 ## Persoon volgen (alleen pan)
 De app kan een spreker volgen die over het podium loopt. Alleen **pan** wordt bijgestuurd; tilt en zoom blijven zoals de preset ze zet.
 
@@ -99,15 +115,19 @@ Gebruik:
 - Bij meerdere mensen in beeld kiest hij de grootste (meestal de spreker vooraan) en blijft daarna bij diezelfde persoon.
 - ⚙ Camera's per camera: **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
 
+![Preset bewerken](docs/screenshots/preset-bewerken.png)
+
+![Camera's instellen](docs/screenshots/cameras.png)
+
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De knop **🎮 controller** rechtsboven toont de status en is ook het **menu** (Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen, thema, afsluiten). Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen, thema, Rondleiding en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
 **Zachte beweging** (standaard aan): de camera trekt geleidelijk op (ca. 1 seconde naar topsnelheid) en de stick reageert fijner rond het midden. Uitzetten geeft direct de volle snelheid.
 
-Sticks en triggers liggen vast. De knoppen stel je per knop in via **🎮 → Knoppenindeling** rechtsboven (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
+Sticks en triggers liggen vast. De knoppen stel je per knop in via **Knoppenindeling instellen…** in de Xbox-kaart (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
 
 | Controller | Functie |
 |---|---|
@@ -125,6 +145,8 @@ Elke knop kan ook worden: een vaste camera, een andere preset, home, volgen, aut
 De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller alleen door aan het actieve tabblad).
 Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 
+![Knoppenindeling](docs/screenshots/knoppenindeling.png)
+
 ## YouTube-livestream bekijken
 Klik op de **YouTube**-knop rechtsboven → *Kanaal instellen…* en vul het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
 **Na het bijwerken van de app altijd PTZ Control opnieuw starten** (Terminal-venster sluiten, app weer openen), anders draait de server nog de oude versie.
@@ -136,21 +158,32 @@ en de stream verschijnt in een **klein venster** (standaard automatisch, zonder 
 - Klik op de YouTube/LIVE-knop voor een keuzemenu: venster tonen/verbergen, automatisch plaatsen, grootte, geluid, automatisch openen, nu controleren, openen op YouTube en kanaal instellen. Toets **Y** toont/verbergt het venster direct.
 - Positie, grootte, automatisch openen en geluid onthoudt elk apparaat zelf; het kanaal geldt voor alle schermen.
 - Alleen kijken: de stream starten en stoppen gebeurt nog steeds buiten deze app. Let op: de stream loopt een paar seconden achter.
+- Het kanaal kun je altijd wijzigen, ook terwijl er een stream loopt.
+
+<img src="docs/screenshots/youtube-menu.png" width="560" alt="YouTube-menu">
 
 ## Licht of donker
 Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
+
+![Lichte modus](docs/screenshots/hoofdscherm-licht.png)
+
+Op een telefoon of smalle tablet staan de onderdelen onder elkaar:
+
+<img src="docs/screenshots/telefoon.png" width="260" alt="Op een telefoon">
 
 ## Workspaces (per locatie)
 Klik op **📍 Standaard ▾** naast de titel. Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenindeling en YouTube-kanaal, alsof het een aparte installatie is.
 - *Nieuwe workspace…*: kies een naam en begin leeg of als kopie van een bestaande.
 - Wisselen geldt voor alle schermen die met deze computer verbonden zijn (ze herladen vanzelf). Volgen stopt bij het wisselen.
 - *Workspaces beheren…*: hernoemen, openen of verwijderen (verwijderen wist alles van die workspace; maak eerst een back-up als je het wilt bewaren).
-- **Back-ups:** 🎮 Menu → 💾 Back-up maakt een back-up van de workspace die nu open is (de naam staat in het bestand). Vink *alle workspaces* aan voor één bestand met alles. Bij terugzetten kies je: in de huidige workspace, of als nieuwe workspace. Een back-up van alle workspaces zet ze allemaal terug (workspaces die er niet in staan blijven staan).
+- **Back-ups:** Menu → 💾 Back-up maakt een back-up van de workspace die nu open is (de naam staat in het bestand). Vink *alle workspaces* aan voor één bestand met alles. Bij terugzetten kies je: in de huidige workspace, of als nieuwe workspace. Een back-up van alle workspaces zet ze allemaal terug (workspaces die er niet in staan blijven staan).
 - Direct in een bepaalde workspace starten: `python3 ptz_control.py --workspace "Kerk Zwolle"` (ook als extra argument achter `Start PTZ Control`).
 
 ## Sneltoetsen
 Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · Y = YouTube-venster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
-**Alle toetsen zijn aan te passen** via 🎮 Menu → ⌨ Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
+**Alle toetsen zijn aan te passen** via Menu → ⌨ Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
+
+![Sneltoetsen](docs/screenshots/sneltoetsen.png)
 
 ## Tip
 Geef de pc met deze app een vast IP-adres (DHCP-reservering), dan blijft het tabletadres hetzelfde.
@@ -161,8 +194,10 @@ Download ze bij **Releases** op GitHub (of onder *Actions → Losse app bouwen �
 
 - **Windows:** dubbelklik op de .exe. De eerste keer: SmartScreen → *Meer informatie* → *Toch uitvoeren*, en bij de firewall *Privénetwerken* toestaan (anders kunnen andere schermen niet meedoen). Er verschijnt een camera-icoon in het systeemvak (rechtsonder, eventueel onder ^).
 - **macOS:** pak de zip uit en zet **PTZ Control.app** in *Programma's*. De app is niet door Apple gecontroleerd: de eerste keer weigert macOS hem. Ga dan naar *Systeeminstellingen → Privacy en beveiliging* en klik bij PTZ Control op *Toch openen* (of in Terminal: `xattr -dr com.apple.quarantine "/Applications/PTZ Control.app"`). Sta daarna *Lokaal netwerk* toe, anders bereikt hij de camera's niet. De app heeft geen Dock-icoon maar een icoon in de **menubalk** (rechtsboven).
-- Via het icoon: *Bediening openen*, het adres voor andere schermen, *Map met instellingen openen* en *Afsluiten*. Afsluiten kan ook in de bediening: 🎮 Menu → **⏻ PTZ Control afsluiten**. Nog een keer op de app klikken terwijl hij draait opent alleen de bediening.
+- Via het icoon: *Bediening openen*, het adres voor andere schermen, *Map met instellingen openen* en *Afsluiten*. Afsluiten kan ook in de bediening: Menu → **⏻ PTZ Control afsluiten**. Nog een keer op de app klikken terwijl hij draait opent alleen de bediening.
 - **Instellingen en foto's** staan bij de losse app in een eigen map: Windows `%APPDATA%\PTZ Control`, Mac `~/Library/Application Support/PTZ Control`. Overstappen vanaf de Python-versie: maak daar een **Back-up** (met wachtwoorden) en zet die terug in de app, of kopieer `cameras.json` en de map `thumbs` naar die map.
 - **Persoon volgen** werkt in de losse app met de ingebouwde OpenCV-detector (minder nauwkeurig dan YOLO). Wil je YOLO, gebruik dan de Python-versie (`Start PTZ Control`).
 - Een nieuwe versie maken: GitHub → *Actions* → **Losse app bouwen** → *Run workflow* → vink **Release maken** aan en vul de versie in (bv. `1.1.0`). GitHub maakt dan zelf de tag, bouwt beide apps en zet ze bij Releases. Zonder vinkje wordt alleen gebouwd (downloads onder *Artifacts*).
 
+## Screenshots bijwerken
+De afbeeldingen in deze README zijn gemaakt met nagemaakte demodata; opnieuw maken: zie [`docs/tools/README.md`](docs/tools/README.md).

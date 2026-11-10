@@ -16,6 +16,7 @@
 <style>
   /* Thema: donker (standaard) en licht. Keuze per apparaat via het menu (localStorage.theme: auto/dark/light). */
   :root {
+    --tourdim: rgba(0,0,0,.62);
     color-scheme: dark;
     --bg: #111317; --panel: #1a1d23; --panel2: #22262e; --line: #2e333d;
     --text: #e8eaed; --muted: #8b93a1; --accent: #f2a93b; --live: #e5484d; --ok: #3fb950;
@@ -25,6 +26,7 @@
     --editbg: rgba(17,19,23,.72); --editfg: #e8eaed; --editline: rgba(255,255,255,.14);
   }
   :root[data-theme=light] {
+    --tourdim: rgba(20,24,32,.45);
     color-scheme: light;
     --bg: #f3f4f6; --panel: #ffffff; --panel2: #eceef2; --line: #d3d8e0;
     --text: #16181d; --muted: #5d6573; --accent: #e09415; --live: #d6343a; --ok: #1f8f3d;
@@ -293,6 +295,21 @@
   #dlgPrefs { width: min(560px, 95vw); }
   #dlgPrefs label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
   #toast.good { background: var(--okbg); border-color: var(--ok); }
+  /* ---- Rondleiding ---- */
+  #tour { position: fixed; inset: 0; z-index: 200; }
+  #tour[hidden] { display: none; }
+  #tour .tspot { position: fixed; border-radius: 10px; box-shadow: 0 0 0 9999px var(--tourdim); outline: 2px solid var(--accent);
+    outline-offset: 2px; transition: all .25s ease; pointer-events: none; }
+  #tour .tspot.none { width: 0 !important; height: 0 !important; outline: 0; left: 50% !important; top: 40% !important; }
+  #tour .tcard { position: fixed; width: min(380px, calc(100vw - 24px)); background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: 0 14px 40px var(--shadow); transition: left .25s, top .25s; }
+  #tour .tcard h4 { margin: 0 0 6px; font-size: 16px; }
+  #tour .tcard p { margin: 0 0 6px; font-size: 14px; line-height: 1.45; }
+  #tour .tcard ul { margin: 4px 0 6px 18px; padding: 0; font-size: 14px; line-height: 1.45; }
+  #tour .tfoot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  #tour .tcount { font-size: 12px; color: var(--muted); flex: 1; white-space: nowrap; }
+  #tour .tbar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+  #tour .tbar i { display: block; height: 100%; background: var(--accent); transition: width .25s; }
 </style>
 </head>
 <body>
@@ -324,6 +341,7 @@
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
       <div class="msep"></div>
       <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
+      <button class="mi" id="btnTour" role="menuitem" title="Alle functies stap voor stap uitgelegd">🎓 Rondleiding</button>
       <div class="msep"></div>
       <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)">⏻ PTZ Control afsluiten</button>
     </div>
@@ -336,6 +354,7 @@
     <div class="bar">
       <h2 id="presetTitle">Presets</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div id="tileCtls" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <div class="tilectl" title="Aantal presettegels per camera (wordt automatisch opgeslagen)">
           <span>Tegels</span>
           <button class="icon tbtn" id="tileMinus" aria-label="Minder tegels">−</button>
@@ -345,6 +364,7 @@
         <label class="tilectl" title="Tegelgrootte (wordt automatisch opgeslagen)">
           <span>Grootte</span> ▫<input type="range" id="tileSize" min="100" max="320" value="170" style="width:90px">◻
         </label>
+        </div>
         <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset">📥 Laden van camera</button>
         <button class="chip" id="btnStore">＋ Preset opslaan</button>
       </div>
@@ -625,6 +645,20 @@
     <button class="primary" id="capStart">Test starten</button></span></div>
 </dialog>
 
+<div id="tour" hidden role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+  <div class="tspot" id="tourSpot"></div>
+  <div class="tcard" id="tourCard">
+    <h4 id="tourTitle"></h4>
+    <div id="tourText"></div>
+    <div class="tbar"><i id="tourBar"></i></div>
+    <div class="tfoot">
+      <span class="tcount" id="tourCount"></span>
+      <button class="icon" id="tourSkip">Stoppen</button>
+      <button class="icon" id="tourPrev">← Vorige</button>
+      <button class="primary" id="tourNext">Volgende →</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -942,7 +976,7 @@ $("#tileCount").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault()
 
 /* ================= toetsenbord ================= */
 const pressed = new Set();   // vastgehouden richtingen: up/down/left/right
-const anyDialog = () => $$("dialog").some(d => d.open);
+const anyDialog = () => $$("dialog").some(d => d.open) || !$("#tour").hidden;   // rondleiding blokkeert ook toetsen en controller
 const sendMove = () => {
   const d = [...pressed];
   const v = d.includes("up") ? "up" : d.includes("down") ? "down" : "";
@@ -2087,7 +2121,139 @@ function connectEvents() {
   };
 }
 
-loadConfig().then(connectEvents);
+/* ---- 🎓 Rondleiding ----
+   🧑 Elke functie hoort hier een stap te hebben. Voeg je iets toe of haal je iets weg: werk TOUR_STEPS bij (zie CLAUDE.md §2a). */
+const TOUR_STEPS = [
+  { title: "Welkom bij PTZ Control 👋", text: () => `<p>Met deze app bedien je de PTZ-camera's in de kerk: presets oproepen, handmatig bewegen, iemand volgen en de livestream bekijken.</p>
+      <p>Deze rondleiding laat in een paar minuten elke functie zien. Tijdens de rondleiding reageren de camera's niet.</p>
+      <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → 🎓 Rondleiding</b>.</p>` },
+  { target: ["#tabs"], title: "Camera's en weergave", text: () => `<p>Kies hier één camera, of <b>Alle camera's</b> om alle presetrasters naast elkaar te zien.</p>
+      <p>In <i>Alle camera's</i> kies je met de cameratoets (standaard <kbd>Shift</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>) welke camera je bedient; die kolom licht op.</p>` },
+  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>LIVE</b>.</p>
+      <p>Met het toetsenbord: <kbd>1</kbd>–<kbd>9</kbd> roept preset 1–9 op van de camera die je bedient.</p>
+      <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
+  { target: ["#presetArea .tile .edit", "#presetArea"], title: "Preset bewerken", text: () => `<p>Het potlood (of rechtsklik / lang drukken op een tegel) opent het presetvenster:</p>
+      <ul><li>naam geven</li><li>oproepen of de huidige positie hier opslaan</li><li>thumbnail vernieuwen</li>
+      <li>🎯 <i>na oproepen automatisch volgen</i></li><li>naam en foto wissen</li></ul>` },
+  { target: ["#btnStore"], title: "Preset opslaan", text: () => `<p>Zet de camera goed, klik op <b>＋ Preset opslaan</b> en tik op de tegel waar de positie moet komen. Er wordt meteen een foto gemaakt voor de tegel.</p>
+      <p>Met de Xbox-controller: <b>Menu</b>-knop vasthouden en een presetknop indrukken.</p>` },
+  { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>📥 Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
+      <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
+  { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
+  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Hier bedien je de gekozen camera met de hand: <b>pijlen</b> (vasthouden = bewegen), <b>HOME</b>, <b>zoom</b>, <b>focus</b> en de autofocus-modus (<i>AF auto</i>, <i>AF hand</i>, <i>One-push</i>).</p>
+      <p>Onder <b>Snelheden</b> stel je de snelheid van pan, tilt, zoom en focus in. Klik op de titel om dit blok in of uit te klappen.</p>` },
+  { target: ["#btnTrack"], title: "🎯 Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker). Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
+      <p>Handbediening, HOME, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
+  { target: ["#padCard"], title: "🎮 Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
+      <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
+      <li>D-pad ←/→ = andere camera, ↓ = home, RB = volgen</li><li>View = alles stoppen</li></ul>
+      <p>Is de controller verbonden, dan staat er een groen <b>● Verbonden</b> in de titel. Hier zet je ook zachte beweging, tilt omkeren en de maximale snelheid (per apparaat).</p>` },
+  { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
+  { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
+  { target: ["#keyHints"], title: "Sneltoetsen", text: () => `<p>Dit overzicht toont de toetsen zoals ze nu zijn ingesteld. Met <b>aanpassen</b> (of Menu → ⌨ Sneltoetsen) kies je zelf andere toetsen.</p>` },
+  { target: ["#chkFollow"], parent: "label", title: "Volg selectie", text: () => `<p>Staat dit aan, dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
+      <p>Het bolletje is <b>groen</b> zolang de verbinding met de app goed is.</p>` },
+  { target: ["#ytWrap"], title: "📺 YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
+      <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream).</p>
+      <p>Het venster kun je slepen aan de titelbalk en groter maken met de hoek rechtsonder. Starten en stoppen van de stream gebeurt buiten deze app.</p>` },
+  { target: ["#wsWrap"], title: "📍 Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
+      <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
+  { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. We lopen ze kort langs.</p>` },
+  { target: ["#btnKeys"], menu: "main", title: "⌨ Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
+  { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>` },
+  { target: ["#btnBackup"], menu: "main", title: "💾 Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
+      <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p>` },
+  { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p>` },
+  { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
+  { target: ["#btnTheme"], menu: "main", title: "☀ / 🌙 Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
+  { target: ["#btnTour"], menu: "main", title: "🎓 Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
+  { target: ["#btnQuit"], menu: "main", title: "⏻ Afsluiten", text: () => `<p>Stopt PTZ Control op deze computer. Alle schermen verliezen dan de verbinding tot de app opnieuw wordt gestart. De camera's blijven staan waar ze zijn.</p>` },
+  { title: "Klaar! 🎉", text: () => `<p>Je kent nu alle functies. ${cfg.cameras.length ? "Veel succes bij de dienst!" : "Begin met <b>Menu → 📷 Camera's</b> om je camera's toe te voegen."}</p>
+      <p class="muted">Deze rondleiding start niet meer vanzelf. Opnieuw bekijken: <b>Menu → 🎓 Rondleiding</b>.</p>` },
+];
+let tourIdx = -1;
+function tourTarget(st) {
+  for (const sel of st.target || []) {
+    let el = $(sel);
+    if (el && st.parent) el = el.closest(st.parent) || el;
+    if (el) { const r = el.getBoundingClientRect(); if (r.width > 0 && r.height > 0) return el; }
+  }
+  return null;
+}
+function tourPlace() {
+  if (tourIdx < 0) return;
+  const st = TOUR_STEPS[tourIdx], spot = $("#tourSpot"), card = $("#tourCard");
+  const el = tourTarget(st), vw = innerWidth, vh = innerHeight, m = 12;
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+  if (!el) {
+    spot.classList.add("none");
+    card.style.left = Math.max(m, (vw - cw) / 2) + "px"; card.style.top = Math.max(m, (vh - ch) / 2.4) + "px";
+    return;
+  }
+  const pad = st.pad ?? 4, r = el.getBoundingClientRect();
+  spot.classList.remove("none");
+  Object.assign(spot.style, { left: r.left - pad + "px", top: r.top - pad + "px", width: r.width + pad * 2 + "px", height: r.height + pad * 2 + "px" });
+  // kaart onder, boven, rechts of links van het doel; anders midden onderin
+  let left, top;
+  const clampX = (x) => Math.min(Math.max(m, x), vw - cw - m), clampY = (y) => Math.min(Math.max(m, y), vh - ch - m);
+  if (r.bottom + pad + m + ch <= vh) { top = r.bottom + pad + m; left = clampX(r.left + r.width / 2 - cw / 2); }
+  else if (r.top - pad - m - ch >= 0) { top = r.top - pad - m - ch; left = clampX(r.left + r.width / 2 - cw / 2); }
+  else if (r.right + pad + m + cw <= vw) { left = r.right + pad + m; top = clampY(r.top); }
+  else if (r.left - pad - m - cw >= 0) { left = r.left - pad - m - cw; top = clampY(r.top); }
+  else { left = clampX((vw - cw) / 2); top = vh - ch - m; }
+  card.style.left = left + "px"; card.style.top = top + "px";
+}
+function tourShow(i) {
+  tourIdx = Math.max(0, Math.min(TOUR_STEPS.length - 1, i));
+  const st = TOUR_STEPS[tourIdx];
+  setMenu(st.menu === "main"); ytMenuOpen(false);
+  $("#tourTitle").innerHTML = st.title;
+  $("#tourText").innerHTML = st.text();
+  $("#tourCount").textContent = `${tourIdx + 1} / ${TOUR_STEPS.length}`;
+  $("#tourBar").style.width = ((tourIdx + 1) / TOUR_STEPS.length * 100) + "%";
+  $("#tourPrev").disabled = tourIdx === 0;
+  const last = tourIdx === TOUR_STEPS.length - 1;
+  $("#tourNext").textContent = last ? "Afronden" : tourIdx === 0 ? "Start →" : "Volgende →";
+  $("#tourSkip").hidden = last;
+  const el = tourTarget(st);
+  if (el && !st.menu) el.scrollIntoView({ block: "nearest", inline: "nearest" });
+  requestAnimationFrame(tourPlace);
+  $("#tourNext").focus({ preventScroll: true });
+}
+function tourStart() {
+  if (anyDialog()) $$("dialog").forEach(d => d.open && d.close());
+  if (document.body.classList.contains("wall")) setWall(false);
+  $("#tour").hidden = false;
+  tourShow(0);
+}
+function tourEnd() {
+  $("#tour").hidden = true; tourIdx = -1;
+  setMenu(false);
+  store.set("tourDone", "1");
+}
+$("#btnTour").onclick = () => setTimeout(tourStart, 0);   // na het sluiten van het menu
+$("#tourNext").onclick = () => tourIdx >= TOUR_STEPS.length - 1 ? tourEnd() : tourShow(tourIdx + 1);
+$("#tourPrev").onclick = () => tourShow(tourIdx - 1);
+$("#tourSkip").onclick = tourEnd;
+// klikken in de rondleiding mag geen menu sluiten of de camera's bedienen
+$("#tour").addEventListener("click", (e) => e.stopPropagation());
+$("#tour").addEventListener("pointerdown", (e) => e.stopPropagation());
+window.addEventListener("keydown", (e) => {
+  if ($("#tour").hidden) return;
+  if (e.key === "Escape") tourEnd();
+  else if (e.key === "ArrowRight" || e.key === "Enter") $("#tourNext").click();
+  else if (e.key === "ArrowLeft") { if (tourIdx > 0) tourShow(tourIdx - 1); }
+  else if (e.key !== "Tab") return;
+  if (e.key !== "Tab") { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+addEventListener("resize", () => tourPlace());
+addEventListener("scroll", () => tourPlace(), true);
+
+loadConfig().then(() => {
+  connectEvents();
+  // 🧑 nieuwe gebruiker (dit apparaat): rondleiding start vanzelf; daarna alleen via het menu
+  if (!store.get("tourDone") && !new URLSearchParams(location.search).has("notour")) setTimeout(tourStart, 700);
+});
 </script>
 </body>
 </html>
