@@ -203,6 +203,30 @@
     border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
   #dlgPin { width: min(360px, 92vw); } #dlgAccess { width: min(520px, 95vw); }
   #dlgAccess input[type=password] { width: 130px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: inherit; }
+  #dlgLog { width: min(860px, 96vw); }
+  #logFilter { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  #logFilter select { width: auto; }
+  #logFilter input { flex: 1; min-width: 160px; width: auto; }
+  #logList { border: 1px solid var(--line); border-radius: 8px; height: min(52vh, 460px); overflow: auto; margin-top: 10px; }
+  .logt { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .logt td { padding: 5px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .logt td.lt { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); width: 1%; }
+  .logt td.lw { white-space: nowrap; max-width: 210px; overflow: hidden; text-overflow: ellipsis; width: 1%; }
+  .logt td.lc { white-space: nowrap; width: 1%; }
+  .logt tr.day td { position: sticky; top: 0; background: var(--panel2, var(--panel)); font-weight: 600; border-top: 0; color: var(--text); }
+  .logt tr.fout td.lm { color: var(--live); }
+  .logt tr.systeem td.lm, .logt tr.systeem td.lw { color: var(--muted); }
+  .logt .lx { color: var(--muted); font-size: 12px; margin-left: 6px; }
+  @media (max-width: 640px) {      /* telefoon: tijd · wie · camera op één regel, het bericht eronder */
+    .logt, .logt tbody { display: block; }
+    .logt tr:not(.day) { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; border-top: 1px solid var(--line); }
+    .logt tr.day { display: block; position: sticky; top: 0; z-index: 1; }
+    .logt tr.day td { display: block; position: static; }
+    .logt td { border-top: 0; }
+    .logt td.lw { max-width: none; width: auto; }
+    .logt td.lm { grid-column: 1 / -1; padding-top: 0; }
+  }
+  .logcount { background: var(--live); color: #fff; border-radius: 9px; font-size: 11px; padding: 0 6px; margin-left: 6px; }
   .abk { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
   .abk td { padding: 5px 6px; border-top: 1px solid var(--line); }
   .abk td:last-child { text-align: right; white-space: nowrap; }
@@ -450,6 +474,7 @@
       <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld">🎛 Videomixer (MIDI)</button>
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
       <div class="msep"></div>
+      <button class="mi" id="btnLog" role="menuitem" title="Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer">📋 Activiteitenlog<span class="logcount" id="logCount" hidden></span></button>
       <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken">🔒 Toegang (pincode)</button>
       <button class="mi" id="btnTablet" role="menuitem" title="Grote tegels en camerakeuze onderin, voor een tablet">📱 Tabletweergave</button>
       <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
@@ -846,6 +871,24 @@
   </div>
   <div class="actions"><span class="small muted" id="acInfo"></span><button class="primary" id="acClose">Sluiten</button></div>
 </dialog>
+<dialog id="dlgLog">
+  <h3>📋 Activiteitenlog</h3>
+  <p class="small">Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer en wat er op de mixer in beeld stond.
+    Handbediening en herhalingen binnen een minuut worden samengevoegd (×2, ×3 …). Geldt voor alle workspaces.</p>
+  <div id="logFilter">
+    <select id="logKind" aria-label="Soort"><option value="">Alles</option><option value="actie">Acties</option><option value="fout">Fouten</option><option value="systeem">Systeem</option></select>
+    <select id="logCam" aria-label="Camera"></select>
+    <input type="text" id="logSearch" autocomplete="off" placeholder="Zoeken (tekst, apparaat, preset…)">
+  </div>
+  <div id="logList"><table class="logt" id="logTable"></table></div>
+  <div class="row small" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+    Naam van dit apparaat <input type="text" id="logDevName" maxlength="40" placeholder="bijv. iPad regie" autocomplete="off" style="width:200px">
+    <span class="muted">komt in het log bij alles wat je vanaf hier doet</span></div>
+  <div class="actions">
+    <a class="icon" href="/api/log.txt" id="logDownload" style="text-decoration:none">⬇ Downloaden</a>
+    <button class="icon danger" id="logClear">🗑 Wissen</button>
+    <span style="flex:1"></span><button class="primary" id="logClose">Sluiten</button></div>
+</dialog>
 <div id="undoNote" hidden role="status"><span id="undoText"></span><button class="primary" id="undoBtn">↶ Ongedaan maken</button><i class="ubar" id="undoBar"></i></div>
 <dialog id="dlgWizard">
   <h3>🧭 PTZ Control instellen</h3>
@@ -896,9 +939,12 @@ function toast(msg, good = false) {
   const t = $("#toast"); t.textContent = msg; t.className = "show" + (good ? " good" : "");
   clearTimeout(t._h); t._h = setTimeout(() => t.className = "", 2200);
 }
+/* apparaatnaam voor het activiteitenlog (per apparaat, niet per workspace) */
+const devName = () => { try { return localStorage.getItem("deviceName") || ""; } catch { return ""; } };
+const postHeaders = () => Object.assign({ "Content-Type": "application/json" }, devName() ? { "X-PTZ-Device": encodeURIComponent(devName()) } : {});
 async function post(url, body) {
   try {
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch(url, { method: "POST", headers: postHeaders(), body: JSON.stringify(body) });
     const j = await r.json();
     if (r.status === 403 && j.need_pin) { access.unlocked = false; accessApply(); pinPrompt(); }
     return j;
@@ -2353,6 +2399,8 @@ function connectEvents() {
       renderPresets();
     } else if (ev.type === "access") {
       accessLoad();
+    } else if (ev.type === "log") {
+      logAdd(ev.entry);
     } else if (ev.type === "autobackup") {
       if ($("#dlgBackup").open) abkLoad();
     } else if (ev.type === "camstatus") {
@@ -2471,7 +2519,7 @@ function pinPrompt() {
 }
 $("#pinCancel").onclick = () => { pinT = Date.now(); $("#dlgPin").close(); };
 $("#pinOk").onclick = async () => {
-  const r = await fetch("/api/access/unlock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: $("#pinInput").value }) });
+  const r = await fetch("/api/access/unlock", { method: "POST", headers: postHeaders(), body: JSON.stringify({ pin: $("#pinInput").value }) });
   const j = await r.json().catch(() => ({}));
   if (!j.ok) { $("#pinErr").textContent = j.error || "Pincode klopt niet"; $("#pinInput").select(); return; }
   $("#dlgPin").close(); await accessLoad(); toast("Ontgrendeld: je kunt bedienen", true);
@@ -2511,6 +2559,76 @@ $("#acLogoutAll").onclick = async () => {
   if (!confirm("Alle apparaten uitloggen? Iedereen moet daarna de pincode opnieuw invoeren (deze computer niet).")) return;
   await post("/api/access/logout_all", {}); await accessLoad(); toast("Alle apparaten uitgelogd", true);
 };
+
+/* ---- 📋 Activiteitenlog ---- */
+let logEntries = new Map(), logRenderT = null;
+const logSeen = () => +(localStorage.getItem("logSeen") || 0);
+function logBadge() {
+  const seen = logSeen();
+  const n = [...logEntries.values()].filter(e => e.kind === "fout" && e.id > seen).length;
+  $("#logCount").hidden = !n; $("#logCount").textContent = n > 99 ? "99+" : n;
+}
+async function logLoad() {
+  try {
+    const j = await (await fetch("/api/log")).json();
+    logEntries = new Map((j.entries || []).map(e => [e.id, e]));
+  } catch { /* server weg: later opnieuw */ }
+  logBadge();
+}
+function logAdd(e) {
+  if (!e) return;
+  logEntries.set(e.id, e);
+  if (logEntries.size > 2500) logEntries.delete(logEntries.keys().next().value);
+  if ($("#dlgLog").open) { localStorage.setItem("logSeen", Math.max(logSeen(), e.id)); clearTimeout(logRenderT); logRenderT = setTimeout(logRender, 150); }
+  logBadge();
+}
+const logDay = (t) => new Date(t * 1000).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+const logTime = (t) => new Date(t * 1000).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+function logRender() {
+  const kind = $("#logKind").value, cam = $("#logCam").value, q = $("#logSearch").value.trim().toLowerCase();
+  const rows = [...logEntries.values()].sort((a, b) => b.id - a.id).filter(e =>
+    (!kind || e.kind === kind) && (!cam || e.cam === cam) &&
+    (!q || `${e.msg} ${e.who} ${e.cam}`.toLowerCase().includes(q)));
+  let html = "", day = "";
+  for (const e of rows.slice(0, 1500)) {
+    const d = logDay(e.t);
+    if (d !== day) { day = d; html += `<tr class="day"><td colspan="4">${esc(d)}</td></tr>`; }
+    const extra = (e.n || 1) > 1 ? `<span class="lx">×${e.n}, laatst ${logTime(e.last)}</span>` : "";
+    html += `<tr class="${esc(e.kind)}"><td class="lt">${logTime(e.t)}</td><td class="lw" title="${esc(e.who || "")}">${esc(e.who || "")}</td>
+      <td class="lc">${esc(e.cam || "")}</td><td class="lm">${e.kind === "fout" ? "⚠ " : ""}${esc(e.msg)}${extra}</td></tr>`;
+  }
+  $("#logTable").innerHTML = html || `<tr><td class="muted">${logEntries.size ? "Niets gevonden met deze filters." : "Nog niets gelogd."}</td></tr>`;
+}
+function logCams() {
+  const names = new Set((cfg.cameras || []).map(c => c.name));
+  for (const e of logEntries.values()) if (e.cam) names.add(e.cam);
+  const cur = $("#logCam").value;
+  $("#logCam").innerHTML = `<option value="">Alle camera's</option>` + [...names].map(n => `<option>${esc(n)}</option>`).join("");
+  $("#logCam").value = [...names].includes(cur) ? cur : "";
+}
+$("#btnLog").onclick = async () => {
+  await logLoad();
+  const top = Math.max(0, ...logEntries.keys());
+  localStorage.setItem("logSeen", top); logBadge();
+  $("#logDevName").value = devName();
+  $("#logClear").hidden = viewOnly();
+  logCams(); logRender(); $("#dlgLog").showModal();
+};
+$("#logClose").onclick = () => $("#dlgLog").close();
+$("#logKind").onchange = $("#logCam").onchange = logRender;
+$("#logSearch").oninput = () => { clearTimeout(logRenderT); logRenderT = setTimeout(logRender, 120); };
+$("#logSearch").addEventListener("keydown", (e) => { if (e.key === "Escape" && e.target.value) { e.preventDefault(); e.stopPropagation(); e.target.value = ""; logRender(); } });
+$("#logDevName").onchange = () => {
+  const v = $("#logDevName").value.trim().slice(0, 40);
+  try { v ? localStorage.setItem("deviceName", v) : localStorage.removeItem("deviceName"); } catch { /* geen opslag */ }
+  toast(v ? `Dit apparaat heet nu "${v}" in het log` : "Apparaatnaam weggehaald", true);
+};
+$("#logClear").onclick = async () => {
+  if (!confirm("Het hele activiteitenlog wissen? Dit kan niet ongedaan worden.")) return;
+  const r = await post("/api/log/clear", {});
+  if (r.ok) { logEntries.clear(); await logLoad(); logRender(); toast("Activiteitenlog gewist", true); }
+};
+logLoad();
 
 /* ---- 💾 Automatische back-ups ---- */
 const fmtSize = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " kB";
@@ -2833,6 +2951,7 @@ const TOUR_STEPS = [
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
   { target: ["#btnMidi"], menu: "main", title: "🎛 Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
+  { target: ["#btnLog"], menu: "main", title: "📋 Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
   { target: ["#btnAccess"], menu: "main", title: "🔒 Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>🔒 Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
   { target: ["#btnTablet"], menu: "main", title: "📱 Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },
   { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },

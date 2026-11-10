@@ -130,6 +130,17 @@ Zonder pincode kan iedereen op het kerknetwerk de camera's bedienen. Met **Menu 
 
 <img src="docs/screenshots/toegang.png" width="560" alt="Toegang en pincode">
 
+## Activiteitenlog
+Met **Menu → 📋 Activiteitenlog** zie je achteraf wat er gebeurd is:
+
+- **wie wat deed en vanaf welk apparaat**: presets oproepen en opslaan, handbediening, home, volgen, foto's, instellingen, back-ups, workspaces, pincode;
+- **fouten**: camera niet bereikbaar (en weer terug), commando mislukt, videomixer weg, foute pincode, bediening geweigerd;
+- **wat er gebeurde**: welke camera op de mixer in beeld stond, YouTube-stream live of afgelopen, back-up- en laadtaken klaar, nieuwe versie.
+
+Geef elk apparaat onderin het venster een **naam** (bijv. *iPad regie*); die komt dan in het log in plaats van alleen het IP-adres. Handbediening en herhalingen binnen een minuut worden samengevoegd (×3). Nieuwe fouten zie je als rood getal achter het menu-item. Filteren op soort of camera, zoeken en **⬇ Downloaden** als tekstbestand kan ook. Het log staat in `activiteit.log` in de instellingenmap (laatste 2000 regels, één log voor alle workspaces) en blijft bewaard na een herstart.
+
+<img src="docs/screenshots/activiteitenlog.png" width="720" alt="Activiteitenlog">
+
 ## Tabletweergave
 Op een iPad of tablet (aanraakscherm) gaat de **tabletweergave** vanzelf aan: grote tegels van één camera en onderin een balk met grote knoppen om de camera te kiezen, met *IN BEELD* en het statusbolletje. Zelf aan/uit/automatisch: **Menu → 📱 Tabletweergave** (per apparaat).
 
@@ -158,7 +169,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, Activiteitenlog, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
