@@ -203,6 +203,13 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - **Geen YOLO/torch** in de losse app (te groot); volgen valt terug op OpenCV-HOG (`opencv-python-headless<5`).
 - ⚠️ Niet ondertekend door Apple/Microsoft: Gatekeeper (Systeeminstellingen → Privacy en beveiliging → *Toch openen*, of `xattr -dr com.apple.quarantine`) en SmartScreen vragen eenmalig om bevestiging.
 
+## 9b. Verkenning: Roland V-1HD via MIDI (branch `verken/midi-roland`)
+
+- 🧑 Videomixer is een **Roland V-1HD** (bevestigd 10 nov 2026). Doel: uitzoeken hoe MIDI-koppeling kan; nog **geen functie in de app**.
+- ✅ Uit de Remote Control Guide: USB-MIDI + DIN; bij een ingangsknop CC0/CC32 + program change (bank 0 = A, 1 = B, 50H = memory), fader CC17; SysEx RQ1 voor fader/video sel (`71 00 xx`) en knoplampjes (`73 02 xx`). Details in `docs/midi-roland-v1hd.md`.
+- ⚠️ Niet getest op de echte mixer: kant van de fader, A/B- vs PGM/PST-modus, betekenis van de lampjes-bytes, 14-bit-codering van de fader. Eerst `docs/tools/midi_verken.py` op de Mac mini draaien.
+- `roland_v1hd.py` (decoder, stdlib) en `docs/tools/midi_verken.py` (mido/python-rtmidi, nog niet in `requirements.txt`).
+
 ## 10. Werken aan deze repo
 
 - **Talen:** Nederlands voor UI-teksten, README, commitberichten en uitleg aan de gebruiker.
