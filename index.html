@@ -136,6 +136,7 @@
   #btnPad .caret { font-size: 11px; opacity: .7; margin-left: 2px; }
   .menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 230px; background: var(--panel); border: 1px solid var(--line);
     border-radius: 10px; padding: 6px; box-shadow: 0 10px 30px var(--shadow); z-index: 30; display: grid; gap: 2px; }
+  #mainMenu { overflow-y: auto; overscroll-behavior: contain; }
   .menu[hidden] { display: none; }
   .mi { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; background: none; border: 0;
     color: var(--text); padding: 9px 10px; border-radius: 7px; cursor: pointer; font-size: 14px; }
@@ -189,6 +190,38 @@
     box-shadow: 0 6px 24px var(--shadow); font-size: 14px; }
   #undoNote[hidden] { display: none; }
   #undoNote .ubar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); border-radius: 0 0 10px 10px; }
+  /* 🔒 pincode / alleen kijken */
+  #btnLock[hidden] { display: none; }
+  #btnLock.locked { border-color: var(--accent); color: var(--accent); }
+  body.viewonly #btnStore, body.viewonly #btnLoad, body.viewonly .tile .edit, body.viewonly #ctrlCard, body.viewonly #padCard,
+  body.viewonly .colhead .trk, body.viewonly #btnOrderReset, body.viewonly .tilectl { display: none !important; }
+  body.viewonly .tile { cursor: default; }
+  #viewBanner { display: none; background: var(--warnbg); color: var(--warntxt); border-bottom: 1px solid var(--accent); padding: 6px 16px;
+    font-size: 13px; text-align: center; }
+  body.viewonly #viewBanner { display: block; }
+  #pinInput { font-size: 28px; letter-spacing: 10px; text-align: center; width: 100%; padding: 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
+  #dlgPin { width: min(360px, 92vw); } #dlgAccess { width: min(520px, 95vw); }
+  #dlgAccess input[type=password] { width: 130px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: inherit; }
+  .abk { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .abk td { padding: 5px 6px; border-top: 1px solid var(--line); }
+  .abk td:last-child { text-align: right; white-space: nowrap; }
+  /* 📱 tabletweergave */
+  #tabBar { display: none; }
+  body.tablet #tabs { display: none; }
+  body.tablet main { padding-bottom: 100px; }
+  body.tablet .grid { grid-template-columns: repeat(auto-fill, minmax(max(var(--tile, 170px), 210px), 1fr)); gap: 12px; }
+  body.tablet .tile .meta { padding: 10px 12px; font-size: 16px; }
+  body.tablet .tile .edit { transform: scale(1.25); transform-origin: top right; }
+  body.tablet #tabBar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px var(--shadow); overflow-x: auto; }
+  body.tablet.wall #tabBar { display: none; }
+  body.tablet #keyHints, body.tablet .tile .tkey { display: none; }
+  #tabBar button { flex: 1 0 140px; min-height: 60px; border-radius: 12px; border: 2px solid var(--line); background: var(--panel2); color: var(--text);
+    font: inherit; font-size: 17px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; }
+  #tabBar button.active { border-color: var(--accent); background: var(--accent); color: var(--onaccent); }
+  #tabBar button.onair { box-shadow: inset 0 0 0 3px var(--live); }
+  #tabBar button small { font-size: 11px; font-weight: 500; display: flex; gap: 6px; align-items: center; }
   /* 🧭 wizard bij de eerste start */
   #dlgWizard { width: min(760px, 95vw); }
   .wzsteps { display: flex; gap: 6px; margin: 0 0 12px; font-size: 12px; color: var(--muted); }
@@ -401,6 +434,7 @@
     <span id="liveDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
     <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
+  <button class="icon" id="btnLock" hidden title="Pincode / alleen kijken">🔒</button>
   <div class="menuwrap" id="ytWrap">
     <button class="icon" id="btnYt" aria-haspopup="true" aria-expanded="false"><span class="ytdot"></span><span id="ytLbl">YouTube</span> <span class="caret">▾</span></button>
     <div class="menu" id="ytMenu" hidden role="menu"></div>
@@ -416,6 +450,8 @@
       <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld">🎛 Videomixer (MIDI)</button>
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
       <div class="msep"></div>
+      <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken">🔒 Toegang (pincode)</button>
+      <button class="mi" id="btnTablet" role="menuitem" title="Grote tegels en camerakeuze onderin, voor een tablet">📱 Tabletweergave</button>
       <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
       <button class="mi" id="btnTour" role="menuitem" title="Alle functies stap voor stap uitgelegd">🎓 Rondleiding</button>
       <button class="mi" id="btnUpd" role="menuitem" title="Kijken of er een nieuwe versie van PTZ Control is">🔄 Op updates controleren</button>
@@ -424,6 +460,7 @@
     </div>
   </div>
 </header>
+<div id="viewBanner">👁 Alleen kijken: bediening is vergrendeld. <a href="#" id="viewUnlock">Pincode invoeren</a></div>
 
 <main>
   <!-- PRESETS (hoofdonderdeel) -->
@@ -637,6 +674,13 @@
     </div>
   </div>
 
+  <div class="bsec">
+    <h4>4. Automatische back-ups</h4>
+    <div class="small">Elke dag en altijd vóór een update maakt PTZ Control zelf een back-up van alle workspaces (op deze computer, de laatste 10).</div>
+    <table class="abk" id="abkTable"></table>
+    <div class="row"><button class="icon" id="abkNow">Nu een back-up maken</button><span class="small muted" id="abkInfo"></span></div>
+  </div>
+
   <div class="actions"><span class="small" id="bkJobInfo"></span><button class="primary" id="bkClose">Sluiten</button></div>
 </dialog>
 
@@ -780,6 +824,28 @@
   </div>
 </div>
 <div id="toast"></div>
+<nav id="tabBar" aria-label="Camera kiezen"></nav>
+<dialog id="dlgPin">
+  <h3>🔒 Pincode</h3>
+  <p class="small">Voer de pincode in om de camera's te bedienen. Dit apparaat blijft daarna ingelogd.</p>
+  <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" aria-label="Pincode">
+  <div class="small" id="pinErr" style="color:var(--live);min-height:18px;margin-top:6px"></div>
+  <div class="actions"><button class="icon" id="pinCancel">Alleen kijken</button><button class="primary" id="pinOk">Ontgrendelen</button></div>
+</dialog>
+<dialog id="dlgAccess">
+  <h3>🔒 Toegang</h3>
+  <p class="small">Met een pincode kan iedereen op het netwerk <b>meekijken</b> (presets, IN BEELD, livestream), maar alleen wie de pincode
+    invoert kan <b>bedienen</b>. Op deze computer zelf (waar PTZ Control draait) is nooit een pincode nodig.</p>
+  <div class="bsec"><h4 id="acStatus">Geen pincode</h4>
+    <div class="row small">Nieuwe pincode <input type="password" id="acPin1" inputmode="numeric" maxlength="8" placeholder="4–8 cijfers">
+      herhalen <input type="password" id="acPin2" inputmode="numeric" maxlength="8"></div>
+    <div class="row"><button class="primary" id="acSave">Pincode opslaan</button><button class="icon danger" id="acRemove">Pincode weghalen</button></div>
+  </div>
+  <div class="bsec"><h4>Apparaten</h4>
+    <div class="row"><button class="icon" id="acLock">🔒 Dit apparaat vergrendelen</button><button class="icon" id="acLogoutAll">Alle apparaten uitloggen</button></div>
+  </div>
+  <div class="actions"><span class="small muted" id="acInfo"></span><button class="primary" id="acClose">Sluiten</button></div>
+</dialog>
 <div id="undoNote" hidden role="status"><span id="undoText"></span><button class="primary" id="undoBtn">↶ Ongedaan maken</button><i class="ubar" id="undoBar"></i></div>
 <dialog id="dlgWizard">
   <h3>🧭 PTZ Control instellen</h3>
@@ -833,11 +899,14 @@ function toast(msg, good = false) {
 async function post(url, body) {
   try {
     const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    return await r.json();
+    const j = await r.json();
+    if (r.status === 403 && j.need_pin) { access.unlocked = false; accessApply(); pinPrompt(); }
+    return j;
   } catch { toast("Server niet bereikbaar"); return { ok: false }; }
 }
 async function cmd(action, args = {}, camId = ctrlCam) {
   if (!camId) return;
+  if (viewOnly()) { if (action !== "stop") pinPrompt(); return; }   // 🔒 alleen kijken
   const j = await post("/api/cmd", { cam: camId, action, args });
   if (j && j.ok === false && j.error) toast(j.error);
   return j;
@@ -865,6 +934,7 @@ async function saveConfig() {
 function render() { renderTabs(); renderPresets(); renderSide(); }
 
 function renderTabs() {
+  renderTabBar();
   const tabs = $("#tabs"); tabs.innerHTML = "";
   cfg.cameras.forEach((c, i) => {
     const b = document.createElement("button");
@@ -889,7 +959,7 @@ function selectCam(c, origin) {
   ctrlCam = c.id;
   if (view !== ALL) view = c.id;
   render(); toast((origin === "pad" ? "🎮 " : "Camera: ") + c.name, true);
-  post("/api/select", { cam: c.id, origin });
+  if (!viewOnly()) post("/api/select", { cam: c.id, origin });   // alleen kijken: keuze blijft op dit scherm
 }
 
 function setView(id) {
@@ -992,6 +1062,7 @@ function renderSide() {
 
 /* ================= preset acties ================= */
 async function presetClick(camId, n, el) {
+  if (viewOnly()) return pinPrompt();
   ctrlCam = camId;
   if (storeMode) {
     const c = camById(camId);
@@ -1504,8 +1575,10 @@ $("#padMax").value = pad.max; $("#padMaxV").textContent = pad.max;
 $("#padInvY").onchange = () => { pad.invY = $("#padInvY").checked; store.set("padInvY", pad.invY ? "1" : "0"); };
 $("#padMax").oninput = () => { pad.max = +$("#padMax").value; $("#padMaxV").textContent = pad.max; store.set("padMax", pad.max); };
 function setMenu(open) {
-  $("#mainMenu").hidden = !open;
+  const m = $("#mainMenu");
+  m.hidden = !open;
   $("#btnPad").setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) { m.style.maxHeight = ""; m.style.maxHeight = Math.max(200, innerHeight - m.getBoundingClientRect().top - 10) + "px"; }   // altijd helemaal in beeld (scrollt)
 }
 $("#btnPad").onclick = (e) => { e.stopPropagation(); setMenu($("#mainMenu").hidden); };
 // keuze in het menu sluit het menu (de eigen onclick van het item doet de rest)
@@ -1685,13 +1758,19 @@ $("#btnBackup").onclick = () => {
 $("#bkClose").onclick = () => $("#dlgBackup").close();
 $("#bkDownload").onclick = () => { location.href = `/api/backup?passwords=${$("#bkPw").checked ? 1 : 0}&all=${$("#bkAll").checked ? 1 : 0}`; };
 $("#bkRestoreBtn").onclick = () => $("#bkFile").click();
+$("#btnBackup").addEventListener("click", () => abkLoad());
 let rsData = null;
 const wsCurName = () => wsData.list.find(w => w.id === wsData.active)?.name || "Standaard";
 const camLine = (c) => `• ${c.name} (${c.host}): ${Object.keys(c.presets || {}).length} presetnamen, ${Object.keys(c.saved_positions || {}).length} posities${c.saved_image ? ", beeld" : ""}`;
 $("#bkFile").onchange = async () => {
   const f = $("#bkFile").files[0]; $("#bkFile").value = "";
   if (!f) return;
-  try { rsData = JSON.parse(await f.text()); } catch { return toast("Bestand is geen geldige back-up"); }
+  let data;
+  try { data = JSON.parse(await f.text()); } catch { return toast("Bestand is geen geldige back-up"); }
+  openRestore(data);
+};
+function openRestore(data) {
+  rsData = data;
   const all = rsData.type === "ptz-control-backup-all";
   if (!all && rsData.type !== "ptz-control-backup") return toast("Dit is geen PTZ Control-back-upbestand");
   if (all) {
@@ -1709,7 +1788,7 @@ $("#bkFile").onchange = async () => {
   $("#rsCur").hidden = $("#rsNew").hidden = all; $("#rsAll").hidden = !all;
   $("#rsCur").textContent = `In huidige workspace (${wsCurName()})`;
   $("#dlgRestore").showModal();
-};
+}
 $("#rsCancel").onclick = () => { rsData = null; $("#dlgRestore").close(); };
 async function rsDo(extra) {
   const r = await post("/api/backup/restore", { ...rsData, ...extra });
@@ -2272,6 +2351,10 @@ function connectEvents() {
     } else if (ev.type === "moving") {
       if (ev.moving) moving[ev.cam] = { n: ev.n }; else delete moving[ev.cam];
       renderPresets();
+    } else if (ev.type === "access") {
+      accessLoad();
+    } else if (ev.type === "autobackup") {
+      if ($("#dlgBackup").open) abkLoad();
     } else if (ev.type === "camstatus") {
       camst = ev.cams || {}; renderTabs(); renderPresets();
     } else if (ev.type === "config") {
@@ -2321,7 +2404,7 @@ $("#btnOrderReset").onclick = async () => {
 };
 // verslepen (muis): alleen de volgorde op het scherm; het presetnummer in de camera blijft gelijk
 function tileDrag(b, c, n) {
-  if (storeMode || document.body.classList.contains("wall")) return;
+  if (storeMode || viewOnly() || document.body.classList.contains("wall")) return;
   b.draggable = true;
   b.addEventListener("dragstart", (e) => { dragSrc = { cam: c.id, n }; b.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(n)); });
   b.addEventListener("dragend", () => { dragSrc = null; $$(".tile.dragging,.tile.dropb,.tile.dropa").forEach(t => t.classList.remove("dragging", "dropb", "dropa")); });
@@ -2362,6 +2445,123 @@ function undoOffer(msg, camId, n) {
     r?.ok ? toast(`Preset ${n} weer zoals eerst`, true) : toast(r?.error || "Ongedaan maken mislukt");
   };
 }
+
+/* ---- 🔒 Pincode / alleen kijken ----
+   Server: GET /api/access {pin_set, unlocked, local}; POST /api/access/unlock|lock|set|logout_all. Sessie = HttpOnly-cookie. */
+let access = { pin_set: false, unlocked: true, local: true }, pinT = 0;
+const viewOnly = () => access.pin_set && !access.unlocked;
+async function accessLoad() {
+  try { access = await (await fetch("/api/access")).json(); } catch { return; }
+  accessApply();
+}
+function accessApply() {
+  document.body.classList.toggle("viewonly", viewOnly());
+  const b = $("#btnLock");
+  b.hidden = !access.pin_set;
+  b.classList.toggle("locked", viewOnly());
+  b.textContent = viewOnly() ? "🔒 Alleen kijken" : access.local ? "🔓" : "🔓 Ontgrendeld";
+  b.title = viewOnly() ? "Pincode invoeren om te bedienen" : access.local ? "Deze computer heeft geen pincode nodig" : "Ontgrendeld; klik voor toegang";
+  if ($("#dlgAccess").open) accessRender();
+}
+function pinPrompt() {
+  if ($("#dlgPin").open || Date.now() - pinT < 1500) return;
+  if ($$("dialog").some(d => d.open)) return toast("Alleen kijken: voer eerst de pincode in (🔒 rechtsboven)");
+  $("#pinInput").value = ""; $("#pinErr").textContent = "";
+  $("#dlgPin").showModal(); setTimeout(() => $("#pinInput").focus(), 50);
+}
+$("#pinCancel").onclick = () => { pinT = Date.now(); $("#dlgPin").close(); };
+$("#pinOk").onclick = async () => {
+  const r = await fetch("/api/access/unlock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: $("#pinInput").value }) });
+  const j = await r.json().catch(() => ({}));
+  if (!j.ok) { $("#pinErr").textContent = j.error || "Pincode klopt niet"; $("#pinInput").select(); return; }
+  $("#dlgPin").close(); await accessLoad(); toast("Ontgrendeld: je kunt bedienen", true);
+};
+$("#pinInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#pinOk").click(); });
+$("#viewUnlock").onclick = (e) => { e.preventDefault(); pinPrompt(); };
+$("#btnLock").onclick = () => viewOnly() ? pinPrompt() : $("#btnAccess").click();
+function accessRender() {
+  $("#acStatus").textContent = access.pin_set ? "🔒 Pincode staat aan" : "Geen pincode: iedereen op het netwerk kan bedienen";
+  $("#acRemove").hidden = !access.pin_set;
+  $("#acLock").hidden = !access.pin_set || access.local;
+  $("#acLogoutAll").hidden = !access.pin_set;
+  $("#acInfo").textContent = access.local ? "Dit is de computer waar PTZ Control draait." : "";
+  $("#acSave").textContent = access.pin_set ? "Pincode wijzigen" : "Pincode opslaan";
+}
+$("#btnAccess").onclick = async () => {
+  await accessLoad();
+  if (viewOnly()) return pinPrompt();
+  $("#acPin1").value = $("#acPin2").value = ""; accessRender(); $("#dlgAccess").showModal();
+};
+$("#acClose").onclick = () => $("#dlgAccess").close();
+$("#acSave").onclick = async () => {
+  const a = $("#acPin1").value.trim(), b = $("#acPin2").value.trim();
+  if (!/^[0-9]{4,8}$/.test(a)) return toast("Pincode: 4 tot 8 cijfers");
+  if (a !== b) return toast("De twee pincodes zijn niet gelijk");
+  const r = await post("/api/access/set", { pin: a });
+  if (r.ok) { toast("Pincode opgeslagen. Andere apparaten moeten opnieuw inloggen.", true); $("#acPin1").value = $("#acPin2").value = ""; await accessLoad(); }
+  else toast(r.error || "Opslaan mislukt");
+};
+$("#acRemove").onclick = async () => {
+  if (!confirm("Pincode weghalen? Dan kan iedereen op het netwerk weer bedienen.")) return;
+  const r = await post("/api/access/set", { pin: "" });
+  if (r.ok) { toast("Pincode weggehaald", true); await accessLoad(); }
+};
+$("#acLock").onclick = async () => { await post("/api/access/lock", {}); $("#dlgAccess").close(); await accessLoad(); toast("Dit apparaat is vergrendeld", true); };
+$("#acLogoutAll").onclick = async () => {
+  if (!confirm("Alle apparaten uitloggen? Iedereen moet daarna de pincode opnieuw invoeren (deze computer niet).")) return;
+  await post("/api/access/logout_all", {}); await accessLoad(); toast("Alle apparaten uitgelogd", true);
+};
+
+/* ---- 💾 Automatische back-ups ---- */
+const fmtSize = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " kB";
+async function abkLoad() {
+  const j = await (await fetch("/api/autobackup")).json();
+  $("#abkTable").innerHTML = (j.list || []).map(a => `<tr><td>${esc(a.created)}</td><td>${esc(a.reason)}</td><td>${fmtSize(a.size)}</td>
+    <td><button class="icon" data-r="${esc(a.name)}">Terugzetten…</button> <a class="icon" href="/api/autobackup/file?name=${encodeURIComponent(a.name)}&download=1" style="text-decoration:none" title="Downloaden">⬇</a></td></tr>`).join("")
+    || '<tr><td class="muted">Nog geen automatische back-ups (de eerste komt binnen een minuut na het starten).</td></tr>';
+  $$("#abkTable [data-r]").forEach(b => b.onclick = async () => {
+    const r = await fetch("/api/autobackup/file?name=" + encodeURIComponent(b.dataset.r));
+    if (r.status === 403) return pinPrompt();
+    if (!r.ok) return toast("Back-up niet gevonden");
+    openRestore(await r.json());
+  });
+}
+$("#abkNow").onclick = async () => {
+  $("#abkInfo").textContent = "Bezig…";
+  const r = await post("/api/autobackup/now", {});
+  $("#abkInfo").textContent = r.ok ? "Gemaakt" : (r.error || "Mislukt");
+  abkLoad();
+};
+
+/* ---- 📱 Tabletweergave ----
+   localStorage.tabletMode = auto | on | off (per apparaat). Auto = aanraakscherm en kortste schermzijde ≤ 1100 px. */
+const tabletAuto = () => matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) <= 1100;
+const tabletMode = () => store.get("tabletMode") || "auto";
+const isTablet = () => tabletMode() === "on" || (tabletMode() === "auto" && tabletAuto());
+function tabletApply() {
+  const on = isTablet();
+  document.body.classList.toggle("tablet", on);
+  $("#btnTablet").textContent = "📱 Tabletweergave: " + { auto: `automatisch (${on ? "aan" : "uit"})`, on: "aan", off: "uit" }[tabletMode()];
+  if (on && view === ALL && ctrlCam) view = ctrlCam;     // op een tablet één camera tegelijk, met grote tegels
+  renderTabBar();
+}
+function renderTabBar() {
+  const bar = $("#tabBar");
+  if (!document.body.classList.contains("tablet")) { bar.innerHTML = ""; return; }
+  bar.innerHTML = "";
+  cfg.cameras.forEach(c => {
+    const b = document.createElement("button");
+    b.className = (c.id === view ? "active" : "") + (midiOnAir(c.id) ? " onair" : "");
+    b.innerHTML = `${esc(c.name)}<small>${camDot(c.id)}${midiOnAir(c.id) ? "IN BEELD" : ""}</small>`;
+    b.onclick = () => { view = c.id; selectCam(c, "tablet"); };
+    bar.appendChild(b);
+  });
+}
+$("#btnTablet").onclick = () => {
+  const next = { auto: "on", on: "off", off: "auto" }[tabletMode()];
+  store.set("tabletMode", next); tabletApply(); render();
+  toast("Tabletweergave: " + { auto: "automatisch", on: "aan", off: "uit" }[next], true);
+};
 
 /* ---- 🧭 Wizard bij de eerste start ----
    cfg.first_run (server): nog geen camera's of alleen de voorbeeldcamera. Overslaan onthoudt dit apparaat (wizardSkip). */
@@ -2630,9 +2830,11 @@ const TOUR_STEPS = [
   { target: ["#btnKeys"], menu: "main", title: "⌨ Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
   { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>` },
   { target: ["#btnBackup"], menu: "main", title: "💾 Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
-      <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p>` },
+      <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
   { target: ["#btnMidi"], menu: "main", title: "🎛 Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
+  { target: ["#btnAccess"], menu: "main", title: "🔒 Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>🔒 Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
+  { target: ["#btnTablet"], menu: "main", title: "📱 Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },
   { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
   { target: ["#btnTheme"], menu: "main", title: "☀ / 🌙 Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
   { target: ["#btnTour"], menu: "main", title: "🎓 Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
@@ -2694,6 +2896,7 @@ function tourShow(i) {
   $("#tourSkip").hidden = last;
   const el = tourTarget(st);
   if (el && !st.menu) el.scrollIntoView({ block: "nearest", inline: "nearest" });
+  else if (el && st.menu) el.scrollIntoView({ block: "nearest" });     // lang menu (telefoon): item in beeld scrollen
   requestAnimationFrame(tourPlace);
   $("#tourNext").focus({ preventScroll: true });
 }
@@ -2729,6 +2932,8 @@ addEventListener("scroll", () => tourPlace(), true);
 
 loadConfig().then(() => {
   connectEvents();
+  accessLoad();
+  tabletApply(); render();
   // 🧑 nieuwe gebruiker (dit apparaat): rondleiding start vanzelf; daarna alleen via het menu
   const notour = new URLSearchParams(location.search).has("notour");
   // 🧑 nog niet ingesteld: eerst de wizard (camera's), daarna de rondleiding

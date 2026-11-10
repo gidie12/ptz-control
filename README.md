@@ -116,6 +116,25 @@ Tip: lees de camera's uit en download een back-up na elke wijziging aan de prese
 
 ![Back-up](docs/screenshots/back-up.png)
 
+## Automatische back-up
+PTZ Control maakt **elke dag** en **altijd vóór een update** zelf een back-up van alle workspaces (camera's, presets, foto's, instellingen) op de computer waar de app draait. De laatste 10 blijven bewaard. Je vindt ze onderaan in **Menu → 💾 Back-up** (*4. Automatische back-ups*): per back-up **Terugzetten…** of **⬇** om te downloaden, en **Nu een back-up maken**.
+
+<img src="docs/screenshots/automatische-back-up.png" width="720" alt="Automatische back-ups">
+
+## Pincode en alleen kijken
+Zonder pincode kan iedereen op het kerknetwerk de camera's bedienen. Met **Menu → 🔒 Toegang (pincode)** stel je een pincode in (4–8 cijfers):
+- Andere apparaten (telefoon, tablet, laptop) kunnen dan **alleen meekijken**: presets, *IN BEELD*, de livestream. Rechtsboven staat **🔒 Alleen kijken** en bovenin een gele balk. Tik je op een preset, dan vraagt de app de pincode.
+- Na de pincode blijft dat apparaat ingelogd (half jaar). **Dit apparaat vergrendelen** en **Alle apparaten uitloggen** staan in hetzelfde venster.
+- **Op de computer waar PTZ Control draait is nooit een pincode nodig**, zodat je jezelf niet kunt buitensluiten. Pincode vergeten? Daar kun je hem wijzigen of weghalen.
+- Na 5 foute pogingen moet een apparaat een minuut wachten. De pincode wordt niet leesbaar opgeslagen.
+
+<img src="docs/screenshots/toegang.png" width="560" alt="Toegang en pincode">
+
+## Tabletweergave
+Op een iPad of tablet (aanraakscherm) gaat de **tabletweergave** vanzelf aan: grote tegels van één camera en onderin een balk met grote knoppen om de camera te kiezen, met *IN BEELD* en het statusbolletje. Zelf aan/uit/automatisch: **Menu → 📱 Tabletweergave** (per apparaat).
+
+<img src="docs/screenshots/tablet.png" width="560" alt="Tabletweergave">
+
 ## Persoon volgen (alleen pan)
 De app kan een spreker volgen die over het podium loopt. Alleen **pan** wordt bijgestuurd; tilt en zoom blijven zoals de preset ze zet.
 
@@ -139,7 +158,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 

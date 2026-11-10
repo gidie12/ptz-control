@@ -18,10 +18,13 @@ import argparse
 import sys
 import base64
 import datetime
+import hashlib
+import hmac
 import json
 import os
 import queue
 import re
+import secrets
 import shutil
 import socket
 import threading
@@ -900,6 +903,169 @@ def make_backup_all(with_passwords=True):
             "workspaces": [make_backup(with_passwords, w["id"]) for w in WS["list"]]}
 
 
+# ---------------------------------------------------------------- automatische back-up
+# 🧑 Elke dag en altijd vóór een update een back-up van alle workspaces (met wachtwoorden, want lokaal) in
+# DATA_DIR/backups/; de laatste AUTOBK_KEEP blijven bewaard.
+AUTOBK_DIR = os.path.join(DATA_DIR, "backups")
+AUTOBK_KEEP = 10
+AUTOBK_EVERY = float(os.environ.get("PTZ_AUTOBK_EVERY", 24 * 3600))
+AUTOBK_LOCK = threading.Lock()
+
+
+def autobackup_list():
+    try:
+        names = sorted((n for n in os.listdir(AUTOBK_DIR) if n.startswith("auto-") and n.endswith(".json")), reverse=True)
+    except OSError:
+        return []
+    out = []
+    for n in names:
+        m = re.match(r"auto-(\d{8})-(\d{6})-(.+)\.json$", n)
+        try:
+            size = os.path.getsize(os.path.join(AUTOBK_DIR, n))
+        except OSError:
+            continue
+        created = f"{m.group(1)[:4]}-{m.group(1)[4:6]}-{m.group(1)[6:]} {m.group(2)[:2]}:{m.group(2)[2:4]}" if m else ""
+        out.append({"name": n, "created": created, "reason": (m.group(3) if m else "").replace("-", " "), "size": size})
+    return out
+
+
+def autobackup(reason="handmatig"):
+    with AUTOBK_LOCK:
+        os.makedirs(AUTOBK_DIR, exist_ok=True)
+        data = make_backup_all(True)
+        data["auto_reason"] = reason
+        slug = re.sub(r"[^a-z0-9]+", "-", reason.lower()).strip("-") or "auto"
+        name = f"auto-{datetime.datetime.now():%Y%m%d-%H%M%S}-{slug}.json"
+        tmp = os.path.join(AUTOBK_DIR, name + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        os.replace(tmp, os.path.join(AUTOBK_DIR, name))
+        for old in autobackup_list()[AUTOBK_KEEP:]:
+            try:
+                os.remove(os.path.join(AUTOBK_DIR, old["name"]))
+            except OSError:
+                pass
+    broadcast({"type": "autobackup"})
+    return name
+
+
+def autobackup_file(name):
+    if not re.fullmatch(r"auto-[0-9]{8}-[0-9]{6}-[a-z0-9-]+\.json", name or ""):
+        raise KeyError("onbekende back-up")
+    path = os.path.join(AUTOBK_DIR, name)
+    if not os.path.isfile(path):
+        raise KeyError("onbekende back-up")
+    return path
+
+
+def autobackup_loop():
+    time.sleep(float(os.environ.get("PTZ_AUTOBK_FIRST", 60)))
+    while True:
+        try:
+            last = autobackup_list()
+            age = time.time() - os.path.getmtime(os.path.join(AUTOBK_DIR, last[0]["name"])) if last else None
+            if age is None or age >= AUTOBK_EVERY:
+                autobackup("dagelijks")
+        except Exception as e:  # noqa: BLE001
+            print(f"Automatische back-up mislukt: {e}")
+        time.sleep(min(3600, AUTOBK_EVERY))
+
+
+# ---------------------------------------------------------------- pincode / alleen kijken
+# 🧑 Met een pincode kan iedereen op het netwerk meekijken, maar alleen wie de pincode heeft ingevoerd kan bedienen.
+# Deze computer zelf (localhost en het eigen LAN-adres) heeft nooit een pincode nodig, zodat je jezelf niet buitensluit.
+ACCESS_FILE = os.path.join(DATA_DIR, "toegang.json")
+ACCESS_LOCK = threading.Lock()
+TOKEN_DAYS = 180
+FAILS = {}            # ip -> [tijdstippen van foute pogingen]
+OPEN_POSTS = {"/api/access/unlock", "/api/access/lock"}
+
+
+def _access():
+    try:
+        with open(ACCESS_FILE, encoding="utf-8") as f:
+            a = json.load(f)
+    except (OSError, ValueError):
+        a = {}
+    a.setdefault("tokens", {})
+    return a
+
+
+def _access_save(a):
+    tmp = ACCESS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(a, f)
+    os.replace(tmp, ACCESS_FILE)
+    try:
+        os.chmod(ACCESS_FILE, 0o600)
+    except OSError:
+        pass
+
+
+def _pin_hash(pin, salt):
+    return hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 120_000).hex()
+
+
+def pin_set():
+    return bool(_access().get("pin_hash"))
+
+
+def is_local(ip):
+    if os.environ.get("PTZ_TEST_NOLOCAL"):     # tests: doen alsof elk verzoek van een ander apparaat komt
+        return False
+    return ip in ("127.0.0.1", "::1", "::ffff:127.0.0.1") or ip == local_ip()
+
+
+def token_ok(token):
+    if not token:
+        return False
+    with ACCESS_LOCK:
+        a = _access()
+        exp = a["tokens"].get(token)
+        return bool(exp and exp > time.time())
+
+
+def new_token():
+    tok = secrets.token_urlsafe(24)
+    with ACCESS_LOCK:
+        a = _access()
+        now = time.time()
+        a["tokens"] = {t: e for t, e in a["tokens"].items() if e > now}
+        a["tokens"][tok] = now + TOKEN_DAYS * 86400
+        _access_save(a)
+    return tok
+
+
+def check_pin(ip, pin):
+    now = time.time()
+    FAILS[ip] = [t for t in FAILS.get(ip, []) if now - t < 60]
+    if len(FAILS[ip]) >= 5:
+        raise PermissionError("Te veel foute pogingen. Wacht een minuut.")
+    a = _access()
+    if not a.get("pin_hash"):
+        return True
+    ok = hmac.compare_digest(_pin_hash(str(pin), a["salt"]), a["pin_hash"])
+    if not ok:
+        FAILS[ip].append(now)
+    return ok
+
+
+def set_pin(pin):
+    pin = str(pin or "").strip()
+    with ACCESS_LOCK:
+        a = _access()
+        if not pin:
+            a.pop("pin_hash", None)
+            a.pop("salt", None)
+        else:
+            if not re.fullmatch(r"[0-9]{4,8}", pin):
+                raise ValueError("Pincode: 4 tot 8 cijfers")
+            a["salt"] = secrets.token_hex(16)
+            a["pin_hash"] = _pin_hash(pin, a["salt"])
+        a["tokens"] = {}           # nieuwe of geen pincode: alle apparaten opnieuw laten inloggen
+        _access_save(a)
+
+
 def restore_backup(data, ws_id=None):
     """Back-up van één workspace terugzetten in ws_id (standaard de actieve)."""
     if not isinstance(data, dict) or data.get("type") != "ptz-control-backup":
@@ -1108,7 +1274,7 @@ class Handler(BaseHTTPRequestHandler):
         if "/api/snapshot" not in (str(args[0]) if args else ""):
             super().log_message(fmt, *args)
 
-    def _send(self, code, body, ctype="application/json"):
+    def _send(self, code, body, ctype="application/json", headers=None):
         if isinstance(body, (dict, list)):
             body = json.dumps(body, ensure_ascii=False).encode()
         elif isinstance(body, str):
@@ -1117,8 +1283,25 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
+
+    def _token(self):
+        for part in (self.headers.get("Cookie") or "").split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == "ptz_auth":
+                return v
+        return ""
+
+    def _authorized(self):
+        """Mag dit apparaat bedienen? Zonder pincode altijd; anders deze computer zelf of een geldige sessie."""
+        return not pin_set() or is_local(self.client_address[0]) or token_ok(self._token())
+
+    def _deny(self):
+        return self._send(403, {"ok": False, "need_pin": True,
+                                "error": "Alleen kijken: voer de pincode in om te bedienen."})
 
     def _body(self):
         n = int(self.headers.get("Content-Length") or 0)
@@ -1141,7 +1324,25 @@ class Handler(BaseHTTPRequestHandler):
             cfg["tracking_error"] = tracking_error()
             cfg["first_run"] = first_run(cfg)
             return self._send(200, cfg)
+        if u.path == "/api/access":
+            return self._send(200, {"pin_set": pin_set(), "unlocked": self._authorized(), "local": is_local(self.client_address[0])})
+        if u.path == "/api/autobackup":
+            return self._send(200, {"list": autobackup_list(), "keep": AUTOBK_KEEP})
+        if u.path == "/api/autobackup/file":
+            if not self._authorized():
+                return self._deny()
+            try:
+                path = autobackup_file(parse_qs(u.query).get("name", [""])[0])
+            except KeyError as e:
+                return self._send(404, {"error": e.args[0]})
+            with open(path, "rb") as f:
+                body = f.read()
+            dl = parse_qs(u.query).get("download", ["0"])[0] == "1"
+            return self._send(200, body, "application/json; charset=utf-8",
+                              {"Content-Disposition": f'attachment; filename="ptz-control-{os.path.basename(path)}"'} if dl else None)
         if u.path == "/api/backup":
+            if not self._authorized():
+                return self._deny()
             q = parse_qs(u.query)
             pw = q.get("passwords", ["1"])[0] == "1"
             if q.get("all", ["0"])[0] == "1":
@@ -1264,6 +1465,48 @@ class Handler(BaseHTTPRequestHandler):
             body = self._body()
         except json.JSONDecodeError:
             return self._send(400, {"error": "ongeldige JSON"})
+        if u.path not in OPEN_POSTS and not self._authorized():
+            return self._deny()
+
+        ip = self.client_address[0]
+        if u.path == "/api/access/unlock":
+            try:
+                if not check_pin(ip, body.get("pin", "")):
+                    return self._send(403, {"ok": False, "error": "Pincode klopt niet"})
+            except PermissionError as e:
+                return self._send(429, {"ok": False, "error": str(e)})
+            tok = new_token()
+            return self._send(200, {"ok": True}, headers={
+                "Set-Cookie": f"ptz_auth={tok}; Path=/; Max-Age={TOKEN_DAYS * 86400}; HttpOnly; SameSite=Strict"})
+        if u.path == "/api/access/lock":
+            tok = self._token()
+            with ACCESS_LOCK:
+                a = _access()
+                if a["tokens"].pop(tok, None) is not None:
+                    _access_save(a)
+            return self._send(200, {"ok": True}, headers={"Set-Cookie": "ptz_auth=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"})
+        if u.path == "/api/access/set":
+            try:
+                set_pin(body.get("pin", ""))
+            except ValueError as e:
+                return self._send(400, {"ok": False, "error": str(e)})
+            broadcast({"type": "access"})
+            hdr = None
+            if body.get("pin") and not is_local(ip):    # dit apparaat blijft ingelogd
+                hdr = {"Set-Cookie": f"ptz_auth={new_token()}; Path=/; Max-Age={TOKEN_DAYS * 86400}; HttpOnly; SameSite=Strict"}
+            return self._send(200, {"ok": True, "pin_set": pin_set()}, headers=hdr)
+        if u.path == "/api/access/logout_all":
+            with ACCESS_LOCK:
+                a = _access()
+                a["tokens"] = {}
+                _access_save(a)
+            broadcast({"type": "access"})
+            return self._send(200, {"ok": True})
+        if u.path == "/api/autobackup/now":
+            try:
+                return self._send(200, {"ok": True, "name": autobackup("handmatig")})
+            except Exception as e:  # noqa: BLE001
+                return self._send(500, {"ok": False, "error": str(e)})
 
         if u.path == "/api/config":
             if not isinstance(body.get("cameras"), list):
@@ -1320,6 +1563,11 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/update/install":
             if JOB.get("running"):
                 return self._send(409, {"error": "Er loopt nog een taak (back-up/laden/test); probeer het daarna."})
+            if UPD.snapshot().get("available"):
+                try:
+                    autobackup("voor update")      # 🧑 altijd eerst een back-up
+                except Exception as e:  # noqa: BLE001
+                    print(f"Back-up vóór update mislukt: {e}")
             try:
                 UPD.install()
             except RuntimeError as e:
@@ -1554,6 +1802,8 @@ def main():
     UPD.start()
     MIDI.start()
     threading.Thread(target=camstatus_loop, daemon=True, name="camstatus").start()
+    if os.environ.get("PTZ_AUTOBK", "").lower() not in ("0", "uit", "off"):
+        threading.Thread(target=autobackup_loop, daemon=True, name="autobackup").start()
     srv.daemon_threads = True
     print(f"PTZ Control draait op {url}  en  {lan_url}")
     print(f"Instellingen en foto's: {DATA_DIR}  (workspace: {WS['active']})")

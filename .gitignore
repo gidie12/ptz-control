@@ -17,3 +17,7 @@ build/
 dist/
 workspaces/
 workspaces.json
+
+# Automatische back-ups en pincode (in DATA_DIR)
+backups/
+toegang.json
