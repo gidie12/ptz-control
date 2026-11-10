@@ -21,6 +21,8 @@ import datetime
 import json
 import os
 import queue
+import re
+import shutil
 import socket
 import threading
 import time
@@ -63,9 +65,44 @@ def _data_dir():
 RES_DIR = getattr(sys, "_MEIPASS", HERE)       # meegeleverde bestanden (index.html)
 DATA_DIR = _data_dir()
 os.makedirs(DATA_DIR, exist_ok=True)
-CONFIG_PATH = os.path.join(DATA_DIR, "cameras.json")
 INDEX_PATH = os.path.join(RES_DIR, "index.html")
-THUMB_DIR = os.path.join(DATA_DIR, "thumbs")
+
+# ---------------------------------------------------------------- workspaces
+# 🧑 Elke workspace is een eigen set instellingen (camera's, presets, foto's, YouTube, sneltoetsen, …),
+# alsof het een aparte installatie is. "standaard" gebruikt de oude plek (cameras.json + thumbs/ in
+# DATA_DIR), zodat bestaande installaties niets hoeven te verhuizen; andere staan in workspaces/<id>/.
+WS_FILE = os.path.join(DATA_DIR, "workspaces.json")
+WS_DIR = os.path.join(DATA_DIR, "workspaces")
+WS_DEFAULT = "standaard"
+
+
+def ws_paths(ws_id):
+    base = DATA_DIR if ws_id == WS_DEFAULT else os.path.join(WS_DIR, ws_id)
+    return os.path.join(base, "cameras.json"), os.path.join(base, "thumbs")
+
+
+def ws_load():
+    try:
+        with open(WS_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        data = {}
+    lst = [w for w in data.get("list", []) if isinstance(w, dict) and re.fullmatch(r"[a-z0-9-]{1,40}", str(w.get("id", "")))]
+    if not any(w["id"] == WS_DEFAULT for w in lst):
+        lst.insert(0, {"id": WS_DEFAULT, "name": "Standaard"})
+    active = data.get("active") if any(w["id"] == data.get("active") for w in lst) else WS_DEFAULT
+    return {"active": active, "list": lst}
+
+
+def ws_save(data):
+    tmp = WS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, WS_FILE)
+
+
+WS = ws_load()
+CONFIG_PATH, THUMB_DIR = ws_paths(WS["active"])
 LOCK = threading.Lock()
 TIMEOUT = 2.5
 
@@ -413,6 +450,103 @@ def follow_after_preset(cam, delay=2.5):
 
 # ---------------------------------------------------------------- back-up en herstel
 
+def ws_public():
+    return {"active": WS["active"], "list": WS["list"]}
+
+
+def _ws_slug(name, taken):
+    base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:30] or "workspace"
+    slug, i = base, 2
+    while slug in taken:
+        slug, i = f"{base}-{i}", i + 1
+    return slug
+
+
+def ws_select(ws_id):
+    """Andere workspace actief maken: alles wat met de vorige bezig is stoppen, paden omzetten."""
+    global CONFIG_PATH, THUMB_DIR
+    if not any(w["id"] == ws_id for w in WS["list"]):
+        raise ValueError("Onbekende workspace")
+    if ws_id == WS["active"]:
+        return
+    if JOB.get("running"):
+        raise ValueError("Er loopt nog een taak (uitlezen/terugzetten/laden). Wacht tot die klaar is.")
+    for cam_id in list(TRACKERS) + list(FOLLOW_TIMERS):
+        try:
+            stop_tracking(cam_id, halt=True, quiet=True)
+        except Exception:  # noqa: BLE001
+            pass
+    with LOCK:
+        WS["active"] = ws_id
+        CONFIG_PATH, THUMB_DIR = ws_paths(ws_id)
+        ws_save(WS)
+    STATE.update(active=None, last_preset={})
+    JOB.update(running=False, kind="", cams={})
+    with YT._lock:   # livestream van de vorige workspace niet laten hangen
+        YT.state.update(channel="", live=False, upcoming=False, video_id=None, title=None, start=None, checked=None, error=None)
+    load_config()          # maakt cameras.json aan als de workspace nog leeg is
+    broadcast({"type": "workspace", "active": ws_id})
+    YT.refresh()
+
+
+def ws_action(body):
+    act = body.get("action")
+    taken = {w["id"] for w in WS["list"]}
+    if act == "select":
+        ws_select(str(body.get("id", "")))
+    elif act == "create":
+        name = str(body.get("name") or "").strip()[:60]
+        if not name:
+            raise ValueError("Geef de workspace een naam")
+        if any(w["name"].lower() == name.lower() for w in WS["list"]):
+            raise ValueError("Er is al een workspace met die naam")
+        new_id = _ws_slug(name, taken)
+        cfg_path, thumb_dir = ws_paths(new_id)
+        os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
+        src = body.get("copy_from")
+        if src:
+            if src not in taken:
+                raise ValueError("Onbekende workspace om te kopiëren")
+            s_cfg, s_thumbs = ws_paths(src)
+            if os.path.exists(s_cfg):
+                shutil.copyfile(s_cfg, cfg_path)
+            if os.path.isdir(s_thumbs):
+                shutil.copytree(s_thumbs, thumb_dir, dirs_exist_ok=True)
+        else:
+            empty = json.loads(json.dumps(DEFAULT_CONFIG))
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                json.dump(empty, f, indent=2, ensure_ascii=False)
+        WS["list"].append({"id": new_id, "name": name})
+        ws_save(WS)
+        broadcast({"type": "workspaces"})
+        if body.get("select"):
+            ws_select(new_id)
+        return {**ws_public(), "created": new_id}
+    elif act == "rename":
+        w = next((w for w in WS["list"] if w["id"] == body.get("id")), None)
+        name = str(body.get("name") or "").strip()[:60]
+        if not w or not name:
+            raise ValueError("Onbekende workspace of lege naam")
+        w["name"] = name
+        ws_save(WS)
+        broadcast({"type": "workspaces"})
+    elif act == "delete":
+        ws_id = body.get("id")
+        if ws_id == WS_DEFAULT:
+            raise ValueError("De standaard-workspace kan niet weg")
+        if ws_id == WS["active"]:
+            raise ValueError("Kies eerst een andere workspace")
+        if ws_id not in taken:
+            raise ValueError("Onbekende workspace")
+        WS["list"] = [w for w in WS["list"] if w["id"] != ws_id]
+        ws_save(WS)
+        shutil.rmtree(os.path.join(WS_DIR, ws_id), ignore_errors=True)
+        broadcast({"type": "workspaces"})
+    else:
+        raise ValueError("Onbekende actie")
+    return ws_public()
+
+
 JOB = {"type": "job", "running": False, "kind": "", "cams": {}}
 JOB_LOCK = threading.Lock()
 
@@ -637,7 +771,12 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         if u.path in ("/", "/index.html"):
             with open(INDEX_PATH, "rb") as f:
-                return self._send(200, f.read(), "text/html; charset=utf-8")
+                html = f.read()
+            # workspace meegeven vóór er iets geladen wordt (per-apparaat-instellingen zijn per workspace)
+            meta = f'<meta name="ptz-workspace" content="{WS["active"]}">'.encode()
+            return self._send(200, html.replace(b"<head>", b"<head>" + meta, 1), "text/html; charset=utf-8")
+        if u.path == "/api/workspaces":
+            return self._send(200, ws_public())
         if u.path == "/api/config":
             cfg = load_config()
             for cam in cfg.get("cameras", []):
@@ -769,6 +908,12 @@ class Handler(BaseHTTPRequestHandler):
             if (body.get("youtube") or {}).get("channel", "") != old_yt:
                 YT.refresh()
             return self._send(200, {"ok": True})
+
+        if u.path == "/api/workspaces":
+            try:
+                return self._send(200, ws_action(body))
+            except ValueError as e:
+                return self._send(400, {"error": str(e)})
 
         if u.path == "/api/quit":
             # 🧑 app afsluiten vanuit het menu (de losse Mac-app heeft geen venster om te sluiten)
@@ -940,6 +1085,7 @@ def main():
     ap.add_argument("--open", action="store_true", help="open de bediening in de standaardbrowser")
     ap.add_argument("--no-open", action="store_true", help="losse app: browser níet openen")
     ap.add_argument("--no-tray", action="store_true", help="losse app: geen icoon in menubalk/systeemvak")
+    ap.add_argument("--workspace", help="starten in deze workspace (naam of id)")
     args = ap.parse_args()
     _log_naar_bestand()
     if FROZEN and not args.no_open:
@@ -959,6 +1105,13 @@ def main():
         except Exception:  # noqa: BLE001
             _melding(f"Poort {args.port} is bezet door een ander programma. PTZ Control kan niet starten.")
             raise SystemExit(1)
+    if args.workspace:
+        want = args.workspace.strip().lower()
+        w = next((w for w in WS["list"] if w["id"] == want or w["name"].lower() == want), None)
+        if w:
+            ws_select(w["id"])
+        else:
+            print(f"Workspace '{args.workspace}' bestaat niet; gestart in '{WS['active']}'.")
     load_config()
     lan_url = f"http://{local_ip()}:{args.port}"
     STATE["server"] = f"{local_ip()}:{args.port}"
@@ -966,7 +1119,7 @@ def main():
     YT.start()
     srv.daemon_threads = True
     print(f"PTZ Control draait op {url}  en  {lan_url}")
-    print(f"Instellingen en foto's: {DATA_DIR}")
+    print(f"Instellingen en foto's: {DATA_DIR}  (workspace: {WS['active']})")
     print("Stoppen met Ctrl+C (of dit venster sluiten)")
     if args.open:
         import webbrowser

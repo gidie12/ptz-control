@@ -15,3 +15,5 @@ thumbs/
 .DS_Store
 build/
 dist/
+workspaces/
+workspaces.json

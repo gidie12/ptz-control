@@ -57,6 +57,17 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - 🧑 **⛶ Volledig scherm** / toets F: `body.wall` verbergt kop en zijbalk, zet weergave op Alle camera's en vraagt browser-fullscreen. Esc / fullscreen verlaten → terug naar vorige weergave.
 - 🧑 **Geen scènes** (meerdere camera's tegelijk naar een preset). Op verzoek verwijderd: camera's mogen niet tegelijk bewegen, omdat de regie eerst via de videomixer naar een ander shot schakelt en dan pas de camera die niet live is verplaatst. Niet opnieuw toevoegen zonder expliciete vraag. Een oude `scenes`-sectie in `cameras.json` wordt bij opslaan weggegooid, oude `scene*`-knoppen in `pad_map` worden genegeerd.
 
+## 2a. Workspaces
+
+- 🧑 **Workspaces** = aparte sets instellingen, alsof het aparte installaties zijn (bijv. per locatie). Per workspace eigen `cameras.json` (camera's, presets, tegels, `pad_map`, `keymap`, YouTube-kanaal, `saved_*`) en `thumbs/`.
+- Opslag: `DATA_DIR/workspaces.json` = `{active, list:[{id,name}]}`. **`standaard` gebruikt de oude plek** (`DATA_DIR/cameras.json` + `thumbs/`), zodat bestaande installaties niets verhuizen; andere in `DATA_DIR/workspaces/<id>/`. `workspaces/` en `workspaces.json` staan in `.gitignore` (wachtwoorden).
+- **Eén actieve workspace per server**, voor alle schermen. `ws_select()` weigert tijdens een taak, stopt volgen/timers, zet de globale `CONFIG_PATH`/`THUMB_DIR` om (alle code leest die op het moment zelf), wist `STATE`/`JOB`, zet de YouTube-status terug, stuurt SSE `workspace` (schermen herladen) en `YT.refresh()`.
+- API: `GET /api/workspaces`, `POST /api/workspaces {action: select|create|rename|delete, …}`. `create` met `copy_from` kopieert config + foto's; zonder = `DEFAULT_CONFIG`. `standaard` en de actieve workspace kunnen niet weg; verwijderen wist de map definitief (UI vraagt bevestiging).
+- **Per-apparaat-instellingen (localStorage) ook per workspace**: de server zet `<meta name="ptz-workspace">` in `index.html`; `store` gebruikt prefix `ws:<id>:` (niet voor `standaard`, niet voor `theme`). Bij *Kopie van* kopieert de UI ook die localStorage-sleutels van dit apparaat.
+- UI: knop **📍 <naam> ▾** (`#btnWs`, menu `#wsMenu`) naast de titel: wisselen (met bevestiging), *Nieuwe workspace…*, *Workspaces beheren…* (`#dlgWs`: maken leeg/kopie, hernoemen met Enter, openen, verwijderen). Paginatitel krijgt de naam als er meer dan één is.
+- CLI: `--workspace <naam of id>` start in die workspace.
+- ✅ Getest (Playwright + API): maken leeg/kopie, wisselen met twee schermen (beide herladen), aparte camera's/YouTube/localStorage, terug, verwijderen, `--workspace`.
+
 ## 3. Camera-protocol (PTZOptics)
 
 - ✅ HTTP-CGI: `http://<ip>/cgi-bin/ptzctrl.cgi?ptzcmd&...` met `up/down/left/right/leftup/rightup/leftdown/rightdown`, `ptzstop`, `home`, `zoomin/zoomout/zoomstop`, `poscall/posset` (bron: PTZOptics developer docs).

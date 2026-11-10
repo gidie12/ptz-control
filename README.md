@@ -138,6 +138,13 @@ en de stream verschijnt in een **klein venster** (standaard automatisch, zonder 
 ## Licht of donker
 Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
 
+## Workspaces (per locatie)
+Klik op **📍 Standaard ▾** naast de titel. Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenindeling en YouTube-kanaal, alsof het een aparte installatie is.
+- *Nieuwe workspace…*: kies een naam en begin leeg of als kopie van een bestaande.
+- Wisselen geldt voor alle schermen die met deze computer verbonden zijn (ze herladen vanzelf). Volgen stopt bij het wisselen.
+- *Workspaces beheren…*: hernoemen, openen of verwijderen (verwijderen wist alles van die workspace; maak eerst een back-up als je het wilt bewaren).
+- Direct in een bepaalde workspace starten: `python3 ptz_control.py --workspace "Kerk Zwolle"` (ook als extra argument achter `Start PTZ Control`).
+
 ## Sneltoetsen
 Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · Y = YouTube-venster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
 **Alle toetsen zijn aan te passen** via 🎮 Menu → ⌨ Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.

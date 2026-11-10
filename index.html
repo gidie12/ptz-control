@@ -243,7 +243,14 @@
   #btnYt.live .ytdot { background: var(--live); box-shadow: 0 0 6px var(--live); animation: padpulse 1s ease-in-out infinite alternate; }
   #btnYt.upcoming .ytdot { background: var(--accent); }
   #btnYt.shown { background: var(--panel2); }
-  #btnYt .caret { font-size: 11px; opacity: .7; }
+  #btnYt .caret, #btnWs .caret { font-size: 11px; opacity: .7; }
+  #btnWs { display: flex; gap: 6px; align-items: center; font-size: 13px; max-width: 220px; }
+  #btnWs #wsLbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #wsMenu { left: 0; right: auto; min-width: 240px; }
+  #wsMenu .mi .chk { width: 16px; text-align: center; color: var(--ok); font-weight: 700; }
+  #dlgWs { width: min(520px, 95vw); }
+  #dlgWs .wsrow { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  #dlgWs .wsrow input { width: 100%; }
   #ytMenu { min-width: 270px; }
   #ytMenu .ystat { padding: 6px 10px 8px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); margin-bottom: 4px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
@@ -288,6 +295,11 @@
 <body>
 <header>
   <h1>PTZ Control</h1>
+  <div class="menuwrap" id="wsWrap">
+    <button class="icon" id="btnWs" aria-haspopup="true" aria-expanded="false" title="Workspace: een aparte set camera's, presets en instellingen (bijv. per locatie)">
+      <span aria-hidden="true">📍</span> <span id="wsLbl">Standaard</span> <span class="caret">▾</span></button>
+    <div class="menu" id="wsMenu" hidden role="menu"></div>
+  </div>
   <div class="tabs" id="tabs"></div>
   <label class="icon" style="display:flex;gap:6px;align-items:center;font-size:13px"
     title="Wissel mee als op een ander scherm of met de controller een andere camera gekozen wordt. Het bolletje is groen als de verbinding met de app goed is.">
@@ -529,6 +541,21 @@
   <div class="actions"><span class="small" id="ldInfo"></span>
     <span style="display:flex;gap:8px"><button class="icon" id="ldClose">Sluiten</button>
     <button class="primary" id="ldStart">Laden</button></span></div>
+</dialog>
+
+<dialog id="dlgWs">
+  <h3>📍 Workspaces</h3>
+  <p class="small" style="margin:0 0 10px">Elke workspace heeft eigen camera's, presets, foto's, sneltoetsen, knoppenindeling en YouTube-kanaal,
+    alsof het een aparte installatie is. Handig per locatie. Wisselen geldt voor alle schermen die met deze computer verbonden zijn.</p>
+  <h4 style="margin:0 0 6px">Nieuwe workspace</h4>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input type="text" id="wsNewName" placeholder="Naam, bijv. Kerk Zwolle" maxlength="60" style="flex:1;min-width:180px">
+    <select id="wsNewFrom"><option value="">Leeg beginnen</option></select>
+    <button class="primary" id="wsCreate">Maken en openen</button>
+  </div>
+  <h4 style="margin:16px 0 4px">Bestaande workspaces</h4>
+  <div id="wsList"></div>
+  <div class="actions"><span></span><button class="icon" id="wsClose">Sluiten</button></div>
 </dialog>
 
 <dialog id="dlgPrefs">
@@ -850,8 +877,12 @@ $("#afOn").onclick = async () => { if ((await cmd("autofocus", { on: true }))?.o
 $("#afOff").onclick = async () => { if ((await cmd("autofocus", { on: false }))?.ok) setAF(false); };
 $("#afPush").onclick = () => cmd("onepush_af");
 
-const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
-                set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+// Per-apparaat-instellingen horen bij de workspace (prefix), behalve het thema.
+// De standaard-workspace gebruikt de oude sleutels, zodat bestaande instellingen blijven werken.
+const WS_ID = document.querySelector('meta[name="ptz-workspace"]')?.content || "standaard";
+const wsKey = (k) => (WS_ID === "standaard" || k === "theme") ? k : `ws:${WS_ID}:${k}`;
+const store = { get: (k) => { try { return localStorage.getItem(wsKey(k)); } catch { return null; } },
+                set: (k, v) => { try { localStorage.setItem(wsKey(k), v); } catch {} } };
 [["#spPan", "#vPan"], ["#spTilt", "#vTilt"], ["#spZoom", "#vZoom"], ["#spFocus", "#vFocus"]].forEach(([s, v]) => {
   if (store.get("ptz" + s)) $(s).value = store.get("ptz" + s);
   $(v).textContent = $(s).value;
@@ -1808,6 +1839,98 @@ fetch("/api/youtube").then(r => {
 }).catch(() => {});
 ytRender();
 
+/* ================= workspaces ================= */
+let wsData = { active: WS_ID, list: [] };
+async function wsLoad() {
+  try { wsData = await (await fetch("/api/workspaces")).json(); } catch { return; }
+  const cur = wsData.list.find(w => w.id === wsData.active);
+  $("#wsLbl").textContent = cur ? cur.name : wsData.active;
+  document.title = "PTZ Control" + (wsData.list.length > 1 && cur ? " · " + cur.name : "");
+  if (!$("#wsMenu").hidden) wsMenuRender();
+  if ($("#dlgWs").open) wsDlgRender();
+}
+async function wsPost(body) {
+  const r = await post("/api/workspaces", body);
+  if (r.error) { toast(r.error); return null; }
+  return r;
+}
+function wsMenuRender() {
+  $("#wsMenu").innerHTML = wsData.list.map(w => `<button class="mi" data-ws="${esc(w.id)}" role="menuitem">
+      ${esc(w.name)} <span class="chk">${w.id === wsData.active ? "✓" : ""}</span></button>`).join("")
+    + `<div class="msep"></div><button class="mi" data-wsact="new" role="menuitem">＋ Nieuwe workspace…</button>
+       <button class="mi" data-wsact="manage" role="menuitem">⚙ Workspaces beheren…</button>`;
+}
+function wsMenuOpen(open) {
+  if (open) { setMenu(false); ytMenuOpen?.(false); wsMenuRender(); }
+  $("#wsMenu").hidden = !open;
+  $("#btnWs").setAttribute("aria-expanded", open ? "true" : "false");
+}
+$("#btnWs").onclick = (e) => { e.stopPropagation(); wsMenuOpen($("#wsMenu").hidden); };
+$("#btnPad").addEventListener("click", () => wsMenuOpen(false));
+$("#btnYt").addEventListener("click", () => wsMenuOpen(false));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#wsMenu").hidden) { e.stopPropagation(); wsMenuOpen(false); } }, true);
+document.addEventListener("click", (e) => { if (!e.target.closest("#wsWrap")) wsMenuOpen(false); });
+$("#wsMenu").addEventListener("click", async (e) => {
+  e.stopPropagation();
+  const b = e.target.closest("button"); if (!b) return;
+  wsMenuOpen(false);
+  if (b.dataset.ws) {
+    if (b.dataset.ws === wsData.active) return;
+    const name = wsData.list.find(w => w.id === b.dataset.ws)?.name;
+    if (!confirm(`Overschakelen naar workspace "${name}"?\n\nAlle schermen wisselen mee; volgen stopt.`)) return;
+    if (await wsPost({ action: "select", id: b.dataset.ws })) toast("Workspace wordt gewisseld…", true);
+  } else { wsDlgOpen(b.dataset.wsact === "new"); }
+});
+function wsDlgRender() {
+  $("#wsNewFrom").innerHTML = '<option value="">Leeg beginnen</option>'
+    + wsData.list.map(w => `<option value="${esc(w.id)}">Kopie van ${esc(w.name)}</option>`).join("");
+  $("#wsList").innerHTML = wsData.list.map(w => `<div class="wsrow" data-id="${esc(w.id)}">
+      <input type="text" value="${esc(w.name)}" maxlength="60" title="Naam wijzigen (Enter)">
+      ${w.id === wsData.active ? '<span class="small" style="color:var(--ok)">✓ actief</span>' : `<button class="icon" data-a="open">Openen</button>`}
+      ${w.id === "standaard" || w.id === wsData.active ? "<span></span>" : `<button class="icon danger" data-a="del" title="Workspace en al zijn instellingen verwijderen">🗑</button>`}
+    </div>`).join("");
+}
+function wsDlgOpen(focusNew) { wsDlgRender(); $("#dlgWs").showModal(); if (focusNew) $("#wsNewName").focus(); }
+$("#wsClose").onclick = () => $("#dlgWs").close();
+$("#wsCreate").onclick = async () => {
+  const name = $("#wsNewName").value.trim();
+  if (!name) { toast("Geef de workspace een naam"); return $("#wsNewName").focus(); }
+  const from = $("#wsNewFrom").value || null;
+  const r = await wsPost({ action: "create", name, copy_from: from, select: false });
+  if (!r) return;
+  // bij een kopie ook de instellingen van dit apparaat meenemen (snelheden, Xbox-opties, YouTube-venster, …)
+  if (from) try {
+    const pre = (id) => id === "standaard" ? "" : `ws:${id}:`;
+    Object.keys(localStorage).forEach(k => {
+      if (k === "theme" || (from === "standaard" ? k.startsWith("ws:") : !k.startsWith(pre(from)))) return;
+      localStorage.setItem(pre(r.created) + k.slice(pre(from).length), localStorage.getItem(k));
+    });
+  } catch {}
+  await wsPost({ action: "select", id: r.created });
+  $("#wsNewName").value = ""; toast(`Workspace "${name}" gemaakt`, true);
+};
+$("#wsNewName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#wsCreate").click(); });
+$("#wsList").addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter" || !e.target.matches("input")) return;
+  const id = e.target.closest(".wsrow").dataset.id;
+  if (await wsPost({ action: "rename", id, name: e.target.value.trim() })) { e.target.blur(); toast("Naam gewijzigd", true); wsLoad(); }
+});
+$("#wsList").addEventListener("change", async (e) => {
+  if (!e.target.matches("input")) return;
+  const id = e.target.closest(".wsrow").dataset.id;
+  if (await wsPost({ action: "rename", id, name: e.target.value.trim() })) wsLoad();
+});
+$("#wsList").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-a]"); if (!b) return;
+  const id = b.closest(".wsrow").dataset.id, name = wsData.list.find(w => w.id === id)?.name;
+  if (b.dataset.a === "open") { if (await wsPost({ action: "select", id })) toast("Workspace wordt gewisseld…", true); }
+  if (b.dataset.a === "del") {
+    if (!confirm(`Workspace "${name}" verwijderen?\n\nDe camera's, presets, foto's en instellingen van deze workspace worden definitief gewist. Maak eerst een back-up als je ze wilt bewaren.`)) return;
+    if (await wsPost({ action: "delete", id })) { toast(`Workspace "${name}" verwijderd`, true); wsLoad(); }
+  }
+});
+wsLoad();
+
 /* ================= live events ================= */
 function connectEvents() {
   const es = new EventSource("/api/events");
@@ -1855,6 +1978,10 @@ function connectEvents() {
       ytUpdate(ev);
     } else if (ev.type === "config") {
       loadConfig();
+    } else if (ev.type === "workspace") {
+      if (ev.active !== WS_ID) location.reload();   // andere workspace: alles opnieuw laden
+    } else if (ev.type === "workspaces") {
+      wsLoad();
     }
   };
 }
