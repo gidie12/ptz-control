@@ -69,6 +69,8 @@ with sync_playwright() as p:
     pg.click("#btnMap2"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/knoppenindeling.png"); pg.click("#btnMapClose")
     pg.click("#btnPad"); pg.click("#btnBackup"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/back-up.png"); pg.keyboard.press("Escape")
     pg.evaluate("setWall(true)"); pg.wait_for_timeout(600); pg.screenshot(path=f"{OUT}/volledig-scherm.png"); pg.evaluate("setWall(false)")
+    pg.wait_for_timeout(800); pg.evaluate("store.set('songWallDock','right'); ytShow(true); songWinShow(true); setWall(true)"); pg.wait_for_timeout(800)
+    pg.screenshot(path=f"{OUT}/liederen-naast-livestream.png"); pg.evaluate("setWall(false); songWinShow(false); ytShow(false); store.set('songWallDock','')")
     pg.evaluate("tourStart()"); pg.wait_for_timeout(300)
     for _ in range(2): pg.click("#tourNext")
     pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/rondleiding.png")

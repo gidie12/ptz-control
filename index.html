@@ -448,6 +448,8 @@
     border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); overflow: hidden;
     display: flex; flex-direction: column; min-width: 220px; min-height: 140px; }
   #songWin[hidden] { display: none; }
+  #songWin.docked .ytgrip { display: none; }
+  #songWin.docked #songHead { cursor: default; }
   #songWin .ytbadge { background: var(--muted); }
   #songWin.on .ytbadge { background: var(--ok); color: #fff; }
   .songnowbox { padding: 8px 12px; border-bottom: 1px solid var(--line); }
@@ -2080,17 +2082,44 @@ function ytGeom() {
 const ytH = (w) => w * 9 / 16 + 31;   // hoogte bij breedte w (16:9 + titelbalk)
 // Zoek de grootste vrije plek (≤ gewenste breedte) die geen presettegel bedekt:
 // rechts naast de laatste tegel van elk raster, of eronder (per kolom bij Alle camera's).
-function ytAutoSpot(maxW) {
+// 🎵 Liederenvenster naast de livestream bij volledig scherm (per apparaat, localStorage songWallDock = "" | left | right).
+// Dan staat het venster direct links/rechts van de speler, even hoog, en houdt de plaatsing van de speler er ruimte voor vrij.
+const SONG_DOCK_GAP = 8;
+function songDockSide() { const v = store.get("songWallDock"); return v === "left" || v === "right" ? v : ""; }
+function songDocked() {
+  const sw = document.getElementById("songWin");
+  return !!songDockSide() && document.body.classList.contains("wall") && !ytWin.hidden && !!sw && !sw.hidden;
+}
+function songDockW() {
+  let w = 300; try { w = +JSON.parse(store.get("songGeom") || "{}").w || 300; } catch {}
+  return Math.max(220, Math.min(w, 380, Math.round(innerWidth * 0.22)));
+}
+function songDockExtra() { return songDocked() ? songDockW() + SONG_DOCK_GAP : 0; }
+function songDockApply() {
+  const sw = document.getElementById("songWin"); if (!sw) return;
+  const on = songDocked(), was = sw.classList.contains("docked");
+  sw.classList.toggle("docked", on);
+  if (!on) { if (was) songPlace(); return; }
+  const r = ytWin.getBoundingClientRect(), w = songDockW();
+  const x = songDockSide() === "left" ? r.left - SONG_DOCK_GAP - w : r.right + SONG_DOCK_GAP;
+  sw.style.right = sw.style.bottom = "";
+  sw.style.left = Math.round(Math.max(0, Math.min(x, innerWidth - w))) + "px";
+  sw.style.top = Math.round(r.top) + "px";
+  sw.style.width = w + "px";
+  sw.style.height = Math.round(Math.max(140, r.height)) + "px";
+}
+function ytAutoSpot(maxW, extra = 0) {   // extra = ruimte naast de speler voor het liederenvenster; x = linkerkant van het geheel
   const GAP = 10, vh = innerHeight, vw = innerWidth, best = { w: 0 };
   const top0 = (document.querySelector("header")?.getBoundingClientRect().bottom || 0);
   const consider = (x0, x1, y0, kind) => {
     const y = Math.max(y0, top0 + GAP);
     const availW = x1 - x0, availH = vh - GAP - y;
-    let w = Math.min(maxW, availW, (availH - 31) * 16 / 9);
+    let w = Math.min(maxW, availW - extra, (availH - 31) * 16 / 9);
     if (w < 220) return;
     w = Math.floor(w);
+    const bw = w + extra;
     if (w > best.w + 1 || (Math.abs(w - best.w) <= 1 && kind === "naast" && best.kind !== "naast"))
-      Object.assign(best, { w, x: Math.round(kind === "naast" ? x1 - w : x0 + (availW - w) / 2), y: Math.round(y), kind });
+      Object.assign(best, { w, x: Math.round(kind === "naast" ? x1 - bw : x0 + (availW - bw) / 2), y: Math.round(y), kind });
   };
   $$("#presetArea .grid").forEach(grid => {
     const tiles = grid.querySelectorAll(".tile"); if (!tiles.length) return;
@@ -2106,28 +2135,33 @@ function ytPlace(g = ytGeom()) {
   let { x, y, w } = g;
   ytWin.classList.toggle("auto", g.auto);
   const wall = document.body.classList.contains("wall");
+  const extra = songDockExtra(), sLeft = songDockSide() === "left" ? extra : 0;   // ruimte voor het liederenvenster
   if (g.auto && wall && ytOpt.wallTop && !ytWin.hidden) {
     // boven de camera's: gecentreerd bovenaan, hooguit 45% van de schermhoogte; de tegels schuiven omlaag
-    w = Math.floor(Math.max(220, Math.min(g.w, innerWidth - 20, (innerHeight * 0.45 - 31) * 16 / 9)));
+    w = Math.floor(Math.max(220, Math.min(g.w, innerWidth - 20 - extra, (innerHeight * 0.45 - 31) * 16 / 9)));
     ytReserve(0); ytResKey = null; ytReserveTop(ytH(w));
-    ytWin.style.width = w + "px"; ytWin.style.left = Math.round((innerWidth - w) / 2) + "px"; ytWin.style.top = "10px";
+    ytWin.style.width = w + "px"; ytWin.style.left = Math.round((innerWidth - w - extra) / 2 + sLeft) + "px"; ytWin.style.top = "10px";
     $("#ytAutoBtn").hidden = true;
+    songDockApply();
     return;
   }
   ytReserveTop(0);
   // sleutel van de indeling: alleen als die verandert, opnieuw kijken of de strook nog nodig is (anders gaat hij heen en weer)
-  const key = [wall, cfg.preset_count, cfg.tile_size, view, cfg.cameras.length, innerWidth, innerHeight, g.w].join("|");
-  const strip = () => { w = Math.min(g.w, Math.round(innerWidth * 0.35)); ytReserve(w); ytResKey = key; x = innerWidth - w - 10; y = 10; };
+  const key = [wall, cfg.preset_count, cfg.tile_size, view, cfg.cameras.length, innerWidth, innerHeight, g.w, extra, sLeft].join("|");
+  // met het liederenvenster ernaast samen hooguit de helft van het scherm (de speler wordt dan kleiner, min. 220 px)
+  const strip = () => { w = Math.min(g.w, Math.round(innerWidth * 0.35)); if (extra) w = Math.max(220, Math.min(w, Math.round(innerWidth * 0.5) - extra));
+    ytReserve(w + extra); ytResKey = key; x = innerWidth - w - extra - 10 + sLeft; y = 10; };
   if (g.auto && wall && ytResKey === key && document.body.classList.contains("ytres")) strip();
   else if (g.auto) {
     ytResKey = null; ytReserve(0);
-    const spot = ytAutoSpot(g.w);
-    if (spot) ({ x, y, w } = spot);
+    const spot = ytAutoSpot(g.w, extra);
+    if (spot) { ({ x, y, w } = spot); x += sLeft; }
     else if (wall) strip();   // volledig scherm zonder vrije plek: rechts een strook vrijhouden, de tegels schuiven op
     else { ytReserve(0); w = Math.min(g.w, innerWidth - 32); x = innerWidth - w - 16; y = innerHeight - ytH(w) - 16; }   // rechtsonder (over de zijbalk)
   } else ytReserve(0);
   ytWin.style.width = w + "px"; ytWin.style.left = x + "px"; ytWin.style.top = y + "px";
   $("#ytAutoBtn").hidden = g.auto;
+  songDockApply();
 }
 function ytSaveGeom(kind) {
   const r = ytWin.getBoundingClientRect(), old = ytGeomRaw();
@@ -2149,7 +2183,8 @@ function ytReserve(w) {
 }
 let ytPlaceRaf = 0;
 function ytReplace() {   // na wijziging van tegels/scherm opnieuw plaatsen (alleen in automatische stand)
-  if (ytWin.hidden || ytWin.classList.contains("dragging") || !ytGeom().auto) return;
+  if (ytWin.hidden || ytWin.classList.contains("dragging")) return;
+  if (!ytGeom().auto) return songDockApply();   // vaste plek: alleen het liederenvenster aan-/loskoppelen
   cancelAnimationFrame(ytPlaceRaf); ytPlaceRaf = requestAnimationFrame(() => ytPlace());
 }
 function ytEmbedUrl(id) {
@@ -2202,7 +2237,7 @@ function ytRender() {
 }
 function ytShow(on) {
   ytWin.hidden = !on;
-  if (!on) { ytReserve(0); ytReserveTop(0); }
+  if (!on) { ytReserve(0); ytReserveTop(0); songDockApply(); }
   if (on) ytPlace();
   ytRender();
 }
@@ -2234,6 +2269,8 @@ function ytMenuRender() {
     <button class="mi" data-y="auto" role="menuitem" title="Zelf een vrije plek naast of onder de tegels zoeken">⌖ Automatisch plaatsen ${chk(g.auto)}</button>
     <div class="ysize"><span class="lbl">↔ Grootte</span>${[["260", "Klein"], ["360", "Middel"], ["520", "Groot"]]
       .map(([w, t]) => `<button data-w="${w}" class="${Math.abs(g.w - w) < 2 ? "on" : ""}">${t}</button>`).join("")}</div>
+    <div class="ysize" title="Bij volledig scherm staat het liederenvenster direct naast de livestream"><span class="lbl">🎵 Liederen</span>${[["", "Los"], ["left", "Links"], ["right", "Rechts"]]
+      .map(([v, t]) => `<button data-sd="${v}" class="${songDockSide() === v ? "on" : ""}">${t}</button>`).join("")}</div>
     <button class="mi" data-y="walltop" role="menuitem" title="Bij volledig scherm staat het venster bovenaan en schuiven de tegels omlaag">⬆ Boven de camera's bij volledig scherm ${chk(ytOpt.wallTop)}</button>
     <button class="mi" data-y="sound" role="menuitem">🔊 Met geluid starten ${chk(ytOpt.sound)}</button>
     <button class="mi" data-y="autoopen" role="menuitem">⚡ Automatisch openen bij live ${chk(ytOpt.auto)}</button>
@@ -2251,6 +2288,13 @@ $("#btnYt").onclick = (e) => { e.stopPropagation(); ytMenuOpen($("#ytMenu").hidd
 $("#btnPad").addEventListener("click", () => ytMenuOpen(false));
 $("#ytMenu").addEventListener("click", (e) => {
   e.stopPropagation();
+  const sd = e.target.closest("button[data-sd]");
+  if (sd) {   // liederenvenster naast de livestream (volledig scherm): menu blijft open
+    store.set("songWallDock", sd.dataset.sd);
+    if (sd.dataset.sd && songWin.hidden && (songs?.pp?.enabled || songs?.voordienst?.enabled)) songWinShow(true);
+    if (!ytWin.hidden) ytPlace(); else songDockApply();
+    return ytMenuRender();
+  }
   const w = e.target.closest("button[data-w]")?.dataset.w;
   if (w) {   // grootte: menu blijft open
     store.set("ytGeom", JSON.stringify({ ...ytGeomRaw(), w: +w }));
@@ -2291,7 +2335,7 @@ function ytDrag(el, onMove) {
     e.preventDefault();
     const r = ytWin.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
     ytWin.classList.add("dragging"); el.setPointerCapture(e.pointerId);
-    const move = (m) => onMove(r, m.clientX - sx, m.clientY - sy);
+    const move = (m) => { onMove(r, m.clientX - sx, m.clientY - sy); songDockApply(); };
     const up = () => { ytWin.classList.remove("dragging"); el.removeEventListener("pointermove", move); ytSaveGeom(el.id === "ytHead" ? "move" : "size"); };
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up, { once: true });
@@ -3156,7 +3200,7 @@ function songWinRender() {
   btn.hidden = !any;
   btn.classList.toggle("on", !!ppNow);
   $("#songBarLbl").textContent = ppNow || "Liederen";
-  if (!any && !songWin.hidden) songWin.hidden = true;
+  if (!any && !songWin.hidden) { songWin.hidden = true; songDockApply(); ytReplace(); }
   if (songWin.hidden) return;
   const keys = Object.keys(L);
   let src = store.get("songSrc");
@@ -3182,9 +3226,10 @@ function songWinRender() {
 }
 function songGeom() { try { return JSON.parse(store.get("songGeom") || "{}"); } catch { return {}; } }
 function songPlace() {
+  if (songDocked()) return songDockApply();   // naast de livestream op volledig scherm
   const g = songGeom();
-  if (g.w) songWin.style.width = Math.min(g.w, innerWidth - 8) + "px";
-  if (g.h) songWin.style.height = Math.min(g.h, innerHeight - 8) + "px";
+  songWin.style.width = g.w ? Math.min(g.w, innerWidth - 8) + "px" : "";
+  songWin.style.height = g.h ? Math.min(g.h, innerHeight - 8) + "px" : "";
   if (g.x == null) { songWin.style.left = songWin.style.top = ""; songWin.style.right = "16px"; songWin.style.bottom = "16px"; return; }
   const r = songWin.getBoundingClientRect();
   songWin.style.right = songWin.style.bottom = "";
@@ -3195,6 +3240,8 @@ function songWinShow(on) {
   songWin.hidden = !on;
   try { on ? store.set("songOpen", "1") : store.set("songOpen", "0"); } catch { /* geen opslag */ }
   if (on) { songPlace(); songWinRender(); const n = $("#songWinList li.now"); if (n) n.scrollIntoView({ block: "center" }); }
+  if (songDockSide() && document.body.classList.contains("wall") && !ytWin.hidden) ytPlace();   // ruimte naast de speler vrijmaken/teruggeven
+  else songDockApply();
 }
 function songWinToggle() {
   if (!(songs?.pp?.enabled || songs?.voordienst?.enabled)) { $("#btnSongs").click(); return; }   // nog niets ingesteld
@@ -3202,7 +3249,7 @@ function songWinToggle() {
 }
 function songDrag(el, onMove) {
   el.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || e.target.closest("button")) return;
+    if (e.button !== 0 || e.target.closest("button") || songWin.classList.contains("docked")) return;
     e.preventDefault();
     const r = songWin.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
     el.setPointerCapture(e.pointerId);
@@ -3277,7 +3324,7 @@ const TOUR_STEPS = [
   { target: ["#ytWrap"], title: "📺 YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
       <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream).</p>
       <p>Het venster kun je slepen aan de titelbalk en groter maken met de hoek rechtsonder. Starten en stoppen van de stream gebeurt buiten deze app.</p>` },
-  { target: ["#btnSongBar", "#btnPad"], title: "🎵 Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → 🎵 Liederen</b>.</p>` },
+  { target: ["#btnSongBar", "#btnPad"], title: "🎵 Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → 🎵 Liederen</b>.</p><p>Op <b>volledig scherm</b> kan het venster vast <b>links of rechts naast de livestream</b> staan: kies dat in het YouTube-menu bij <i>🎵 Liederen</i> (Los / Links / Rechts, per scherm).</p>` },
   { target: ["#wsWrap"], title: "📍 Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
       <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. We lopen ze kort langs.</p>` },
