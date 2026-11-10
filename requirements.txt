@@ -1,5 +1,7 @@
 # PTZ Control – Python-packages voor de .venv (installeer met Installeer.command)
 # De bediening zelf heeft genoeg aan standaard-Python; deze packages zijn voor 'persoon volgen'.
+mido>=1.3            # videomixer (Roland V-1HD) via USB-MIDI
+python-rtmidi>=1.5
 certifi              # root-certificaten voor https (YouTube) met Python van python.org op de Mac
 numpy>=1.24
 opencv-python>=4.8,<5   # 5.x mist de ingebouwde persoonsdetector (HOG)

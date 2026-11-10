@@ -34,6 +34,7 @@ from urllib.parse import parse_qs, urlparse
 import backup as _backup  # noqa: E402
 import youtube as _youtube  # noqa: E402
 import updater as _updater  # noqa: E402
+import midi as _midi  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FROZEN = bool(getattr(sys, "frozen", False))   # losse app (PyInstaller): .exe / .app
@@ -188,6 +189,18 @@ def _yt_channel():
 
 
 YT = _youtube.Watcher(_yt_channel, lambda st, changed: broadcast(st))
+
+
+# ---------------------------------------------------------------- videomixer (Roland V-1HD via MIDI)
+def _midi_cfg():
+    return load_config().get("midi") or {}
+
+
+def _midi_cams():
+    return [{"id": c.get("id"), "name": c.get("name")} for c in load_config().get("cameras", [])]
+
+
+MIDI = _midi.Watcher(_midi_cfg, _midi_cams, broadcast)
 
 
 # ---------------------------------------------------------------- updates
@@ -499,6 +512,7 @@ def ws_select(ws_id):
     load_config()          # maakt cameras.json aan als de workspace nog leeg is
     broadcast({"type": "workspace", "active": ws_id})
     YT.refresh()
+    MIDI.refresh()
 
 
 def ws_action(body):
@@ -882,6 +896,21 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, YT.snapshot())
         if u.path == "/api/update":
             return self._send(200, UPD.snapshot())
+        if u.path == "/api/midi":
+            return self._send(200, {**MIDI.snapshot(), "config": _midi.norm_cfg(_midi_cfg())})
+        if u.path == "/api/midi/log":
+            seq = int(parse_qs(u.query).get("since", ["0"])[0] or 0)
+            return self._send(200, MIDI.log_since(seq))
+        if u.path == "/api/midi/log.txt":
+            body = MIDI.log_text().encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Disposition",
+                             f'attachment; filename="v1hd-verkenning-{datetime.datetime.now():%Y%m%d-%H%M}.txt"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return None
         if u.path == "/api/events":
             return self._sse()
         if u.path == "/api/thumb":
@@ -918,6 +947,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(f"data: {json.dumps(st)}\n\n".encode())
             self.wfile.write(f"data: {json.dumps(YT.snapshot())}\n\n".encode())
             self.wfile.write(f"data: {json.dumps(UPD.snapshot())}\n\n".encode())
+            self.wfile.write(f"data: {json.dumps(MIDI.snapshot())}\n\n".encode())
             self.wfile.flush()
             while True:
                 try:
@@ -977,6 +1007,10 @@ class Handler(BaseHTTPRequestHandler):
                 body["youtube"] = {"channel": chan}
             else:
                 body.pop("youtube", None)
+            # videomixer-instellingen alleen via /api/midi/config (een verouderd scherm mag ze niet wissen)
+            body.pop("midi", None)
+            if old_cfg.get("midi"):
+                body["midi"] = old_cfg["midi"]
             existing = {c["id"]: c for c in old_cfg.get("cameras", [])}
             for cam in body["cameras"]:
                 cam.pop("thumbs", None)
@@ -1015,6 +1049,21 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True})
         if u.path == "/api/youtube/check":
             YT.refresh()
+            return self._send(200, {"ok": True})
+        if u.path == "/api/midi/config":
+            with LOCK:
+                cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+                old_midi = cfg.get("midi") or {}
+                cfg["midi"] = _midi.norm_cfg({**old_midi, **body})
+                _write(cfg)
+            MIDI.config_changed(old_midi, cfg["midi"])
+            broadcast({"type": "config"})
+            return self._send(200, {"ok": True, "config": cfg["midi"]})
+        if u.path == "/api/midi/fake_press" and _midi.FAKE:   # alleen met PTZ_MIDI_FAKE (tests)
+            _midi.FAKE.press("B" if body.get("bus") == "B" else "A", clamp(body.get("n", 1), 1, 4))
+            return self._send(200, {"ok": True})
+        if u.path == "/api/midi/record":
+            MIDI.set_recording(bool(body.get("on")))
             return self._send(200, {"ok": True})
 
         if u.path == "/api/backup/restore":
@@ -1210,6 +1259,7 @@ def main():
     STATE["app"] = {"frozen": FROZEN, "data_dir": DATA_DIR}
     YT.start()
     UPD.start()
+    MIDI.start()
     srv.daemon_threads = True
     print(f"PTZ Control draait op {url}  en  {lan_url}")
     print(f"Instellingen en foto's: {DATA_DIR}  (workspace: {WS['active']})")

@@ -1,6 +1,6 @@
 # Verkenning: Roland V-1HD via MIDI
 
-Branch `verken/midi-roland`. Nog **geen functie in de app**: dit is uitzoekwerk plus een script om de echte mixer te testen.
+Branch `verken/midi-roland`. In de app: Menu → **🎛 Videomixer (MIDI)** (koppeling knop → camera, IN BEELD-markering, verkenning met log). Hieronder het uitzoekwerk.
 
 Bron: Roland *V-1HD Remote Control Guide* (versie 1.00, 2015).
 
@@ -36,6 +36,8 @@ Er bestaat geen kant-en-klaar tally-bericht. 🧑 **De fader wordt nooit gebruik
 Te bevestigen met de log: is er altijd precies één knop rood?
 
 ## Testen op de Mac mini
+
+Makkelijkst in de app: Menu → 🎛 Videomixer (MIDI) → *Verkenning starten*, knoppen indrukken, *Log downloaden*. Of los, zonder de app:
 
 ```bash
 .venv/bin/pip install mido python-rtmidi

@@ -15,6 +15,7 @@ with sync_playwright() as p:
     pg.click("#btnPad"); pg.wait_for_timeout(300); pg.screenshot(path=f"{OUT}/menu.png", clip={"x": 840, "y": 0, "width": 600, "height": 520}); pg.keyboard.press("Escape")
     pg.click("#presetArea .tile .edit"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/preset-bewerken.png"); pg.click("#pCancel")
     pg.click("#btnPad"); pg.click("#btnSettings"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/cameras.png"); pg.click("#btnCancel")
+    pg.click("#btnPad"); pg.click("#btnMidi"); pg.wait_for_timeout(1500); pg.screenshot(path=f"{OUT}/videomixer.png"); pg.click("#midiClose")
     pg.click("#btnPad"); pg.click("#btnKeys"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/sneltoetsen.png"); pg.click("#keysCancel")
     pg.click("#btnMap2"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/knoppenindeling.png"); pg.click("#btnMapClose")
     pg.click("#btnPad"); pg.click("#btnBackup"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/back-up.png"); pg.keyboard.press("Escape")

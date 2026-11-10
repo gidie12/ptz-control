@@ -24,6 +24,7 @@
     --okbg: #12301c; --oktxt: #7ee2a0; --warnbg: #3a2a10; --warntxt: #f5d49a; --errbg: #2b1416; --errline: #5a2a2c;
     --shadow: rgba(0,0,0,.45); --backdrop: rgba(0,0,0,.65);
     --editbg: rgba(17,19,23,.72); --editfg: #e8eaed; --editline: rgba(255,255,255,.14);
+    --mixoff: #2a2e36; --mixgreen: #2f9e4f; --mixred: #e5484d; --mixtxt: #ffffff; --logbg: #0d0f12;
   }
   :root[data-theme=light] {
     --tourdim: rgba(20,24,32,.45);
@@ -34,6 +35,7 @@
     --okbg: #dcf3e2; --oktxt: #17692f; --warnbg: #fff1d6; --warntxt: #7a4a00; --errbg: #fde6e6; --errline: #efb4b6;
     --shadow: rgba(20,24,32,.18); --backdrop: rgba(20,24,32,.45);
     --editbg: rgba(255,255,255,.88); --editfg: #2b303a; --editline: rgba(20,24,32,.14);
+    --mixoff: #c9ced6; --mixgreen: #2a9d4b; --mixred: #d6343a; --mixtxt: #ffffff; --logbg: #f7f8fa;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
@@ -160,6 +162,29 @@
   .padprofcard select { flex: 1; }
   #dlgMap .padset { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
   #padMap .hit { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+  /* 🎛 Videomixer (Roland V-1HD via MIDI) */
+  #dlgMidi { width: min(720px, 95vw); }
+  .mixrow { display: grid; grid-template-columns: 70px repeat(4, 1fr); gap: 8px 12px; margin-top: 10px; align-items: center; }
+  .mixlbl { font-size: 13px; color: var(--muted); line-height: 1.2; }
+  .mixlbl b { color: var(--text); font-size: 15px; }
+  .mixkey.sel { border-color: var(--text); }
+  .mixbtn { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+  .mixkey { height: 54px; border-radius: 10px; background: var(--mixoff); color: var(--mixtxt); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-weight: 700; font-size: 20px; border: 2px solid transparent; transition: background .15s; }
+  .mixkey small { font-size: 11px; font-weight: 500; opacity: .85; }
+  .mixkey.green { background: var(--mixgreen); }
+  .mixkey.red { background: var(--mixred); box-shadow: 0 0 10px var(--mixred); }
+  .mixkey.hit { border-color: var(--accent); }
+  .mixbtn select, #dlgMidi input[type=text], #dlgMidi input[type=number] { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel2); color: var(--text); font: inherit; }
+  .mixstat { font-size: 13px; margin-top: 4px; }
+  .mixstat.ok { color: var(--oktxt); } .mixstat.err { color: var(--live); } .mixstat.off { color: var(--muted); }
+  #midiLog { background: var(--logbg); border: 1px solid var(--line); border-radius: 8px; height: 180px; overflow: auto; margin: 8px 0 0;
+    padding: 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; white-space: pre; user-select: text; -webkit-user-select: text; }
+  .col.onair { outline: 2px solid var(--live); outline-offset: 4px; border-radius: 8px; }
+  .colhead .onair, .tab .onair { background: var(--live); color: #fff; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px;
+    white-space: nowrap; flex-shrink: 0; align-self: center; }
+  .tab .onair { margin-left: 6px; }
   .bsec { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
   .bsec h4 { margin: 0 0 4px; font-size: 14px; }
   .bsec .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
@@ -351,6 +376,7 @@
       <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm <kbd>F</kbd></button>
       <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
       <button class="mi" id="btnSettings" role="menuitem">📷 Camera's</button>
+      <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld">🎛 Videomixer (MIDI)</button>
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
       <div class="msep"></div>
       <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
@@ -646,6 +672,38 @@
 </div>
 
 <button class="icon" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
+<dialog id="dlgMidi">
+  <h3>🎛 Videomixer (Roland V-1HD)</h3>
+  <p class="small">Via een USB-kabel van de V-1HD naar deze computer ziet PTZ Control welke ingang op de mixer gekozen is (rode knop).
+    De camera die daarbij hoort, krijgt in de app een rode rand met <b>IN BEELD</b>.</p>
+  <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="midiOn"> Koppeling met de videomixer aan</label>
+  <div class="mixstat off" id="midiStat"></div>
+  <div class="bsec">
+    <h4>Knoppen koppelen aan camera's</h4>
+    <div class="small">Kies per ingang welke camera erop zit. Beide rijen (A en B) kiezen uit dezelfde vier ingangen, dus de koppeling geldt voor beide.
+      Druk je op de mixer op een knop, dan licht hij hier op.</div>
+    <div class="mixrow" id="mixRow"></div>
+    <div class="row small">Live rij op de mixer (kant waar de fader staat):
+      <label><input type="radio" name="midiBus" value="A"> A</label>
+      <label><input type="radio" name="midiBus" value="B"> B</label>
+      <span class="muted" id="midiSel"></span></div>
+    <details class="small" style="margin-top:10px"><summary>Geavanceerd</summary>
+      <div class="row">MIDI-poort bevat <input type="text" id="midiPort" maxlength="80" style="width:140px">
+        SysEx device-ID <input type="number" id="midiDev" min="0" max="31" style="width:64px"> <span class="muted">(standaard 16 = 17 in het menu)</span></div>
+      <div class="muted" id="midiPorts" style="margin-top:6px"></div>
+    </details>
+  </div>
+  <div class="bsec">
+    <h4>Verkenning</h4>
+    <div class="small">Legt alles vast wat de mixer via MIDI stuurt, om de koppeling te controleren of te verbeteren.
+      Start, druk op de mixer op de knoppen van beide rijen en kies een memory, en download dan de log.</div>
+    <div class="row"><button class="icon" id="midiRec">▶ Verkenning starten</button>
+      <a class="icon" id="midiDl" href="/api/midi/log.txt" download style="text-decoration:none">⬇ Log downloaden</a>
+      <span class="small muted" id="midiRecInfo"></span></div>
+    <pre id="midiLog"></pre>
+  </div>
+  <div class="actions"><span></span><button class="primary" id="midiClose">Sluiten</button></div>
+</dialog>
 <dialog id="dlgCap">
   <h3>🧪 Presetaantal testen</h3>
   <p class="small">Test per camera hoeveel presets hij echt kan opslaan en oproepen. Voor elk testnummer: preset oproepen,
@@ -745,7 +803,7 @@ function renderTabs() {
   cfg.cameras.forEach((c, i) => {
     const b = document.createElement("button");
     b.className = "tab" + (c.id === view ? " active" : "");
-    b.innerHTML = `${esc(c.name)}<small>${i + 1}</small>`;
+    b.innerHTML = `${esc(c.name)}<small>${i + 1}</small>${midiOnAir(c.id) ? '<span class="onair">IN BEELD</span>' : ""}`;
     b.onclick = () => setView(c.id);
     tabs.appendChild(b);
   });
@@ -822,10 +880,10 @@ function renderPresets() {
     const cols = document.createElement("div"); cols.className = "cols";
     cols.style.setProperty("--ncol", Math.min(cfg.cameras.length, 4));
     cfg.cameras.forEach((c, i) => {
-      const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "");
+      const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "") + (midiOnAir(c.id) ? " onair" : "");
       const ln = lastPreset[c.id];
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
-        <b>${esc(c.name)}</b>${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⌨ Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}
+        <b>${esc(c.name)}</b>${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⌨ Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}
         <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
@@ -2134,6 +2192,8 @@ function connectEvents() {
       updUpdate(ev);
     } else if (ev.type === "youtube") {
       ytUpdate(ev);
+    } else if (ev.type === "midi") {
+      midiUpdate(ev);
     } else if (ev.type === "config") {
       loadConfig();
     } else if (ev.type === "workspace") {
@@ -2143,6 +2203,100 @@ function connectEvents() {
     }
   };
 }
+
+/* ---- 🎛 Videomixer (Roland V-1HD via MIDI) ----
+   Server (midi.py) leest de knopdrukken van de mixer en stuurt SSE "midi" met live_cams.
+   Koppeling ingang 1–4 → camera staat in cfg.midi (per workspace), alleen te wijzigen via /api/midi/config. */
+let midi = { live_cams: [] }, midiCfg = null, midiSeq = 0, midiPoll = null;
+const midiOnAir = (id) => !!(midi.enabled && midi.connected && (midi.live_cams || []).includes(id));
+function midiUpdate(ev) {
+  const before = JSON.stringify(midi.live_cams || []) + midi.connected + midi.enabled;
+  midi = ev;
+  if (before !== JSON.stringify(ev.live_cams || []) + ev.connected + ev.enabled) { renderTabs(); renderPresets(); }
+  if ($("#dlgMidi").open) midiRender();
+}
+async function midiLoad() {
+  const j = await (await fetch("/api/midi")).json();
+  midiCfg = j.config; delete j.config; midiUpdate(j);
+}
+async function midiSave(part) {
+  const j = await post("/api/midi/config", part);
+  if (j && j.config) { midiCfg = j.config; midiRender(); } else toast(j?.error || "Opslaan mislukt");
+}
+function midiRender() {
+  if (!midiCfg) return;
+  $("#midiOn").checked = midiCfg.enabled;
+  const st = $("#midiStat");
+  if (!midi.available) { st.className = "mixstat err"; st.textContent = midi.error || "MIDI niet beschikbaar"; }
+  else if (!midiCfg.enabled) { st.className = "mixstat off"; st.textContent = "Uit. Vink aan om te verbinden."; }
+  else if (midi.connected) { st.className = "mixstat ok"; st.textContent = "● Verbonden met " + midi.port + (midi.error ? " · " + midi.error : ""); }
+  else { st.className = "mixstat err"; st.textContent = midi.error || "Verbinden…"; }
+  const row = $("#mixRow");
+  if (!row.children.length) {
+    let h = "";
+    for (const bus of ["A", "B"]) {
+      h += `<div class="mixlbl"><b>${bus}</b>-rij<br><span data-buslbl="${bus}"></span></div>`;
+      for (let i = 1; i <= 4; i++) h += `<div class="mixkey" data-bus="${bus}" data-in="${i}">${i}<small>HDMI ${i}</small></div>`;
+    }
+    h += `<div class="mixlbl">Camera</div>`;
+    for (let i = 1; i <= 4; i++) h += `<select data-in="${i}" aria-label="Camera op ingang ${i}"></select>`;
+    row.innerHTML = h;
+    row.querySelectorAll("select").forEach(sel => sel.onchange = (e) => {
+      const i = sel.dataset.in, map = { ...midiCfg.map };
+      if (e.target.value) map[i] = e.target.value; else delete map[i];
+      midiSave({ map });
+    });
+  }
+  // 🧑 op de mixer: alles groen, de gekozen ingang rood (= live). Op de andere rij alleen een rand om de gekozen knop.
+  row.querySelectorAll(".mixkey").forEach(k => {
+    const i = +k.dataset.in, bus = k.dataset.bus, isLive = bus === midiCfg.live_bus;
+    const chosen = midi.connected && midi.sel?.[bus] === i;
+    k.className = "mixkey" + (midi.connected ? (chosen && isLive ? " red" : " green") : "")
+      + (chosen && !isLive ? " sel" : "") + (midi.pressed === i && chosen ? " hit" : "");
+  });
+  row.querySelectorAll("[data-buslbl]").forEach(l => l.textContent = l.dataset.buslbl === midiCfg.live_bus ? "live" : "");
+  row.querySelectorAll("select").forEach(sel => {
+    const i = sel.dataset.in, cur = midiCfg.map[i] || "";
+    if (sel === document.activeElement) return;
+    sel.innerHTML = `<option value="">— geen camera —</option>` + cfg.cameras.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")
+      + (cur && !camById(cur) ? `<option value="${esc(cur)}">(verwijderde camera)</option>` : "");
+    sel.value = cur;
+  });
+  $$("input[name=midiBus]").forEach(r => r.checked = r.value === midiCfg.live_bus);
+  $("#midiSel").textContent = "";
+  if (document.activeElement !== $("#midiPort")) $("#midiPort").value = midiCfg.port;
+  if (document.activeElement !== $("#midiDev")) $("#midiDev").value = midiCfg.dev;
+  $("#midiPorts").textContent = midi.ports?.length ? "Gevonden MIDI-poorten: " + midi.ports.join(", ") : "Geen MIDI-poorten gevonden.";
+  $("#midiRec").textContent = midi.recording ? "■ Verkenning stoppen" : "▶ Verkenning starten";
+  $("#midiRecInfo").textContent = midi.recording ? "Bezig: druk nu op de knoppen van de mixer." : "";
+}
+async function midiPollLog() {
+  const j = await (await fetch("/api/midi/log?since=" + midiSeq)).json();
+  if (j.seq < midiSeq) { $("#midiLog").textContent = ""; midiSeq = 0; return midiPollLog(); }   // opnieuw gestart
+  if (j.lines.length) {
+    const box = $("#midiLog"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 4;
+    box.textContent += j.lines.join("\n") + "\n";
+    if (atEnd) box.scrollTop = box.scrollHeight;
+  }
+  midiSeq = j.seq;
+}
+$("#btnMidi").onclick = async () => {
+  await midiLoad(); $("#midiLog").textContent = ""; midiSeq = 0;
+  $("#dlgMidi").showModal(); midiRender(); midiPollLog();
+  clearInterval(midiPoll); midiPoll = setInterval(() => { if ($("#dlgMidi").open) midiPollLog(); }, 1000);
+};
+$("#dlgMidi").addEventListener("close", () => clearInterval(midiPoll));
+$("#midiClose").onclick = () => $("#dlgMidi").close();
+$("#midiOn").onchange = (e) => midiSave({ enabled: e.target.checked });
+$$("input[name=midiBus]").forEach(r => r.onchange = () => midiSave({ live_bus: r.value }));
+$("#midiPort").onchange = (e) => midiSave({ port: e.target.value });
+$("#midiDev").onchange = (e) => midiSave({ dev: +e.target.value });
+$("#midiRec").onclick = async () => {
+  const on = !midi.recording;
+  if (on) { $("#midiLog").textContent = ""; midiSeq = 0; }
+  await post("/api/midi/record", { on });
+};
+midiLoad();
 
 /* ---- 🔄 Updates ----
    Server (updater.py) kijkt elke 6 uur of er een nieuwe versie is en stuurt SSE "update".
@@ -2245,6 +2399,7 @@ const TOUR_STEPS = [
   { target: ["#btnBackup"], menu: "main", title: "💾 Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p>` },
   { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p>` },
+  { target: ["#btnMidi"], menu: "main", title: "🎛 Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
   { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
   { target: ["#btnTheme"], menu: "main", title: "☀ / 🌙 Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
   { target: ["#btnTour"], menu: "main", title: "🎓 Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },

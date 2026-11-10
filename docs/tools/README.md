@@ -5,7 +5,7 @@ De screenshots in `docs/screenshots/` zijn gemaakt met nagemaakte demodata (3 ca
 ```bash
 pip install pillow playwright && python -m playwright install chromium
 python docs/tools/demo.py /tmp/ptz-demo                      # demodata: cameras.json + thumbs
-PTZ_DATA=/tmp/ptz-demo PTZ_YT_BASE=http://127.0.0.1:9 python ptz_control.py --no-open --no-tray &
+PTZ_DATA=/tmp/ptz-demo PTZ_YT_BASE=http://127.0.0.1:9 PTZ_MIDI_FAKE=1 PTZ_UPDATE=0 python ptz_control.py --no-open --no-tray &   # PTZ_MIDI_FAKE: nagebootste V-1HD (nep_v1hd.py), ingang 1 in beeld
 python docs/tools/screenshots.py docs/screenshots             # alle screenshots (1440×900, licht, donker, telefoon)
 ```
 

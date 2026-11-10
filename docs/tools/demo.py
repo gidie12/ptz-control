@@ -59,7 +59,8 @@ cams = [
   ("midden", "Midden", [("Totaal zaal", "zaal"), ("Spreker close", "spreker"), ("Kansel", "kansel"), ("Scherm", "scherm"), ("Zangers", "zang"), ("Gemeente", "gemeente")]),
   ("rechts", "Rechts", [("Drums", "drums"), ("Gitaar", "gitaar"), ("Zang", "zang"), ("Band breed", "band"), ("Gemeente", "gemeente"), ("Tafel", "tafel")]),
 ]
-cfg = {"cameras": [], "preset_count": 8, "tile_size": 170, "youtube": {"channel": "@kerkzwolle"}}
+cfg = {"cameras": [], "preset_count": 8, "tile_size": 170, "youtube": {"channel": "@kerkzwolle"},
+       "midi": {"enabled": True, "port": "V-1HD", "dev": 16, "live_bus": "A", "map": {"1": "links", "2": "midden", "3": "rechts"}}}
 for ci, (cid, name, ps) in enumerate(cams):
     cfg["cameras"].append({"id": cid, "name": name, "host": f"192.168.100.{81 + ci}", "protocol": "http", "visca_port": 5678,
                            "user": "admin", "password": "", "presets": {str(i + 1): n for i, (n, _) in enumerate(ps)}})

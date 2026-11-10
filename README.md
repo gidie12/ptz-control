@@ -121,7 +121,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
@@ -161,6 +161,20 @@ en de stream verschijnt in een **klein venster** (standaard automatisch, zonder 
 - Het kanaal kun je altijd wijzigen, ook terwijl er een stream loopt.
 
 <img src="docs/screenshots/youtube-menu.png" width="560" alt="YouTube-menu">
+
+## Videomixer (Roland V-1HD)
+Sluit de V-1HD met een **USB-kabel** aan op de computer waar PTZ Control draait en open Menu → **🎛 Videomixer (MIDI)**.
+
+- Vink **Koppeling met de videomixer aan** aan. Bovenin staat of de mixer gevonden is.
+- Het venster toont beide rijen van de mixer (A en B, elk knop 1–4). Beide rijen kiezen uit dezelfde vier HDMI-ingangen, dus je kiest per ingang één keer welke camera erop zit. Druk je op de mixer op een knop, dan licht hij in het venster op; de gekozen ingang op de live rij is rood, net als op de mixer.
+- De camera die op de mixer gekozen is, krijgt in de app een **rode rand** en **IN BEELD** (in de kolom en op het tabblad). Zo zie je meteen welke camera je niet moet verplaatsen.
+- **Live rij**: de rij aan de kant waar de fader staat (de fader wordt niet gebruikt). Standaard A.
+- **Verkenning**: legt alles vast wat de mixer via MIDI stuurt. Start, druk op de knoppen van beide rijen en kies een memory, en klik **⬇ Log downloaden**. Handig als de koppeling niet klopt.
+- Op de mixer: SETUP → MIDI → *MIDI OUT* op **OUT** (via USB stuurt hij altijd).
+
+De koppeling geldt voor alle schermen en wordt per workspace en in de back-up bewaard. Nodig zijn de packages `mido` en `python-rtmidi` (installeert de starter vanzelf).
+
+![Videomixer](docs/screenshots/videomixer.png)
 
 ## Licht of donker
 Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
