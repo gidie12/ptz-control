@@ -377,10 +377,19 @@ def do_action(cam, action, args, info=None):
                              "Gebruik 1–89 of 100–254.")
     if action in STOPS_TRACKING and (cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS):
         stop_tracking(cam["id"], halt=False)
-    res = run_command(cam, action, args)
+    if action in ("move", "stop", "home", "preset_call", "preset_set"):
+        moving_cancel(cam["id"])          # een nieuw commando beëindigt de "onderweg"-markering
+    old = undo_snapshot(cam, clamp(args.get("n"), 0, 254)) if action == "preset_set" else None
+    try:
+        res = run_command(cam, action, args)
+    except (urllib.error.URLError, OSError) as e:
+        camstatus_set(cam["id"], False, str(e))
+        raise
+    camstatus_set(cam["id"], True)
     if action == "preset_call":
         n = clamp(args.get("n"), 0, 254)
         broadcast({"type": "preset", "cam": cam["id"], "n": n})
+        moving_watch(cam, n)
         if n in (cam.get("track_presets") or []) and not tracking_error():
             follow_after_preset(cam)
     elif action == "preset_set":
@@ -388,8 +397,264 @@ def do_action(cam, action, args, info=None):
         err = snapshot_thumb(cam, n)  # nieuwe positie vastgezet: meteen een thumbnail
         if info is not None:
             info["thumb_error"] = err
+            info["undo"] = undo_register(cam, n, old)
         broadcast({"type": "preset", "cam": cam["id"], "n": n})
+        remember_position(cam, n)
     return res
+
+
+# ---------------------------------------------------------------- onderweg naar een preset
+# 🧑 Na het oproepen van een preset krijgt de tegel "onderweg" tot de camera stilstaat (VISCA-positie
+# twee keer gelijk). Lukt uitlezen niet, dan een vaste tijd. Elk nieuw commando op die camera stopt het.
+MOVING = {}            # cam_id -> token
+MOVING_FALLBACK = 3.0  # s, als de positie niet uit te lezen is
+
+
+def moving_cancel(cam_id):
+    if MOVING.pop(cam_id, None) is not None:
+        broadcast({"type": "moving", "cam": cam_id, "moving": False})
+
+
+def moving_watch(cam, n):
+    if JOB.get("running"):
+        return                                  # back-up/test gebruikt VISCA al; niet storen
+    token = object()
+    cid = cam["id"]
+    MOVING[cid] = token
+    broadcast({"type": "moving", "cam": cid, "n": n, "moving": True})
+
+    def run():
+        exact = False
+        start = time.time()
+        try:
+            with _backup.visca_session(cam) as sock:
+                last = None
+                while MOVING.get(cid) is token and time.time() - start < 15:
+                    time.sleep(0.35)
+                    try:
+                        p = _backup.read_position(sock)
+                    except _backup.ViscaError:
+                        continue
+                    key = (p["pan"], p["tilt"], p["zoom"], p.get("focus"))
+                    if key == last and time.time() - start >= 0.8:
+                        exact = True
+                        break
+                    last = key
+        except Exception:  # noqa: BLE001  (geen VISCA: vaste tijd)
+            while MOVING.get(cid) is token and time.time() - start < MOVING_FALLBACK:
+                time.sleep(0.1)
+        if MOVING.get(cid) is token:
+            MOVING.pop(cid, None)
+            broadcast({"type": "moving", "cam": cid, "n": n, "moving": False, "exact": exact})
+
+    threading.Thread(target=run, daemon=True, name=f"onderweg-{cid}").start()
+
+
+# ---------------------------------------------------------------- bereikbaarheid per camera
+# 🧑 Groen/rood bolletje per camera. Elke 10 s een TCP-verbinding naar de camera (HTTP-poort of VISCA-poort),
+# en direct bijwerken als een commando lukt of mislukt.
+CAMSTATUS = {}
+CAMSTATUS_LOCK = threading.Lock()
+CAMSTATUS_INTERVAL = float(os.environ.get("PTZ_CAMSTATUS_INTERVAL", 10))
+
+
+def camstatus_set(cam_id, ok, err=""):
+    with CAMSTATUS_LOCK:
+        old = CAMSTATUS.get(cam_id)
+        CAMSTATUS[cam_id] = {"ok": bool(ok), "error": "" if ok else str(err)[:200], "checked": time.strftime("%H:%M:%S")}
+        changed = not old or old["ok"] != bool(ok)
+        snap = dict(CAMSTATUS)
+    if changed:
+        broadcast({"type": "camstatus", "cams": snap})
+
+
+def _cam_port(cam):
+    if cam.get("protocol") == "visca":
+        return cam["host"].split(":")[0], int(cam.get("visca_port") or 5678)
+    host, _, port = cam["host"].partition(":")
+    return host, int(port or 80)
+
+
+def camstatus_probe(cam):
+    try:
+        with socket.create_connection(_cam_port(cam), timeout=1.5):
+            pass
+        camstatus_set(cam["id"], True)
+    except Exception as e:  # noqa: BLE001
+        camstatus_set(cam["id"], False, f"niet bereikbaar ({e})")
+
+
+def camstatus_loop():
+    if os.environ.get("PTZ_CAMSTATUS", "").lower() in ("0", "uit", "off"):
+        return                       # bv. screenshots met demodata (camera's bestaan niet)
+    while True:
+        try:
+            cams = load_config().get("cameras", [])
+            ids = {c["id"] for c in cams}
+            with CAMSTATUS_LOCK:
+                for k in list(CAMSTATUS):
+                    if k not in ids:
+                        CAMSTATUS.pop(k)
+            ts = [threading.Thread(target=camstatus_probe, args=(c,), daemon=True) for c in cams if c.get("host")]
+            for t in ts:
+                t.start()
+            for t in ts:
+                t.join(3)
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(CAMSTATUS_INTERVAL)
+
+
+# ---------------------------------------------------------------- ongedaan maken na overschrijven
+# 🧑 Bij preset_set onthouden we de oude positie (saved_positions) en foto. Binnen UNDO_TTL kan de app de camera
+# terugzetten naar de oude positie en de preset opnieuw opslaan. Na elk opslaan wordt de nieuwe positie uitgelezen,
+# zodat de volgende keer overschrijven ook ongedaan te maken is.
+UNDO = {}
+UNDO_TTL = 60
+
+
+def _saved_pos(cam_id, n):
+    for c in load_config().get("cameras", []):
+        if c.get("id") == cam_id:
+            return (c.get("saved_positions") or {}).get(str(n))
+    return None
+
+
+def undo_snapshot(cam, n):
+    tp = thumb_path(cam, n)
+    try:
+        with open(tp, "rb") as f:
+            thumb = f.read()
+    except OSError:
+        thumb = None
+    return {"pos": _saved_pos(cam["id"], n), "thumb": thumb}
+
+
+def undo_register(cam, n, old):
+    if not old or not old.get("pos"):
+        return False
+    UNDO[(cam["id"], n)] = {"old": old, "t": time.time()}
+    return True
+
+
+def _write_saved_pos(cam_id, n, pos):
+    with LOCK:
+        cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+        for c in cfg.get("cameras", []):
+            if c.get("id") == cam_id:
+                sp = c.setdefault("saved_positions", {})
+                if pos:
+                    sp[str(n)] = pos
+                else:
+                    sp.pop(str(n), None)
+        _write(cfg)
+
+
+def remember_position(cam, n):
+    """Positie van de zojuist opgeslagen preset uitlezen en bewaren (op de achtergrond)."""
+    if JOB.get("running"):
+        return
+
+    def run():
+        try:
+            with _backup.visca_session(cam) as sock:
+                pos = _backup.read_position(sock)
+            pos["_captured"] = time.strftime("%Y-%m-%d %H:%M")
+            _write_saved_pos(cam["id"], n, pos)
+        except Exception:  # noqa: BLE001  (geen VISCA: dan geen ongedaan maken voor deze preset)
+            pass
+
+    threading.Thread(target=run, daemon=True, name="positie-onthouden").start()
+
+
+def undo_preset(cam, n):
+    e = UNDO.get((cam["id"], n))
+    if not e or time.time() - e["t"] > UNDO_TTL:
+        raise ValueError("Ongedaan maken kan niet meer (te lang geleden of oude positie onbekend).")
+    if JOB.get("running"):
+        raise ValueError("Er loopt een taak; probeer het daarna.")
+    UNDO.pop((cam["id"], n), None)
+    if cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS:
+        stop_tracking(cam["id"], halt=True)
+    moving_cancel(cam["id"])
+    old = e["old"]
+    with _backup.visca_session(cam) as sock:
+        _backup.goto_position(sock, old["pos"])
+        _backup.wait_still(sock)
+    run_command(cam, "preset_set", {"n": n})
+    if old["thumb"]:
+        _store_thumb(cam, n, old["thumb"])
+    else:
+        try:
+            os.remove(thumb_path(cam, n))
+        except OSError:
+            pass
+        broadcast({"type": "thumb", "cam": cam["id"], "n": int(n)})
+    _write_saved_pos(cam["id"], n, old["pos"])
+    broadcast({"type": "preset", "cam": cam["id"], "n": n})
+
+
+# ---------------------------------------------------------------- hulp bij instellen (wizard)
+def camtest(c):
+    """Test een (nog niet opgeslagen) camera: bereikbaar, VISCA-poort, snapshot."""
+    cam = {"id": "test", "host": str(c.get("host") or "").strip(), "protocol": c.get("protocol") or "http",
+           "visca_port": c.get("visca_port") or 5678, "user": c.get("user") or "", "password": c.get("password") or ""}
+    if not cam["host"]:
+        raise ValueError("Vul een IP-adres in")
+    res = {"http": False, "visca": False, "snapshot": False, "error": ""}
+    host, _, port = cam["host"].partition(":")
+    for key, prt in (("http", int(port or 80)), ("visca", int(cam["visca_port"]))):
+        try:
+            with socket.create_connection((host, prt), timeout=1.5):
+                res[key] = True
+        except OSError as e:
+            res["error"] = res["error"] or str(e)
+    if res["http"]:
+        try:
+            data, _ = http_get(cam, "/snapshot.jpg", binary=True)
+            res["snapshot"] = data.startswith(b"\xff\xd8")
+            if not res["snapshot"]:
+                res["error"] = "camera gaf geen beeld (inloggegevens?)"
+        except Exception as e:  # noqa: BLE001
+            res["error"] = f"geen beeld: {e}"
+    return res
+
+
+def scan_network(port=5678, timeout=0.4):
+    """⚠️ Zoek camera's in het eigen /24-netwerk: apparaten met de VISCA-poort (PTZOptics: 5678) open."""
+    ip = local_ip()
+    if ip.startswith("127."):
+        return {"network": "", "found": []}
+    base = ip.rsplit(".", 1)[0]
+    found, lock = [], threading.Lock()
+
+    def probe(i):
+        h = f"{base}.{i}"
+        if h == ip:
+            return
+        try:
+            with socket.create_connection((h, port), timeout=timeout):
+                with lock:
+                    found.append(h)
+        except OSError:
+            pass
+
+    ts = [threading.Thread(target=probe, args=(i,), daemon=True) for i in range(1, 255)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join(timeout + 1)
+    return {"network": base + ".0/24", "found": sorted(found, key=lambda h: int(h.rsplit(".", 1)[1]))}
+
+
+def first_run(cfg):
+    """Nog niet ingesteld: geen camera's, of alleen de voorbeeldcamera uit DEFAULT_CONFIG."""
+    cams = cfg.get("cameras") or []
+    if not cams:
+        return True
+    d = DEFAULT_CONFIG["cameras"][0]
+    return len(cams) == 1 and cams[0].get("host") == d["host"] and cams[0].get("name") == d["name"] \
+        and not cams[0].get("presets")
 
 
 
@@ -513,6 +778,10 @@ def ws_select(ws_id):
     broadcast({"type": "workspace", "active": ws_id})
     YT.refresh()
     MIDI.refresh()
+    with CAMSTATUS_LOCK:          # andere camera's: status, onderweg en ongedaan maken opnieuw
+        CAMSTATUS.clear()
+    MOVING.clear()
+    UNDO.clear()
 
 
 def ws_action(body):
@@ -870,6 +1139,7 @@ class Handler(BaseHTTPRequestHandler):
             for cam in cfg.get("cameras", []):
                 cam["thumbs"] = list_thumbs(cam)
             cfg["tracking_error"] = tracking_error()
+            cfg["first_run"] = first_run(cfg)
             return self._send(200, cfg)
         if u.path == "/api/backup":
             q = parse_qs(u.query)
@@ -896,6 +1166,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, YT.snapshot())
         if u.path == "/api/update":
             return self._send(200, UPD.snapshot())
+        if u.path == "/api/camstatus":
+            with CAMSTATUS_LOCK:
+                return self._send(200, {"type": "camstatus", "cams": dict(CAMSTATUS)})
         if u.path == "/api/midi":
             return self._send(200, {**MIDI.snapshot(), "config": _midi.norm_cfg(_midi_cfg())})
         if u.path == "/api/midi/log":
@@ -948,6 +1221,10 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(f"data: {json.dumps(YT.snapshot())}\n\n".encode())
             self.wfile.write(f"data: {json.dumps(UPD.snapshot())}\n\n".encode())
             self.wfile.write(f"data: {json.dumps(MIDI.snapshot())}\n\n".encode())
+            with CAMSTATUS_LOCK:
+                self.wfile.write(f"data: {json.dumps({'type': 'camstatus', 'cams': dict(CAMSTATUS)})}\n\n".encode())
+            for cid in list(MOVING):
+                self.wfile.write(f"data: {json.dumps({'type': 'moving', 'cam': cid, 'moving': True})}\n\n".encode())
             self.wfile.flush()
             while True:
                 try:
@@ -992,6 +1269,7 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(body.get("cameras"), list):
                 return self._send(400, {"error": "cameras ontbreekt"})
             body.pop("tracking_error", None)
+            body.pop("first_run", None)
             body.pop("obs", None)  # OBS-koppeling (stream starten/stoppen) is verwijderd
             body.pop("scenes", None)  # scènes zijn verwijderd
             old_cfg = load_config()
@@ -1050,6 +1328,21 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/youtube/check":
             YT.refresh()
             return self._send(200, {"ok": True})
+        if u.path == "/api/preset/undo":
+            try:
+                undo_preset(find_camera(body.get("cam")), clamp(body.get("n"), 0, 254))
+                return self._send(200, {"ok": True})
+            except KeyError as e:
+                return self._send(404, {"ok": False, "error": e.args[0]})
+            except Exception as e:  # noqa: BLE001
+                return self._send(400, {"ok": False, "error": str(e)})
+        if u.path == "/api/camtest":
+            try:
+                return self._send(200, {"ok": True, **camtest(body)})
+            except Exception as e:  # noqa: BLE001
+                return self._send(400, {"ok": False, "error": str(e)})
+        if u.path == "/api/scan":
+            return self._send(200, {"ok": True, **scan_network()})
         if u.path == "/api/midi/config":
             with LOCK:
                 cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
@@ -1260,6 +1553,7 @@ def main():
     YT.start()
     UPD.start()
     MIDI.start()
+    threading.Thread(target=camstatus_loop, daemon=True, name="camstatus").start()
     srv.daemon_threads = True
     print(f"PTZ Control draait op {url}  en  {lan_url}")
     print(f"Instellingen en foto's: {DATA_DIR}  (workspace: {WS['active']})")
