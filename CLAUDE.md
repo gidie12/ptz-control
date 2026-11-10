@@ -101,6 +101,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Standaard: A/B/X/Y preset 1–4, LB shift (5–8), Menu opslaan, D-pad ←/→ camera, ↑ niets, ↓ home, RB volgen, L3 fijn-modus (max/4), R3 one-push AF, View alles stoppen.
 - Zachte beweging, tilt omkeren en max. snelheid blijven per apparaat (localStorage).
 - Commando's alleen bij verandering, maximaal ~12/s (80 ms).
+- 🧑 **Groene badge "● Verbonden"** (`#padBadge`) naast de titel van de Xbox-kaart zolang er een controller is (`padUI`); daaronder de naam van de controller zonder de technische (…)-codes.
 - 🧑 Instellingen (zacht, omkeren, max.) staan in een kaart in de **zijbalk onder de camerabediening**; 🎮-status in de kop scrolt ernaartoe.
 - 🧑 **Knoppenindeling** in dialoog `#dlgMap`, te openen via het menu (🕹 Knoppenindeling) en vanuit de zijbalkkaart. Zolang die open is bestuurt de controller niets, maar een ingedrukte knop licht zijn regel op (`padHit`).
 - 🧑 **Zachte beweging** (optie, standaard aan, `localStorage.padSoft`): derdemachtscurve i.p.v. kwadratisch, en optrekken met max. `max/12` stap per verzonden commando (~1 s naar topsnelheid); zoom +1 per commando. Stoppen gaat altijd direct.

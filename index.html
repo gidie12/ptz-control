@@ -148,6 +148,10 @@
   #padMap select { width: 100%; font-size: 12px; padding: 4px; }
   .padset { display: grid; gap: 8px; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
   #padCard.flash { border-color: var(--accent); }
+  #padCard .bar { display: flex; align-items: center; gap: 8px; }
+  .padbadge { background: var(--okbg); color: var(--oktxt); border: 1px solid var(--ok); border-radius: 999px;
+    padding: 1px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .padbadge[hidden] { display: none; }
   .padset label { display: flex; gap: 6px; align-items: center; }
   #dlgBackup { width: min(760px, 95vw); }
   #dlgMap { width: min(720px, 95vw); }
@@ -395,6 +399,7 @@
     <div class="card" id="padCard">
       <div class="bar" style="margin:0">
         <h2>🎮 Xbox-controller</h2>
+        <span class="padbadge" id="padBadge" hidden>● Verbonden</span>
       </div>
       <p class="small" id="padInfo" style="margin:8px 0 0">Verbind de controller via Bluetooth of USB en druk op een knop.</p>
       <div class="small" id="padLive" style="margin-top:4px"></div>
@@ -1271,8 +1276,10 @@ window.addEventListener("gamepaddisconnected", (e) => {
 function padUI(gp) {
   if (!gp) $("#padLive").textContent = "";
   $("#btnPad").classList.toggle("on", !!gp);
+  $("#padBadge").hidden = !gp;
+  if (gp) $("#padBadge").title = gp.id;
   $("#btnPad").title = gp ? "Menu · controller verbonden" : "Menu · geen controller verbonden";
-  $("#padInfo").textContent = gp ? `Verbonden: ${gp.id}` : "Verbind de controller via Bluetooth of USB en druk op een knop (de browser ziet hem pas na een knopdruk).";
+  $("#padInfo").textContent = gp ? gp.id.replace(/\s*\(.*?\)\s*/g, " ").trim() || gp.id : "Verbind de controller via Bluetooth of USB en druk op een knop (de browser ziet hem pas na een knopdruk).";
 }
 function rumble(gp, ms = 120, strong = 0.6) {
   try { gp.vibrationActuator?.playEffect("dual-rumble", { duration: ms, strongMagnitude: strong, weakMagnitude: strong }); } catch {}
