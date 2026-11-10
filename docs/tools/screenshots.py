@@ -23,6 +23,10 @@ LOG = """(() => { const d = new Date(); d.setHours(9, 41, 0, 0); const t0 = d.ge
  [1500, 'actie', 'Mac regie (deze computer)', 'Midden', 'Persoon volgen aan'],
 ]; logEntries = new Map(r.map((x, i) => [i + 1, { id: i + 1, t: t0 + x[0], kind: x[1], who: x[2], cam: x[3], msg: x[4], n: x[5] || 1, last: t0 + x[0] + 40 }]));
 $('#logDevName').value = 'Mac regie'; logCams(); logRender(); })()"""
+def practice(on):   # oefenstand aan/uit (alle schermen herladen)
+    import json, urllib.request
+    urllib.request.urlopen(urllib.request.Request(URL.split("/?")[0] + "/api/practice", json.dumps({"on": on}).encode(),
+                                                  {"Content-Type": "application/json"})).read()
 def page(b, theme="dark", w=1440, h=900):
     ctx = b.new_context(viewport={"width": w, "height": h}, device_scale_factor=1)
     ctx.add_init_script(f"localStorage.setItem('theme','{theme}'); localStorage.setItem('tourDone','1'); localStorage.setItem('ytAuto','0');")
@@ -44,6 +48,13 @@ with sync_playwright() as p:
     pg.click("#btnPad"); pg.click("#btnAccess"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/toegang.png"); pg.click("#acClose")
     pg.click("#btnPad"); pg.click("#btnLog"); pg.wait_for_timeout(400); pg.evaluate(LOG); pg.wait_for_timeout(200)
     pg.screenshot(path=f"{OUT}/activiteitenlog.png"); pg.click("#logClose")
+    pg.evaluate("camst.rechts = {ok:false, error:'geen verbinding'}; renderTabs(); renderPresets(); alertCheck()"); pg.wait_for_timeout(300)
+    pg.screenshot(path=f"{OUT}/foutmelding.png", clip={"x": 0, "y": 0, "width": 1440, "height": 420})
+    pg.evaluate("camst.rechts = {ok:true}; renderTabs(); renderPresets(); alertCheck(); $('#alertBar').classList.remove('show')")
+    practice(True); pg.wait_for_timeout(2500)
+    po = page(b); po.screenshot(path=f"{OUT}/oefenstand.png", clip={"x": 0, "y": 0, "width": 1440, "height": 420}); po.close()
+    practice(False); pg.wait_for_timeout(2500)
+    pg.goto(URL); pg.wait_for_timeout(1500); pg.evaluate(YT + LIVE); pg.wait_for_timeout(300)
     pg.click("#btnPad"); pg.click("#btnBackup"); pg.wait_for_timeout(600); pg.locator("#dlgBackup").evaluate("d => d.scrollTop = 99999"); pg.wait_for_timeout(200)
     pg.screenshot(path=f"{OUT}/automatische-back-up.png"); pg.click("#bkClose")
     pg.click("#btnPad"); pg.click("#btnKeys"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/sneltoetsen.png"); pg.click("#keysCancel")

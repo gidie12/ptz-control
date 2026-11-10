@@ -15,4 +15,4 @@ Met dezelfde server (demodata) draaien: `python docs/tools/rondleiding_test.py`.
 
 ## Nep-camera's
 
-`python docs/tools/nep_camera.py 3 9101` start 3 nagebootste PTZOptics-camera's (HTTP-CGI op 9101–9103, VISCA over TCP op 9201–9203) die presets onthouden, geleidelijk bewegen en een foto met de positie geven. Handig voor *onderweg*, *ongedaan maken*, de camerastatus en de wizard (`host` = `127.0.0.1:9101`, `visca_port` = 9201).
+`python docs/tools/nep_camera.py 3 9101` start 3 nagebootste (uit `oefen.py`, dezelfde als de oefenstand) PTZOptics-camera's (HTTP-CGI op 9101–9103, VISCA over TCP op 9201–9203) die presets onthouden, geleidelijk bewegen en een foto met de positie geven. Handig voor *onderweg*, *ongedaan maken*, de camerastatus en de wizard (`host` = `127.0.0.1:9101`, `visca_port` = 9201).

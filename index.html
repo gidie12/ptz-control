@@ -199,6 +199,20 @@
   #viewBanner { display: none; background: var(--warnbg); color: var(--warntxt); border-bottom: 1px solid var(--accent); padding: 6px 16px;
     font-size: 13px; text-align: center; }
   body.viewonly #viewBanner { display: block; }
+  /* 🧑 foutbalk (alle schermen, ook volledig scherm) en oefenbalk */
+  #alertBar, #practiceBar { display: none; position: sticky; top: 0; z-index: 26; padding: 8px 16px; font-size: 14px; font-weight: 600;
+    align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; text-align: center; }
+  #alertBar { background: var(--live); color: #fff; }
+  #alertBar.ok { background: var(--ok); }
+  #alertBar.show, #practiceBar.show { display: flex; }
+  #alertBar button, #practiceBar button { background: rgba(0,0,0,.18); color: inherit; border: 1px solid rgba(255,255,255,.55); border-radius: 7px;
+    padding: 3px 10px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  #alertBar.ok button { display: none; }
+  #practiceBar { background: var(--accent); color: #1a1205; }
+  #practiceBar button { border-color: rgba(0,0,0,.35); }
+  body.practice { box-shadow: inset 0 0 0 4px var(--accent); }
+  @keyframes alertPulse { 50% { filter: brightness(1.25); } }
+  #alertBar.new { animation: alertPulse .8s ease-in-out 3; }
   #pinInput { font-size: 28px; letter-spacing: 10px; text-align: center; width: 100%; padding: 10px; border-radius: 8px;
     border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
   #dlgPin { width: min(360px, 92vw); } #dlgAccess { width: min(520px, 95vw); }
@@ -474,6 +488,7 @@
       <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld">🎛 Videomixer (MIDI)</button>
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
       <div class="msep"></div>
+      <button class="mi" id="btnPractice" role="menuitem" title="Oefenen met nagebootste camera's: de camera's in de kerk bewegen niet">🎯 Oefenstand</button>
       <button class="mi" id="btnLog" role="menuitem" title="Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer">📋 Activiteitenlog<span class="logcount" id="logCount" hidden></span></button>
       <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken">🔒 Toegang (pincode)</button>
       <button class="mi" id="btnTablet" role="menuitem" title="Grote tegels en camerakeuze onderin, voor een tablet">📱 Tabletweergave</button>
@@ -485,6 +500,9 @@
     </div>
   </div>
 </header>
+<div id="practiceBar" role="status">🎯 OEFENSTAND: de echte camera's bewegen niet en de videomixer is losgekoppeld. Wijzigingen worden niet bewaard.
+  <button id="practiceStop">Oefenstand stoppen</button></div>
+<div id="alertBar" role="alert"><span id="alertText"></span><button id="alertLog">Bekijk log</button><button id="alertHide">Verbergen</button></div>
 <div id="viewBanner">👁 Alleen kijken: bediening is vergrendeld. <a href="#" id="viewUnlock">Pincode invoeren</a></div>
 
 <main>
@@ -1210,6 +1228,7 @@ $("#afPush").onclick = () => cmd("onepush_af");
 // Per-apparaat-instellingen horen bij de workspace (prefix), behalve het thema.
 // De standaard-workspace gebruikt de oude sleutels, zodat bestaande instellingen blijven werken.
 const WS_ID = document.querySelector('meta[name="ptz-workspace"]')?.content || "standaard";
+const PRACTICE = document.querySelector('meta[name="ptz-practice"]')?.content === "1";   // 🎯 oefenstand (server-breed)
 const wsKey = (k) => (WS_ID === "standaard" || k === "theme") ? k : `ws:${WS_ID}:${k}`;
 const store = { get: (k) => { try { return localStorage.getItem(wsKey(k)); } catch { return null; } },
                 set: (k, v) => { try { localStorage.setItem(wsKey(k), v); } catch {} } };
@@ -2348,8 +2367,8 @@ wsLoad();
 /* ================= live events ================= */
 function connectEvents() {
   const es = new EventSource("/api/events");
-  es.onopen = () => $("#liveDot").style.background = "var(--ok)";
-  es.onerror = () => $("#liveDot").style.background = "var(--live)";
+  es.onopen = () => { $("#liveDot").style.background = "var(--ok)"; sseDown = 0; alertCheck(); };
+  es.onerror = () => { $("#liveDot").style.background = "var(--live)"; if (!sseDown) sseDown = Date.now(); setTimeout(alertCheck, 4100); };
   es.onmessage = (m) => {
     const ev = JSON.parse(m.data);
     if (ev.type === "state") {
@@ -2404,11 +2423,11 @@ function connectEvents() {
     } else if (ev.type === "autobackup") {
       if ($("#dlgBackup").open) abkLoad();
     } else if (ev.type === "camstatus") {
-      camst = ev.cams || {}; renderTabs(); renderPresets();
+      camst = ev.cams || {}; renderTabs(); renderPresets(); alertCheck();
     } else if (ev.type === "config") {
       loadConfig();
     } else if (ev.type === "workspace") {
-      if (ev.active !== WS_ID) location.reload();   // andere workspace: alles opnieuw laden
+      if (ev.active !== WS_ID || !!ev.practice !== PRACTICE) location.reload();   // andere workspace of oefenstand: opnieuw laden
     } else if (ev.type === "workspaces") {
       wsLoad();
     }
@@ -2559,6 +2578,56 @@ $("#acLogoutAll").onclick = async () => {
   if (!confirm("Alle apparaten uitloggen? Iedereen moet daarna de pincode opnieuw invoeren (deze computer niet).")) return;
   await post("/api/access/logout_all", {}); await accessLoad(); toast("Alle apparaten uitgelogd", true);
 };
+
+/* ---- ⚠ Foutbalk: camera of mixer weg, of geen verbinding met PTZ Control (op alle schermen) ---- */
+let sseDown = 0, alertPrev = new Map(), alertHidden = new Set(), alertOkT = null, alertDemo = false;
+const PAGE_T = Date.now();
+function alertList() {
+  const out = new Map();
+  if (sseDown && Date.now() - sseDown > 4000) out.set("server", "Geen verbinding met PTZ Control (draait de Mac nog?)");
+  for (const c of cfg.cameras || []) if (camst[c.id] && camst[c.id].ok === false) out.set("cam:" + c.id, `Camera ${c.name} niet bereikbaar`);
+  // mixer: alleen als de koppeling aan staat; na het openen even wachten tot de status binnen is
+  if (midi.enabled && midi.available !== false && !midi.connected && Date.now() - PAGE_T > 5000) out.set("midi", "Videomixer niet verbonden");
+  return out;
+}
+function alertCheck() {
+  const bar = $("#alertBar");
+  if (alertDemo) {   // voorbeeld in de rondleiding
+    $("#alertText").textContent = "⚠ Camera " + ((cfg.cameras || [])[0]?.name || "1") + " niet bereikbaar (voorbeeld)";
+    bar.classList.remove("ok"); bar.classList.add("show"); return;
+  }
+  const cur = alertList();
+  const fixed = [...alertPrev.keys()].filter(k => !cur.has(k));
+  const added = [...cur.keys()].some(k => !alertPrev.has(k));
+  alertPrev = cur;
+  if (!cur.size) alertHidden = new Set();
+  if (cur.size) {
+    clearTimeout(alertOkT);
+    bar.classList.remove("ok");
+    $("#alertText").textContent = "⚠ " + [...cur.values()].join(" · ");
+    bar.classList.toggle("show", [...cur.keys()].some(k => !alertHidden.has(k)));   // verborgen tot er een nieuwe fout bij komt
+    if (added) { bar.classList.remove("new"); void bar.offsetWidth; bar.classList.add("new"); }
+  } else if (fixed.length && bar.classList.contains("show")) {
+    $("#alertText").textContent = "✓ Alles weer in orde";
+    bar.classList.add("ok"); clearTimeout(alertOkT);
+    alertOkT = setTimeout(() => bar.classList.remove("show", "ok"), 4000);
+  } else if (!fixed.length && !bar.classList.contains("ok")) bar.classList.remove("show");
+}
+$("#alertHide").onclick = () => { alertHidden = new Set(alertPrev.keys()); $("#alertBar").classList.remove("show"); };
+$("#alertLog").onclick = () => $("#btnLog").click();
+setInterval(alertCheck, 2000);
+
+/* ---- 🎯 Oefenstand: alle schermen naar een kopie met nagebootste camera's ---- */
+if (PRACTICE) { document.body.classList.add("practice"); $("#practiceBar").classList.add("show"); $("#btnPractice").textContent = "⏹ Oefenstand stoppen"; }
+async function practiceSet(on) {
+  if (viewOnly()) return pinPrompt();
+  if (on && !confirm("Oefenstand starten?\n\n• Op ALLE schermen gaat PTZ Control naar de oefenstand.\n• De camera's in de kerk bewegen niet; je bedient nagebootste camera's met dezelfde presets.\n• De videomixer wordt losgekoppeld.\n• Wat je verandert (presets, namen) wordt niet bewaard.\n\nNiet doen tijdens een dienst.")) return;
+  if (!on && !confirm("Oefenstand stoppen? Alle schermen gaan terug naar de echte camera's; wijzigingen uit de oefenstand vervallen.")) return;
+  const r = await post("/api/practice", { on });
+  if (!r.ok) toast(r.error || "Lukt niet");
+}
+$("#btnPractice").onclick = () => practiceSet(!PRACTICE);
+$("#practiceStop").onclick = () => practiceSet(false);
 
 /* ---- 📋 Activiteitenlog ---- */
 let logEntries = new Map(), logRenderT = null;
@@ -2759,6 +2828,7 @@ function midiUpdate(ev) {
   midi = ev;
   if (before !== JSON.stringify(ev.live_cams || []) + ev.connected + ev.enabled) { renderTabs(); renderPresets(); }
   if ($("#dlgMidi").open) midiRender();
+  alertCheck();
 }
 async function midiLoad() {
   const j = await (await fetch("/api/midi")).json();
@@ -2951,6 +3021,9 @@ const TOUR_STEPS = [
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
   { target: ["#btnMidi"], menu: "main", title: "🎛 Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
+  { target: ["#alertBar"], show: () => { alertDemo = true; alertCheck(); }, hide: () => { alertDemo = false; $("#alertBar").classList.remove("show"); alertPrev = new Map(); alertCheck(); },
+    title: "⚠ Foutmelding op alle schermen", text: () => `<p>Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op <b>alle schermen</b> een rode balk, ook op volledig scherm: een <b>camera niet bereikbaar</b>, de <b>videomixer niet verbonden</b>, of <b>geen verbinding met PTZ Control</b> zelf.</p><p>Is het opgelost, dan wordt de balk even groen en verdwijnt hij. Met <b>Verbergen</b> haal je hem weg tot er een nieuwe fout bij komt; <b>Bekijk log</b> opent het activiteitenlog.</p>` },
+  { target: ["#btnPractice"], menu: "main", title: "🎯 Oefenstand", text: () => `<p>Oefenen zonder dat er iets beweegt in de kerk: PTZ Control schakelt over op <b>nagebootste camera's</b> met dezelfde camera's, presets en foto's. Handig voor nieuwe vrijwilligers.</p><p>Geldt voor <b>alle schermen</b> (oranje balk en rand), de videomixer wordt losgekoppeld en wat je verandert wordt niet bewaard. Stoppen via de balk of hier. <b>Niet tijdens een dienst.</b></p>` },
   { target: ["#btnLog"], menu: "main", title: "📋 Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
   { target: ["#btnAccess"], menu: "main", title: "🔒 Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>🔒 Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
   { target: ["#btnTablet"], menu: "main", title: "📱 Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },
