@@ -979,6 +979,10 @@ def stream_url(cam):
     return cam.get("stream_url") or f"rtsp://{cam['host'].split(':')[0]}:554/2"
 
 
+def person_model_dirs():
+    return [RES_DIR, HERE, DATA_DIR]
+
+
 def _track_status(cam_id, **kw):
     st = TRACK_STATUS.setdefault(cam_id, {"type": "track", "cam": cam_id, "on": False, "status": ""})
     st.update(kw)
@@ -995,7 +999,7 @@ def start_tracking(cam):
     stop_tracking(cam["id"], halt=True, quiet=True)
     with TRACK_LOCK:
         if _DETECTOR is None:
-            _DETECTOR = _tracker.Detector()
+            _DETECTOR = _tracker.Detector(person_model_dirs())
         settings = {"max_speed": clamp(cam.get("track_speed") or 6, 1, 24),
                     "invert": bool(cam.get("track_invert")),
                     "deadzone": 0.10}

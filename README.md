@@ -198,7 +198,8 @@ Installeren op de pc waar de app draait:
 pip install opencv-python numpy          # verplicht
 pip install ultralytics                   # aanbevolen: nauwkeuriger (YOLO), liefst met een NVIDIA-GPU
 ```
-Zonder `ultralytics` gebruikt de app de ingebouwde OpenCV-persoonsdetector (werkt op elke pc, minder nauwkeurig).
+Zonder `ultralytics` gebruikt de app **YOLOX-tiny** via OpenCV, als het modelbestand er is (`python3 packaging/haal_model.py` zet het in `models/`). De losse app heeft dit model al ingebouwd.
+Beide herkennen ook een **half silhouet** (ingezoomd op het bovenlichaam). Alleen als er geen van beide is, valt hij terug op de oude OpenCV-detector, en die ziet alleen **hele** personen van top tot teen: ingezoomd blijft hij dan op *zoekt persoon* staan. Onder de volgknop staat welke detector gebruikt wordt.
 
 Gebruik:
 - **🎯 volgen** in de kolomkop (of de knop in de bediening, of toets **T**) zet volgen aan/uit. De status staat erbij: *volgt*, *zoekt persoon*, *geen beeld*.
@@ -334,7 +335,7 @@ Download ze bij **Releases** op GitHub (of onder *Actions → Losse app bouwen �
 - **macOS:** pak de zip uit en zet **PTZ Control.app** in *Programma's*. De app is niet door Apple gecontroleerd: de eerste keer weigert macOS hem. Ga dan naar *Systeeminstellingen → Privacy en beveiliging* en klik bij PTZ Control op *Toch openen* (of in Terminal: `xattr -dr com.apple.quarantine "/Applications/PTZ Control.app"`). Sta daarna *Lokaal netwerk* toe, anders bereikt hij de camera's niet. De app heeft geen Dock-icoon maar een icoon in de **menubalk** (rechtsboven).
 - Via het icoon: *Bediening openen*, het adres voor andere schermen, *Map met instellingen openen* en *Afsluiten*. Afsluiten kan ook in de bediening: Menu → **⏻ PTZ Control afsluiten**. Nog een keer op de app klikken terwijl hij draait opent alleen de bediening.
 - **Instellingen en foto's** staan bij de losse app in een eigen map: Windows `%APPDATA%\PTZ Control`, Mac `~/Library/Application Support/PTZ Control`. Overstappen vanaf de Python-versie: maak daar een **Back-up** (met wachtwoorden) en zet die terug in de app, of kopieer `cameras.json` en de map `thumbs` naar die map.
-- **Persoon volgen** werkt in de losse app met de ingebouwde OpenCV-detector (minder nauwkeurig dan YOLO). Wil je YOLO, gebruik dan de Python-versie (`Start PTZ Control`).
+- **Persoon volgen** werkt in de losse app met de ingebouwde YOLOX-detector (via OpenCV, zonder torch); die herkent ook een half silhouet. De Python-versie (`Start PTZ Control`) gebruikt YOLOv8 op de Apple-chip.
 - Een nieuwe versie maken: GitHub → *Actions* → **Losse app bouwen** → *Run workflow* → vink **Release maken** aan en vul de versie in (bv. `1.1.0`). GitHub maakt dan zelf de tag, bouwt beide apps en zet ze bij Releases. Zonder vinkje wordt alleen gebouwd (downloads onder *Artifacts*).
 
 ## Screenshots bijwerken

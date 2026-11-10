@@ -15,16 +15,21 @@ _VFILE = os.path.join(ROOT, "build", "version.txt")
 os.makedirs(os.path.dirname(_VFILE), exist_ok=True)
 with open(_VFILE, "w", encoding="utf-8") as _f:
     _f.write(VERSION)
+# Persoonsdetector voor 'persoon volgen' (YOLOX-tiny, Apache 2.0): eerst packaging/haal_model.py draaien.
+# Zonder dit bestand herkent de app alleen hele personen (HOG), dus geen half silhouet bij inzoomen.
+MODEL = os.path.join(ROOT, "models", "yolox_tiny.onnx")
+if not os.path.isfile(MODEL):
+    raise SystemExit("models/yolox_tiny.onnx ontbreekt: draai eerst  python packaging/haal_model.py")
 ICO = os.path.join(ROOT, "app", "ptz.ico")
 ICNS = os.path.join(ROOT, "PTZ Control.app", "Contents", "Resources", "AppIcon.icns")
 
 a = Analysis(  # noqa: F821
     [os.path.join(ROOT, "ptz_control.py")],
     pathex=[ROOT],
-    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, ".")],
+    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, "."), (MODEL, "models")],
     hiddenimports=["backup", "youtube", "updater", "tracker", "midi", "roland_v1hd", "actlog", "oefen", "liederen", "mido", "mido.backends.rtmidi", "rtmidi", "certifi", "pystray", "PIL.Image"]
     + (["pystray._win32"] if sys.platform == "win32" else ["pystray._darwin", "AppKit", "Foundation"] if sys.platform == "darwin" else []),
-    # YOLO/torch is te groot voor de losse app: volgen gebruikt daar de OpenCV-persoonsdetector (HOG)
+    # YOLO/torch is te groot voor de losse app: volgen gebruikt daar YOLOX (ONNX) via OpenCV (cv2.dnn)
     excludes=["ultralytics", "torch", "torchvision", "matplotlib", "tkinter", "pandas", "scipy", "IPython", "pytest"],
     noarchive=False,
 )

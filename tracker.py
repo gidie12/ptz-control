@@ -3,16 +3,20 @@ Volgmodule voor PTZ Control: volgt een persoon op het podium en stuurt ALLEEN pa
 Tilt en zoom worden nooit aangeraakt.
 
 Vereist:  pip install opencv-python numpy
-Beter (optioneel, nauwkeuriger, liefst met GPU):  pip install ultralytics
-  -> dan wordt automatisch YOLOv8n gebruikt (model wordt de eerste keer gedownload).
-  Zonder ultralytics valt hij terug op de ingebouwde OpenCV-persoonsdetector (HOG, alleen CPU).
+Detectors, in deze volgorde:
+  1. YOLOv8n via `ultralytics` (als geïnstalleerd; gebruikt de Apple-chip/GPU).
+  2. YOLOX-tiny als ONNX via OpenCV (`cv2.dnn`, geen torch nodig): zo werkt de losse app.
+     Het modelbestand `yolox_tiny.onnx` (Apache 2.0) haal je met `packaging/haal_model.py`.
+  3. OpenCV HOG: herkent alleen HELE personen (van top tot teen). Een half silhouet
+     (ingezoomd) ziet hij nooit, daarom alleen als laatste terugval.
 """
+import os
 import threading
 import time
 
 try:
     import cv2
-    import numpy as np  # noqa: F401  (vereist door cv2)
+    import numpy as np
     CV_ERROR = ""
 except Exception as e:  # noqa: BLE001
     cv2 = None
@@ -82,14 +86,76 @@ class FrameGrabber(threading.Thread):
 
 
 # ---------------------------------------------------------------- persoonsdetectie
-class Detector:
-    """Geeft personen terug als (cx, cy, w, h, score), genormaliseerd 0..1."""
+YOLOX_FILE = "yolox_tiny.onnx"
+YOLOX_SIZE = 416        # invoermaat van yolox_tiny / yolox_nano
+MIN_SCORE = 0.35
 
-    def __init__(self):
+
+def find_model(dirs):
+    """Zoek het YOLOX-modelbestand: PTZ_PERSON_MODEL, daarna <map>/models/ en <map>/ voor elke map."""
+    env = os.environ.get("PTZ_PERSON_MODEL")
+    cands = [env] if env else []
+    for d in dirs or []:
+        if d:
+            cands += [os.path.join(d, "models", YOLOX_FILE), os.path.join(d, YOLOX_FILE)]
+    for c in cands:
+        if c and os.path.isfile(c):
+            return c
+    return None
+
+
+class Yolox:
+    """YOLOX (Megvii, Apache 2.0) als ONNX via cv2.dnn. Herkent ook halve silhouetten (bovenlichaam)."""
+
+    def __init__(self, path, size=YOLOX_SIZE):
+        self.net = cv2.dnn.readNetFromONNX(path)
+        self.size = size
+        grids, strides = [], []
+        for st in (8, 16, 32):
+            n = size // st
+            yv, xv = np.meshgrid(np.arange(n), np.arange(n), indexing="ij")
+            grids.append(np.stack((xv, yv), 2).reshape(-1, 2))
+            strides.append(np.full((n * n, 1), st))
+        self.grid = np.concatenate(grids).astype(np.float32)
+        self.stride = np.concatenate(strides).astype(np.float32)
+
+    def detect(self, frame, min_score=MIN_SCORE):
+        h, w = frame.shape[:2]
+        size = self.size
+        r = min(size / h, size / w)
+        nw, nh = max(1, int(w * r)), max(1, int(h * r))
+        pad = np.full((size, size, 3), 114, np.uint8)       # zoals YOLOX traint: links-boven, grijze rand
+        pad[:nh, :nw] = cv2.resize(frame, (nw, nh))
+        self.net.setInput(cv2.dnn.blobFromImage(pad, 1.0, (size, size), swapRB=False))
+        out = self.net.forward()[0]                         # (N, 85): cx, cy, w, h, obj, 80 klassen
+        score = out[:, 4] * out[:, 5]                       # klasse 0 = persoon
+        keep = score >= min_score
+        if not keep.any():
+            return []
+        out, score = out[keep], score[keep]
+        xy = (out[:, :2] + self.grid[keep]) * self.stride[keep] / r
+        wh = np.exp(out[:, 2:4]) * self.stride[keep] / r
+        boxes = [[float(x - bw / 2), float(y - bh / 2), float(bw), float(bh)] for (x, y), (bw, bh) in zip(xy, wh)]
+        idx = cv2.dnn.NMSBoxes(boxes, score.tolist(), min_score, 0.45)
+        res = []
+        for i in np.array(idx).flatten():
+            x, y, bw, bh = boxes[int(i)]
+            x2, y2 = min(w, x + bw), min(h, y + bh)          # binnen het beeld houden
+            x, y = max(0.0, x), max(0.0, y)
+            res.append(((x + x2) / 2 / w, (y + y2) / 2 / h, (x2 - x) / w, (y2 - y) / h, float(score[int(i)])))
+        return res
+
+
+class Detector:
+    """Geeft personen terug als (cx, cy, w, h, score), genormaliseerd 0..1.
+    model_dirs = mappen waarin naar yolox_tiny.onnx gezocht wordt."""
+
+    def __init__(self, model_dirs=None):
         self.lock = threading.Lock()
         self.kind = "hog"
         self.model = None
         self.device = "cpu"
+        self.note = ""
         try:
             from ultralytics import YOLO  # type: ignore
             import torch  # type: ignore
@@ -97,16 +163,30 @@ class Detector:
                 "mps" if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available() else "cpu"
             self.model = YOLO("yolov8n.pt")
             self.kind = "yolo"
+            return
         except Exception:  # noqa: BLE001
-            if not hasattr(cv2, "HOGDescriptor"):
-                raise RuntimeError("Geen persoonsdetector: installeer 'ultralytics' of opencv-python 4.x "
-                                   "(pip install -r requirements.txt)")
-            self.hog = cv2.HOGDescriptor()
-            self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+            pass
+        path = find_model(model_dirs)
+        if path:
+            try:
+                self.model = Yolox(path)
+                self.kind = "yolox"
+                return
+            except Exception as e:  # noqa: BLE001
+                self.note = f"YOLOX-model niet te laden ({e})"
+        else:
+            self.note = "geen YOLOX-model gevonden: alleen hele personen worden herkend"
+        if not hasattr(cv2, "HOGDescriptor"):
+            raise RuntimeError("Geen persoonsdetector: installeer 'ultralytics' of opencv-python 4.x "
+                               "(pip install -r requirements.txt)")
+        self.hog = cv2.HOGDescriptor()
+        self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
     def detect(self, frame):
         h, w = frame.shape[:2]
         with self.lock:
+            if self.kind == "yolox":
+                return self.model.detect(frame)
             if self.kind == "yolo":
                 res = self.model(frame, classes=[0], conf=0.35, imgsz=640, device=self.device, verbose=False)[0]
                 res = res.cpu()
@@ -175,6 +255,7 @@ class CameraTracker(threading.Thread):
     LOST_STOP = 0.4      # s zonder doel -> pan stoppen
     LOST_RESET = 2.5     # s zonder doel -> nieuw doel mogen kiezen
     MAX_JUMP = 0.22      # max sprong (beeldbreedte) om nog hetzelfde doel te zijn
+    MIN_HEIGHT = 0.10    # kleinere personen (ver weg in een totaalshot) negeren
 
     def __init__(self, cam, url, detector, send, on_status, settings):
         super().__init__(daemon=True)
@@ -197,7 +278,8 @@ class CameraTracker(threading.Thread):
     def _status(self, status, force=False):
         if status != self.status or force:
             self.status = status
-            self.on_status({"status": status, "fps": round(self.fps, 1), "detector": self.detector.kind})
+            self.on_status({"status": status, "fps": round(self.fps, 1), "detector": self.detector.kind,
+                            "note": getattr(self.detector, "note", "")})
 
     def _cmd(self, c):
         if c is None:
@@ -215,7 +297,7 @@ class CameraTracker(threading.Thread):
 
     def _pick(self, people):
         lo, hi = self.zone
-        people = [p for p in people if lo <= p[0] <= hi and p[3] > 0.15]
+        people = [p for p in people if lo <= p[0] <= hi and p[3] > self.MIN_HEIGHT]
         if not people:
             return None
         now = time.time()
