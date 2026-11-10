@@ -1765,8 +1765,11 @@ $("#btnPrefs").onclick = openPrefs;
 $("#btnQuit").onclick = async () => {
   if (!confirm("PTZ Control afsluiten?\n\nDe camera's blijven staan waar ze zijn, maar geen enkel scherm kan ze nog bedienen tot je de app opnieuw start.")) return;
   await post("/api/quit", {}).catch(() => {});
-  document.body.innerHTML = '<div style="display:grid;place-items:center;height:100vh;font:16px system-ui;color:var(--muted);text-align:center">'
-    + '<div><div style="font-size:42px">⏻</div><p>PTZ Control is afgesloten.</p><p>Start de app opnieuw om verder te gaan.</p></div></div>';
+  ytShow(false);
+  const d = document.createElement("div");
+  d.style.cssText = "position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);font:16px system-ui;color:var(--muted);text-align:center";
+  d.innerHTML = '<div><div style="font-size:42px">⏻</div><p>PTZ Control is afgesloten.</p><p>Start de app opnieuw om verder te gaan.</p></div>';
+  document.body.appendChild(d);
 };
 $("#prefsCancel").onclick = () => $("#dlgPrefs").close();
 // aanzetten = ook automatisch plaatsen weer aan (anders blijft een versleept venster op zijn plek staan)
