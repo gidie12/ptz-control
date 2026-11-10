@@ -295,6 +295,18 @@
   #dlgPrefs { width: min(560px, 95vw); }
   #dlgPrefs label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
   #toast.good { background: var(--okbg); border-color: var(--ok); }
+  /* ---- Updatemelding (rechtsonder) ---- */
+  #updNote { position: fixed; right: 16px; bottom: 16px; z-index: 27; width: min(340px, calc(100vw - 32px)); background: var(--panel);
+    border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; box-shadow: 0 12px 34px var(--shadow); font-size: 14px; }
+  #updNote[hidden] { display: none; }
+  body.wall #updNote:not(.preview) { display: none; }
+  #updNote .uh { display: flex; align-items: center; gap: 8px; }
+  #updNote .uh b { flex: 1; }
+  #updNote .ux { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 4px; }
+  #updNote ul { margin: 6px 0 0 18px; padding: 0; font-size: 13px; line-height: 1.4; }
+  #updNote .ua { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+  #updNote .uerr { color: var(--live); font-size: 13px; margin-top: 6px; }
+
   /* ---- Rondleiding ---- */
   #tour { position: fixed; inset: 0; z-index: 200; }
   #tour[hidden] { display: none; }
@@ -307,6 +319,7 @@
   #tour .tcard p { margin: 0 0 6px; font-size: 14px; line-height: 1.45; }
   #tour .tcard ul { margin: 4px 0 6px 18px; padding: 0; font-size: 14px; line-height: 1.45; }
   #tour .tfoot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  #tour .tfoot button { white-space: nowrap; }
   #tour .tcount { font-size: 12px; color: var(--muted); flex: 1; white-space: nowrap; }
   #tour .tbar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 10px; overflow: hidden; }
   #tour .tbar i { display: block; height: 100%; background: var(--accent); transition: width .25s; }
@@ -342,6 +355,7 @@
       <div class="msep"></div>
       <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
       <button class="mi" id="btnTour" role="menuitem" title="Alle functies stap voor stap uitgelegd">🎓 Rondleiding</button>
+      <button class="mi" id="btnUpd" role="menuitem" title="Kijken of er een nieuwe versie van PTZ Control is">🔄 Op updates controleren</button>
       <div class="msep"></div>
       <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)">⏻ PTZ Control afsluiten</button>
     </div>
@@ -645,6 +659,13 @@
     <button class="primary" id="capStart">Test starten</button></span></div>
 </dialog>
 
+<div id="updNote" hidden role="status" aria-live="polite">
+  <div class="uh"><b id="updTitle">⬆ Nieuwe versie beschikbaar</b><button class="ux" id="updClose" title="Later herinneren" aria-label="Sluiten">✕</button></div>
+  <div class="small muted" id="updInfo" style="margin-top:4px"></div>
+  <ul id="updNotes"></ul>
+  <div class="uerr" id="updErr" hidden></div>
+  <div class="ua" id="updActions"><button class="icon" id="updLater">Later</button><button class="primary" id="updGo">Nu bijwerken</button></div>
+</div>
 <div id="tour" hidden role="dialog" aria-modal="true" aria-labelledby="tourTitle">
   <div class="tspot" id="tourSpot"></div>
   <div class="tcard" id="tourCard">
@@ -2109,6 +2130,8 @@ function connectEvents() {
           : ev.kind === "capture" ? "Uitlezen klaar" : "Terugzetten klaar";
         toast(errs ? `Klaar, ${errs} camera('s) met fout` : done, !errs);
       }
+    } else if (ev.type === "update") {
+      updUpdate(ev);
     } else if (ev.type === "youtube") {
       ytUpdate(ev);
     } else if (ev.type === "config") {
@@ -2120,6 +2143,61 @@ function connectEvents() {
     }
   };
 }
+
+/* ---- 🔄 Updates ----
+   Server (updater.py) kijkt elke 6 uur of er een nieuwe versie is en stuurt SSE "update".
+   Melding rechtsonder; "Later" verbergt hem voor díe versie op dit apparaat (localStorage updDismiss). */
+let upd = { mode: "off" }, updServerVer = null, updPreview = false;
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* geen opslag */ } };
+const updKey = () => String(upd.latest || upd.count || "");
+const UPD_SAMPLE = { mode: "git", available: true, can_install: true, count: 3, current: "v1.0.0", latest: "v1.0.0-3-gabc1234",
+  notes: ["Rondleiding voor nieuwe gebruikers", "Knoppenprofielen voor de Xbox-controller", "YouTube-kanaal altijd wijzigbaar"] };
+function updUpdate(st) {
+  // server is na het bijwerken opnieuw gestart met een andere versie → pagina verversen
+  if (updServerVer && st.current && st.current !== updServerVer && !st.installing) { location.reload(); return; }
+  if (!updServerVer && st.current) updServerVer = st.current;
+  upd = st; updRender();
+}
+function updRender() {
+  const box = $("#updNote"), u = updPreview ? UPD_SAMPLE : upd;
+  const show = updPreview || u.installing || (u.available && lsGet("updDismiss") !== updKey());
+  box.hidden = !show; box.classList.toggle("preview", updPreview);
+  $("#btnUpd").title = `Kijken of er een nieuwe versie van PTZ Control is${upd.current ? " (nu " + upd.current + ")" : ""}`;
+  if (!show) return;
+  $("#updTitle").textContent = u.installing ? "⏳ Bijwerken…" : "⬆ Nieuwe versie beschikbaar";
+  $("#updInfo").textContent = u.installing ? "PTZ Control start zo opnieuw; deze pagina ververst vanzelf (ca. 10 seconden)."
+    : u.mode === "release" ? `Versie ${u.latest} (nu ${u.current})`
+    : `${u.count} ${u.count === 1 ? "wijziging" : "wijzigingen"} · nu ${u.current}`;
+  const notes = u.installing ? [] : (u.notes || []);
+  $("#updNotes").innerHTML = notes.slice(0, 5).map(n => `<li>${esc(n)}</li>`).join("") + (notes.length > 5 ? `<li class="muted">en nog ${notes.length - 5}…</li>` : "");
+  $("#updNotes").hidden = !notes.length;
+  const err = u.error && !u.installing && u.error.startsWith("Bijwerken") ? u.error
+    : !u.installing && u.mode === "git" && !u.can_install && u.blocked ? `Automatisch bijwerken kan niet: ${u.blocked}. Werk bij met git pull.` : "";
+  $("#updErr").textContent = err; $("#updErr").hidden = !err;
+  $("#updActions").hidden = !!u.installing;
+  $("#updGo").textContent = u.mode === "release" ? "Downloaden" : u.can_install ? "Nu bijwerken" : "Bekijken";
+}
+function updDismiss() { lsSet("updDismiss", updKey()); updRender(); }
+$("#updLater").onclick = updDismiss;
+$("#updClose").onclick = updDismiss;
+$("#updGo").onclick = async () => {
+  if (upd.mode === "release" || !upd.can_install) { if (upd.url) window.open(upd.url, "_blank", "noopener"); return; }
+  if (!confirm("PTZ Control bijwerken?\n\nDe bediening is ongeveer 10 seconden weg terwijl de app opnieuw start. Niet doen tijdens een dienst.")) return;
+  const r = await post("/api/update/install", {});
+  if (r.error) return toast(r.error);
+  updUpdate({ ...upd, installing: true });
+};
+$("#btnUpd").onclick = async () => {
+  if (upd.mode === "off") return toast("Updatecontrole is niet beschikbaar: deze installatie komt niet uit git en is geen losse app");
+  toast("Controleren op updates…", true);
+  const r = await post("/api/update/check", {});
+  if (!r || r.ok === false) return;
+  if (r.available) { lsSet("updDismiss", ""); updUpdate(r); toast("Er is een nieuwe versie (zie rechtsonder)", true); }
+  else if (r.error) { updUpdate(r); toast(r.error); }
+  else { updUpdate(r); toast(`Je hebt de nieuwste versie (${r.current})`, true); }
+};
+fetch("/api/update").then(r => r.ok ? r.json() : null).then(st => st && updUpdate(st)).catch(() => {});
 
 /* ---- 🎓 Rondleiding ----
    🧑 Elke functie hoort hier een stap te hebben. Voeg je iets toe of haal je iets weg: werk TOUR_STEPS bij (zie CLAUDE.md §2a). */
@@ -2167,11 +2245,17 @@ const TOUR_STEPS = [
   { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
   { target: ["#btnTheme"], menu: "main", title: "☀ / 🌙 Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
   { target: ["#btnTour"], menu: "main", title: "🎓 Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
+  { target: ["#btnUpd"], menu: "main", title: "🔄 Op updates controleren", text: () => `<p>Kijkt meteen of er een nieuwe versie van PTZ Control is. De app doet dit ook zelf, elke 6 uur.</p>` },
+  { target: ["#updNote"], show: () => { updPreview = true; updRender(); }, hide: () => { updPreview = false; updRender(); },
+    title: "⬆ Nieuwe versie", text: () => `<p>Is er een nieuwe versie, dan verschijnt <b>rechtsonder</b> zo'n melding met wat er nieuw is.</p>
+      <ul><li><b>Nu bijwerken</b>: de app werkt zichzelf bij en start opnieuw (ca. 10 seconden geen bediening, dus niet tijdens een dienst).</li>
+      <li><b>Later</b>: verbergt de melding voor deze versie op dit apparaat.</li></ul>
+      <p class="muted">Bij de losse app (.exe/.app) opent <i>Downloaden</i> de pagina met de nieuwe versie. Op volledig scherm blijft de melding weg.</p>` },
   { target: ["#btnQuit"], menu: "main", title: "⏻ Afsluiten", text: () => `<p>Stopt PTZ Control op deze computer. Alle schermen verliezen dan de verbinding tot de app opnieuw wordt gestart. De camera's blijven staan waar ze zijn.</p>` },
   { title: "Klaar! 🎉", text: () => `<p>Je kent nu alle functies. ${cfg.cameras.length ? "Veel succes bij de dienst!" : "Begin met <b>Menu → 📷 Camera's</b> om je camera's toe te voegen."}</p>
       <p class="muted">Deze rondleiding start niet meer vanzelf. Opnieuw bekijken: <b>Menu → 🎓 Rondleiding</b>.</p>` },
 ];
-let tourIdx = -1;
+let tourIdx = -1, tourStepShown = -1;
 function tourTarget(st) {
   for (const sel of st.target || []) {
     let el = $(sel);
@@ -2205,7 +2289,9 @@ function tourPlace() {
 }
 function tourShow(i) {
   tourIdx = Math.max(0, Math.min(TOUR_STEPS.length - 1, i));
-  const st = TOUR_STEPS[tourIdx];
+  const prev = TOUR_STEPS[tourStepShown]; if (prev?.hide) prev.hide();
+  const st = TOUR_STEPS[tourIdx]; tourStepShown = tourIdx;
+  if (st.show) st.show();
   setMenu(st.menu === "main"); ytMenuOpen(false);
   $("#tourTitle").innerHTML = st.title;
   $("#tourText").innerHTML = st.text();
@@ -2227,6 +2313,7 @@ function tourStart() {
   tourShow(0);
 }
 function tourEnd() {
+  TOUR_STEPS[tourStepShown]?.hide?.(); tourStepShown = -1;
   $("#tour").hidden = true; tourIdx = -1;
   setMenu(false);
   store.set("tourDone", "1");

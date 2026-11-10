@@ -22,6 +22,8 @@ with sync_playwright() as p:
     pg.evaluate("tourStart()"); pg.wait_for_timeout(300)
     for _ in range(2): pg.click("#tourNext")
     pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/rondleiding.png")
+    pg.evaluate("tourEnd(); updPreview = true; updRender()"); pg.wait_for_timeout(300)
+    pg.screenshot(path=f"{OUT}/update-melding.png", clip={"x": 1040, "y": 600, "width": 400, "height": 300}); pg.evaluate("updPreview = false; updRender()")
     pl = page(b, "light"); pl.screenshot(path=f"{OUT}/hoofdscherm-licht.png")
     pm = page(b, "dark", 390, 844); pm.screenshot(path=f"{OUT}/telefoon.png", full_page=False)
     b.close()

@@ -10,14 +10,19 @@ import sys
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))  # noqa: F821 (SPECPATH komt van PyInstaller)
 VERSION = os.environ.get("PTZ_VERSION", "0.0.0").lstrip("v")
+# versie meebakken voor de updatecontrole (updater.py leest version.txt uit de app)
+_VFILE = os.path.join(ROOT, "build", "version.txt")
+os.makedirs(os.path.dirname(_VFILE), exist_ok=True)
+with open(_VFILE, "w", encoding="utf-8") as _f:
+    _f.write(VERSION)
 ICO = os.path.join(ROOT, "app", "ptz.ico")
 ICNS = os.path.join(ROOT, "PTZ Control.app", "Contents", "Resources", "AppIcon.icns")
 
 a = Analysis(  # noqa: F821
     [os.path.join(ROOT, "ptz_control.py")],
     pathex=[ROOT],
-    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), ".")],
-    hiddenimports=["backup", "youtube", "tracker", "certifi", "pystray", "PIL.Image"]
+    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, ".")],
+    hiddenimports=["backup", "youtube", "updater", "tracker", "certifi", "pystray", "PIL.Image"]
     + (["pystray._win32"] if sys.platform == "win32" else ["pystray._darwin", "AppKit", "Foundation"] if sys.platform == "darwin" else []),
     # YOLO/torch is te groot voor de losse app: volgen gebruikt daar de OpenCV-persoonsdetector (HOG)
     excludes=["ultralytics", "torch", "torchvision", "matplotlib", "tkinter", "pandas", "scipy", "IPython", "pytest"],

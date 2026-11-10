@@ -33,6 +33,7 @@ from urllib.parse import parse_qs, urlparse
 
 import backup as _backup  # noqa: E402
 import youtube as _youtube  # noqa: E402
+import updater as _updater  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FROZEN = bool(getattr(sys, "frozen", False))   # losse app (PyInstaller): .exe / .app
@@ -187,6 +188,17 @@ def _yt_channel():
 
 
 YT = _youtube.Watcher(_yt_channel, lambda st, changed: broadcast(st))
+
+
+# ---------------------------------------------------------------- updates
+def _restart():
+    """Server opnieuw starten na bijwerken (zelfde Terminal-venster; browser niet opnieuw openen)."""
+    args = [a for a in sys.argv[1:] if a != "--open"]
+    sys.stdout.flush()
+    os.execv(sys.executable, [sys.executable, os.path.abspath(__file__), *args])
+
+
+UPD = _updater.Updater(HERE, FROZEN, RES_DIR, DATA_DIR, broadcast, _restart)
 
 
 # ---------------------------------------------------------------- helpers
@@ -868,6 +880,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, STATE)
         if u.path == "/api/youtube":
             return self._send(200, YT.snapshot())
+        if u.path == "/api/update":
+            return self._send(200, UPD.snapshot())
         if u.path == "/api/events":
             return self._sse()
         if u.path == "/api/thumb":
@@ -903,6 +917,7 @@ class Handler(BaseHTTPRequestHandler):
             for st in list(TRACK_STATUS.values()):
                 self.wfile.write(f"data: {json.dumps(st)}\n\n".encode())
             self.wfile.write(f"data: {json.dumps(YT.snapshot())}\n\n".encode())
+            self.wfile.write(f"data: {json.dumps(UPD.snapshot())}\n\n".encode())
             self.wfile.flush()
             while True:
                 try:
@@ -988,6 +1003,16 @@ class Handler(BaseHTTPRequestHandler):
             threading.Timer(0.3, lambda: os._exit(0)).start()
             return None
 
+        if u.path == "/api/update/check":
+            return self._send(200, UPD.check())
+        if u.path == "/api/update/install":
+            if JOB.get("running"):
+                return self._send(409, {"error": "Er loopt nog een taak (back-up/laden/test); probeer het daarna."})
+            try:
+                UPD.install()
+            except RuntimeError as e:
+                return self._send(400, {"error": str(e)})
+            return self._send(200, {"ok": True})
         if u.path == "/api/youtube/check":
             YT.refresh()
             return self._send(200, {"ok": True})
@@ -1184,6 +1209,7 @@ def main():
     STATE["server"] = f"{local_ip()}:{args.port}"
     STATE["app"] = {"frozen": FROZEN, "data_dir": DATA_DIR}
     YT.start()
+    UPD.start()
     srv.daemon_threads = True
     print(f"PTZ Control draait op {url}  en  {lan_url}")
     print(f"Instellingen en foto's: {DATA_DIR}  (workspace: {WS['active']})")

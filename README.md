@@ -121,7 +121,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen, thema, Rondleiding en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
@@ -184,6 +184,17 @@ Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · 
 **Alle toetsen zijn aan te passen** via Menu → ⌨ Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
 
 ![Sneltoetsen](docs/screenshots/sneltoetsen.png)
+
+## Updates
+PTZ Control kijkt zelf elke 6 uur (en kort na het starten) of er een nieuwe versie is. Is die er, dan verschijnt **rechtsonder** een melding met wat er nieuw is. Zelf kijken: **Menu → 🔄 Op updates controleren**.
+
+- **Nu bijwerken** (versie via *Start PTZ Control* / git): de app haalt de nieuwe versie op (`git pull`), werkt zo nodig de packages bij en start zichzelf opnieuw. De bediening is dan ongeveer 10 seconden weg; open schermen verversen vanzelf. ⚠ Niet tijdens een dienst.
+- **Later** verbergt de melding voor die versie op dit apparaat. Op volledig scherm blijft de melding altijd weg.
+- Lukt automatisch bijwerken niet (bijv. omdat er op deze computer bestanden zijn aangepast), dan zegt de melding dat; werk dan bij met `git pull` en start de app opnieuw.
+- **Losse app (.exe/.app):** de melding heeft een knop **Downloaden** naar de nieuwe release; de app kan zichzelf niet vervangen. Omdat de repository privé is, heeft de losse app een GitHub-token nodig om releases te zien: zet een token met leesrecht in `github_token.txt` in de map met instellingen (of in de omgevingsvariabele `PTZ_GITHUB_TOKEN`). Zonder token blijft de melding weg.
+- Uitzetten: start met de omgevingsvariabele `PTZ_UPDATE=0`.
+
+<img src="docs/screenshots/update-melding.png" width="400" alt="Updatemelding rechtsonder">
 
 ## Tip
 Geef de pc met deze app een vast IP-adres (DHCP-reservering), dan blijft het tabletadres hetzelfde.
