@@ -103,6 +103,15 @@ jobs:
       - name: Snelle controle
         run: python -m py_compile ptz_control.py tracker.py backup.py youtube.py
 
+      - name: Persoonsdetector ophalen en testen (half silhouet)
+        shell: bash
+        run: |
+          python packaging/haal_model.py
+          # testfoto (twee mannen, alleen bovenlichaam) uit het ultralytics-pakket; gaat niet mee in de app
+          pip download --no-deps -q ultralytics -d testfoto
+          python -c "import zipfile,glob;zipfile.ZipFile(glob.glob('testfoto/*.whl')[0]).extract('ultralytics/assets/zidane.jpg','testfoto')"
+          python packaging/test_detector.py testfoto/ultralytics/assets/zidane.jpg 2
+
       - name: App bouwen
         run: pyinstaller --noconfirm packaging/ptz_control.spec
 

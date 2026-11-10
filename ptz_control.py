@@ -979,6 +979,10 @@ def stream_url(cam):
     return cam.get("stream_url") or f"rtsp://{cam['host'].split(':')[0]}:554/2"
 
 
+def person_model_dirs():
+    return [RES_DIR, HERE, DATA_DIR]
+
+
 def _track_status(cam_id, **kw):
     st = TRACK_STATUS.setdefault(cam_id, {"type": "track", "cam": cam_id, "on": False, "status": ""})
     st.update(kw)
@@ -995,7 +999,7 @@ def start_tracking(cam):
     stop_tracking(cam["id"], halt=True, quiet=True)
     with TRACK_LOCK:
         if _DETECTOR is None:
-            _DETECTOR = _tracker.Detector()
+            _DETECTOR = _tracker.Detector(person_model_dirs())
         settings = {"max_speed": clamp(cam.get("track_speed") or 6, 1, 24),
                     "invert": bool(cam.get("track_invert")),
                     "deadzone": 0.10}
@@ -2195,6 +2199,51 @@ def _log_naar_bestand():
             pass
 
 
+def _app_browser():
+    """Pad naar Chrome/Edge/Chromium/Brave (die kennen --app), of None."""
+    import shutil  # noqa: PLC0415
+    kand = []
+    if sys.platform == "darwin":
+        for naam, exe in (("Google Chrome", "Google Chrome"), ("Microsoft Edge", "Microsoft Edge"),
+                          ("Chromium", "Chromium"), ("Brave Browser", "Brave Browser")):
+            for root in ("/Applications", os.path.expanduser("~/Applications")):
+                kand.append(os.path.join(root, naam + ".app", "Contents", "MacOS", exe))
+    elif sys.platform == "win32":
+        roots = [os.environ.get(k) for k in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA")]
+        for root in filter(None, roots):
+            kand += [os.path.join(root, "Google", "Chrome", "Application", "chrome.exe"),
+                     os.path.join(root, "Microsoft", "Edge", "Application", "msedge.exe"),
+                     os.path.join(root, "BraveSoftware", "Brave-Browser", "Application", "brave.exe")]
+    else:
+        for naam in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser",
+                     "microsoft-edge", "brave-browser"):
+            w = shutil.which(naam)
+            if w:
+                kand.append(w)
+    return next((k for k in kand if os.path.isfile(k)), None)
+
+
+def open_bediening(url):
+    """Bediening openen als eigen app-venster (Chrome/Edge --app: geen adresbalk of tabbladen).
+
+    Terugval: gewoon tabblad in de standaardbrowser. PTZ_BROWSER=tab forceert het tabblad."""
+    exe = None if os.environ.get("PTZ_BROWSER", "").lower() == "tab" else _app_browser()
+    if exe:
+        try:
+            import subprocess  # noqa: PLC0415
+            kw = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "stdin": subprocess.DEVNULL}
+            if sys.platform == "win32":
+                kw["creationflags"] = 0x00000008 | 0x00000200   # DETACHED_PROCESS | NEW_PROCESS_GROUP
+            else:
+                kw["start_new_session"] = True
+            subprocess.Popen([exe, f"--app={url}"], **kw)  # noqa: S603
+            return
+        except OSError:
+            pass
+    import webbrowser  # noqa: PLC0415
+    webbrowser.open(url)
+
+
 def _tray(url, lan_url):
     """Icoon in de menubalk (Mac) / het systeemvak (Windows): openen, map, afsluiten. Blokkeert.
 
@@ -2219,7 +2268,7 @@ def _tray(url, lan_url):
 
     img = Image.open(os.path.join(RES_DIR, "icon.png"))
     menu = pystray.Menu(
-        pystray.MenuItem("Bediening openen", lambda *_: webbrowser.open(url), default=True),
+        pystray.MenuItem("Bediening openen", lambda *_: open_bediening(url), default=True),
         pystray.MenuItem(f"Andere schermen: {lan_url}", lambda *_: webbrowser.open(lan_url)),
         pystray.MenuItem("Map met instellingen openen", lambda *_: open_map()),
         pystray.Menu.SEPARATOR,
@@ -2235,10 +2284,13 @@ def main():
     ap.add_argument("--bind", default="0.0.0.0")
     ap.add_argument("--open", action="store_true", help="open de bediening in de standaardbrowser")
     ap.add_argument("--no-open", action="store_true", help="losse app: browser níet openen")
+    ap.add_argument("--tab", action="store_true", help="bediening in een gewoon browsertabblad openen i.p.v. een app-venster")
     ap.add_argument("--no-tray", action="store_true", help="losse app: geen icoon in menubalk/systeemvak")
     ap.add_argument("--workspace", help="starten in deze workspace (naam of id)")
     args = ap.parse_args()
     _log_naar_bestand()
+    if args.tab:
+        os.environ["PTZ_BROWSER"] = "tab"
     if FROZEN and not args.no_open:
         args.open = True   # dubbelklik op de app = bediening openen
     url = f"http://localhost:{args.port}"
@@ -2250,8 +2302,7 @@ def main():
             urllib.request.urlopen(url + "/api/state", timeout=2).read()
             print(f"PTZ Control draait al op {url}")
             if args.open:
-                import webbrowser
-                webbrowser.open(url)
+                open_bediening(url)
             return
         except Exception:  # noqa: BLE001
             _melding(f"Poort {args.port} is bezet door een ander programma. PTZ Control kan niet starten.")
@@ -2280,8 +2331,7 @@ def main():
     print(f"Instellingen en foto's: {DATA_DIR}  (workspace: {WS['active']})")
     print("Stoppen met Ctrl+C (of dit venster sluiten)")
     if args.open:
-        import webbrowser
-        threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+        threading.Timer(1.0, lambda: open_bediening(url)).start()
     if FROZEN and not args.no_tray:
         threading.Thread(target=srv.serve_forever, daemon=True, name="http").start()
         if _tray(url, lan_url):

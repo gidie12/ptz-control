@@ -6,7 +6,7 @@ Eigen webbediening voor PTZOptics-camera's, te bedienen met muis/touch, toetsenb
 
 ## Installeren en starten
 
-**Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in je browser.
+**Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in een eigen venster, zonder adresbalk en tabbladen (app-venster van Chrome of Edge; is geen van beide er, dan een gewoon tabblad in je standaardbrowser). Liever een gewoon tabblad: start met `--tab` of zet `PTZ_BROWSER=tab`.
 
 | | Mac | Windows |
 |---|---|---|
@@ -16,7 +16,7 @@ Eigen webbediening voor PTZOptics-camera's, te bedienen met muis/touch, toetsenb
 | Snelkoppeling opnieuw maken | | in cmd: `"Start PTZ Control.bat" /snelkoppeling` |
 | Vereist | Python 3.9+ (python.org of `brew install python`) | Python 3.9+ (python.org, vink *Add python.exe to PATH* aan, of `winget install -e --id Python.Python.3.12`) |
 
-- **Mac – app-icoon:** *PTZ Control.app* moet in de map van PTZ Control blijven staan (hij start de starter uit die map). Sleep hem naar het Dock; dat maakt alleen een verwijzing. Draait de app al, dan opent een klik alleen de bediening in de browser. Anders opent Terminal met het logboek; dat venster sluiten = stoppen.
+- **Mac – app-icoon:** *PTZ Control.app* moet in de map van PTZ Control blijven staan (hij start de starter uit die map). Sleep hem naar het Dock; dat maakt alleen een verwijzing. Draait de app al, dan opent een klik alleen de bediening (als app-venster). Anders opent Terminal met het logboek; dat venster sluiten = stoppen.
 - **Mac:** meldt macOS "onbekende ontwikkelaar", rechtsklik → **Open** (eenmalig).
 - **Windows – snelkoppeling:** de starter maakt bij de eerste keer de snelkoppeling **PTZ Control** met icoon in het Startmenu en op het bureaublad.
 - **Windows:** vraagt de firewall om toegang, kies **Privénetwerken**, anders kunnen tablets de app niet bereiken.
@@ -198,7 +198,8 @@ Installeren op de pc waar de app draait:
 pip install opencv-python numpy          # verplicht
 pip install ultralytics                   # aanbevolen: nauwkeuriger (YOLO), liefst met een NVIDIA-GPU
 ```
-Zonder `ultralytics` gebruikt de app de ingebouwde OpenCV-persoonsdetector (werkt op elke pc, minder nauwkeurig).
+Zonder `ultralytics` gebruikt de app **YOLOX-tiny** via OpenCV, als het modelbestand er is (`python3 packaging/haal_model.py` zet het in `models/`). De losse app heeft dit model al ingebouwd.
+Beide herkennen ook een **half silhouet** (ingezoomd op het bovenlichaam). Alleen als er geen van beide is, valt hij terug op de oude OpenCV-detector, en die ziet alleen **hele** personen van top tot teen: ingezoomd blijft hij dan op *zoekt persoon* staan. Onder de volgknop staat welke detector gebruikt wordt.
 
 Gebruik:
 - **🎯 volgen** in de kolomkop (of de knop in de bediening, of toets **T**) zet volgen aan/uit. De status staat erbij: *volgt*, *zoekt persoon*, *geen beeld*.
@@ -334,7 +335,7 @@ Download ze bij **Releases** op GitHub (of onder *Actions → Losse app bouwen �
 - **macOS:** pak de zip uit en zet **PTZ Control.app** in *Programma's*. De app is niet door Apple gecontroleerd: de eerste keer weigert macOS hem. Ga dan naar *Systeeminstellingen → Privacy en beveiliging* en klik bij PTZ Control op *Toch openen* (of in Terminal: `xattr -dr com.apple.quarantine "/Applications/PTZ Control.app"`). Sta daarna *Lokaal netwerk* toe, anders bereikt hij de camera's niet. De app heeft geen Dock-icoon maar een icoon in de **menubalk** (rechtsboven).
 - Via het icoon: *Bediening openen*, het adres voor andere schermen, *Map met instellingen openen* en *Afsluiten*. Afsluiten kan ook in de bediening: Menu → **⏻ PTZ Control afsluiten**. Nog een keer op de app klikken terwijl hij draait opent alleen de bediening.
 - **Instellingen en foto's** staan bij de losse app in een eigen map: Windows `%APPDATA%\PTZ Control`, Mac `~/Library/Application Support/PTZ Control`. Overstappen vanaf de Python-versie: maak daar een **Back-up** (met wachtwoorden) en zet die terug in de app, of kopieer `cameras.json` en de map `thumbs` naar die map.
-- **Persoon volgen** werkt in de losse app met de ingebouwde OpenCV-detector (minder nauwkeurig dan YOLO). Wil je YOLO, gebruik dan de Python-versie (`Start PTZ Control`).
+- **Persoon volgen** werkt in de losse app met de ingebouwde YOLOX-detector (via OpenCV, zonder torch); die herkent ook een half silhouet. De Python-versie (`Start PTZ Control`) gebruikt YOLOv8 op de Apple-chip.
 - Een nieuwe versie maken: GitHub → *Actions* → **Losse app bouwen** → *Run workflow* → vink **Release maken** aan en vul de versie in (bv. `1.1.0`). GitHub maakt dan zelf de tag, bouwt beide apps en zet ze bij Releases. Zonder vinkje wordt alleen gebouwd (downloads onder *Artifacts*).
 
 ## Screenshots bijwerken
