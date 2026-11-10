@@ -14,7 +14,7 @@
   })();
 </script>
 <style>
-  /* Thema: donker (standaard) en licht. Keuze per apparaat in ⚙ Instellingen (localStorage.theme: auto/dark/light). */
+  /* Thema: donker (standaard) en licht. Keuze per apparaat via het menu (localStorage.theme: auto/dark/light). */
   :root {
     color-scheme: dark;
     --bg: #111317; --panel: #1a1d23; --panel2: #22262e; --line: #2e333d;
@@ -321,7 +321,6 @@
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
       <div class="msep"></div>
       <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
-      <button class="mi" id="btnPrefs" role="menuitem" title="YouTube-kanaal en -venster">⚙ Instellingen</button>
       <div class="msep"></div>
       <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)">⏻ PTZ Control afsluiten</button>
     </div>
@@ -572,7 +571,7 @@
 </dialog>
 
 <dialog id="dlgPrefs">
-  <h3>⚙ Instellingen</h3>
+  <h3>▶ YouTube-kanaal</h3>
   <div class="bsec" style="margin-top:0">
     <h4>YouTube-livestream</h4>
     <div class="small">De app kijkt elke minuut of dit kanaal live is en toont de stream in een klein venster. Alleen kijken:
@@ -1834,7 +1833,7 @@ addEventListener("blur", () => setTimeout(() => {
   if (document.activeElement?.tagName === "IFRAME" && ytWin.contains(document.activeElement)) { document.activeElement.blur(); window.focus(); }
 }, 400));
 
-/* ---- ⚙ Instellingen ---- */
+/* ---- YouTube-kanaal instellen (via het YouTube-menu) ---- */
 function openPrefs() {
   $("#ytChannel").value = (cfg.youtube || {}).channel || "";
   $("#ytPrefStatus").textContent = !yt.channel ? "" : yt.error ? yt.error
@@ -1842,7 +1841,6 @@ function openPrefs() {
       + (yt.checked ? " · gecontroleerd " + yt.checked : "");
   $("#dlgPrefs").showModal();
 }
-$("#btnPrefs").onclick = openPrefs;
 $("#btnQuit").onclick = async () => {
   if (!confirm("PTZ Control afsluiten?\n\nDe camera's blijven staan waar ze zijn, maar geen enkel scherm kan ze nog bedienen tot je de app opnieuw start.")) return;
   await post("/api/quit", {}).catch(() => {});

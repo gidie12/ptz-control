@@ -101,7 +101,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De knop **🎮 controller** rechtsboven toont de status en is ook het **menu** (Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen, thema, Instellingen). Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De knop **🎮 controller** rechtsboven toont de status en is ook het **menu** (Sneltoetsen, Volledig scherm, Back-up, Camera's, Presetaantal testen, thema, afsluiten). Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Zachte beweging** (standaard aan): de camera trekt geleidelijk op (ca. 1 seconde naar topsnelheid) en de stick reageert fijner rond het midden. Uitzetten geeft direct de volle snelheid.
 
@@ -124,13 +124,13 @@ De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller 
 Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 
 ## YouTube-livestream bekijken
-Menu → **⚙ Instellingen** → vul bij *YouTube-livestream* het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
+Klik op de **YouTube**-knop rechtsboven → *Kanaal instellen…* en vul het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
 **Na het bijwerken van de app altijd PTZ Control opnieuw starten** (Terminal-venster sluiten, app weer openen), anders draait de server nog de oude versie.
 De app kijkt daarna elke minuut of het kanaal live is. De knop rechtsboven wordt rood (**● LIVE**) zodra er een stream loopt,
 en de stream verschijnt in een **klein venster** (standaard automatisch, zonder geluid).
 
 - Het venster zoekt zelf een vrije plek naast of onder de presettegels en schuift mee als je het aantal tegels verandert. Is er op volledig scherm geen plek, dan houdt de app rechts een strook vrij en schuiven de tegels op.
-- Zelf verplaatsen: sleep aan de titelbalk (dan blijft het daar staan; ⌖ zet het weer automatisch). Groter/kleiner: sleep het hoekje rechtsonder (of kies Klein/Middel/Groot in Instellingen).
+- Zelf verplaatsen: sleep aan de titelbalk (dan blijft het daar staan; ⌖ zet het weer automatisch). Groter/kleiner: sleep het hoekje rechtsonder (of kies Klein/Middel/Groot in het YouTube-menu).
 - Klik op de YouTube/LIVE-knop voor een keuzemenu: venster tonen/verbergen, automatisch plaatsen, grootte, geluid, automatisch openen, nu controleren, openen op YouTube en kanaal instellen. Toets **Y** toont/verbergt het venster direct.
 - Positie, grootte, automatisch openen en geluid onthoudt elk apparaat zelf; het kanaal geldt voor alle schermen.
 - Alleen kijken: de stream starten en stoppen gebeurt nog steeds buiten deze app. Let op: de stream loopt een paar seconden achter.
