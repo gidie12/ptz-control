@@ -115,7 +115,7 @@
   .camrow2 { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
     border-bottom: 1px solid var(--line); align-items: center; }
   .camrow2 label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
-  #dlgKeys { width: min(560px, 95vw); }
+  #dlgKeys { width: min(560px, 95vw); max-height: 90vh; overflow: auto; }
   .keylist { display: grid; grid-template-columns: 1fr 160px; gap: 6px 12px; align-items: center; }
   .keylist b { font-weight: 600; }
   .keyfixed { grid-template-columns: 90px 1fr; font-size: 13px; }
@@ -399,11 +399,7 @@
       </div>
       <button class="icon" id="btnMap2" style="margin-top:6px">🎮 Knoppenindeling instellen…</button>
     </div>
-    <div class="small" style="padding:0 4px">
-      <kbd>1</kbd>–<kbd>9</kbd> preset · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>9</kbd> camera (instelbaar) · <kbd>←↑→↓</kbd> bewegen ·
-      <kbd>Q</kbd>/<kbd>A</kbd> zoom · <kbd>W</kbd>/<kbd>S</kbd> focus · <kbd>H</kbd> home · <kbd>T</kbd> volgen · <kbd>F</kbd> volledig scherm · <kbd>Y</kbd> YouTube · <kbd>Spatie</kbd> stop ·
-      rechtsklik of lang drukken op een preset = bewerken
-    </div>
+    <div class="small" style="padding:0 4px" id="keyHints"></div>
   </aside>
 </main>
 
@@ -446,25 +442,14 @@
 
 <dialog id="dlgKeys">
   <h3>⌨ Sneltoetsen</h3>
+  <p class="small" style="margin:0 0 10px">Klik in een veld en druk de toets of combinatie (bijv. <kbd>F1</kbd>, <kbd>Num 5</kbd>, <kbd>Shift</kbd>+<kbd>Z</kbd>).
+    <kbd>Backspace</kbd> = standaard, <kbd>Delete</kbd> = uit. Rood = toets al in gebruik. Geldt voor alle schermen.
+    <kbd>Esc</kbd> is vast (volledig scherm / opslaan-modus verlaten).</p>
   <h4 style="margin:0 0 6px">Camera kiezen</h4>
-  <p class="small" style="margin:0 0 8px">Met deze toets kies je de camera die je bedient (in <i>Alle camera's</i> blijf je in die weergave); daarna roept
-    <kbd>1</kbd>–<kbd>9</kbd> een preset op die camera op. Klik in een veld en druk de toets, bijvoorbeeld <kbd>F1</kbd> of <kbd>Num 1</kbd>.
-    <kbd>Backspace</kbd> = standaard (<kbd>Shift</kbd>+cijfer). Rood = toets al in gebruik. Geldt voor alle schermen.</p>
+  <p class="small" style="margin:0 0 8px">In <i>Alle camera's</i> kies je hiermee de camera die je bedient; de presettoetsen werken dan op die camera.</p>
   <div id="keyList" class="keylist"></div>
-  <h4 style="margin:14px 0 6px">Vaste toetsen</h4>
-  <div class="map keyfixed">
-    <b>1 – 9</b><span>Preset op de gekozen camera</span>
-    <b>← ↑ → ↓</b><span>Bewegen (vasthouden)</span>
-    <b>Q / A</b><span>Zoom in / uit</span>
-    <b>W / S</b><span>Focus ver / dichtbij</span>
-    <b>H</b><span>Home</span>
-    <b>T</b><span>Volgen (pan) aan/uit</span>
-    <b>F</b><span>Volledig scherm</span>
-    <b>Y</b><span>YouTube-venster tonen / verbergen</span>
-    <b>Spatie</b><span>Stop</span>
-    <b>Esc</b><span>Volledig scherm / opslaan-modus verlaten</span>
-  </div>
-  <div class="actions"><button class="icon" id="keysReset">Standaard terugzetten</button>
+  <div id="keyActions"></div>
+  <div class="actions"><button class="icon" id="keysReset">Alles standaard</button>
     <span style="display:flex;gap:8px"><button class="icon" id="keysCancel">Annuleren</button>
     <button class="primary" id="keysSave">Opslaan</button></span></div>
 </dialog>
@@ -657,7 +642,7 @@ async function loadConfig() {
   if (view === null && cfg.cameras.length > 1) view = ALL;
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
-  render(); renderBackup(); renderPadMap(); renderLoad(); renderCap();
+  render(); renderBackup(); renderPadMap(); renderLoad(); renderCap(); renderKeyHints();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -920,36 +905,51 @@ $("#tileCount").onchange = () => setTileCount($("#tileCount").value);
 $("#tileCount").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); setTileCount($("#tileCount").value); e.target.blur(); } };
 
 /* ================= toetsenbord ================= */
-const keyMove = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
-const pressed = new Set();
+const pressed = new Set();   // vastgehouden richtingen: up/down/left/right
 const anyDialog = () => $$("dialog").some(d => d.open);
 const sendMove = () => {
-  const d = [...pressed].map(x => keyMove[x]);
+  const d = [...pressed];
   const v = d.includes("up") ? "up" : d.includes("down") ? "down" : "";
   const h = d.includes("left") ? "left" : d.includes("right") ? "right" : "";
   cmd("move", { dir: (h && v) ? h + v : (h || v), pan: sp("#spPan"), tilt: sp("#spTilt") });
 };
-/* ---- sneltoetsen om een camera te kiezen (instelbaar per camera, cfg.cameras[i].hotkey) ---- */
+/* ---- sneltoetsen: alles instelbaar (cfg.keymap = {actie: combinatie}, camera's via cfg.cameras[i].hotkey) ---- */
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-// Toetsen die de app al gebruikt (zonder Shift/Alt/Ctrl)
-const USED_KEYS = ["KeyQ", "KeyA", "KeyW", "KeyS", "KeyH", "KeyT", "KeyF", "KeyY", "Space", "Escape",
-  "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => "Digit" + n)];
+// actie → [omschrijving, standaardtoets, groep, vasthouden?]
+const KEY_ACTIONS = {
+  up: ["Omhoog", "ArrowUp", "Bewegen", true], down: ["Omlaag", "ArrowDown", "Bewegen", true],
+  left: ["Links", "ArrowLeft", "Bewegen", true], right: ["Rechts", "ArrowRight", "Bewegen", true],
+  zoom_in: ["Zoom in", "KeyQ", "Zoom en focus", true], zoom_out: ["Zoom uit", "KeyA", "Zoom en focus", true],
+  focus_far: ["Focus ver", "KeyW", "Zoom en focus", true], focus_near: ["Focus dichtbij", "KeyS", "Zoom en focus", true],
+  stop: ["Stop", "Space", "Overig"], home: ["Home", "KeyH", "Overig"], track: ["Volgen (pan) aan/uit", "KeyT", "Overig"],
+  wall: ["Volledig scherm", "KeyF", "Overig"], youtube: ["YouTube-venster tonen/verbergen", "KeyY", "Overig"],
+  ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ["preset_" + n, ["Preset " + n, "Digit" + n, "Presets op de gekozen camera"]])),
+};
+const keyOf = (a) => { const v = (cfg.keymap || {})[a]; return v === "none" ? "" : (v || KEY_ACTIONS[a][1]); };
 function comboOf(e) {
   if (["Shift", "Alt", "Control", "Meta", "AltGraph"].includes(e.key) || !e.code) return null;
   return (e.ctrlKey ? "Ctrl+" : "") + (e.altKey ? "Alt+" : "") + (e.shiftKey ? "Shift+" : "") + e.code;
 }
+// Num 2/4/6/8 zonder NumLock geven code "Numpad2" maar key "ArrowDown": die tellen ook als pijltje
+function combosOf(e) {
+  const c = comboOf(e); if (!c) return [];
+  return /^Numpad\d$/.test(e.code) && /^Arrow/.test(e.key) ? [c, c.replace(e.code, e.key)] : [c];
+}
 function keyLabel(k) {
-  return String(k || "").replace("Alt+", IS_MAC ? "⌥+" : "Alt+")
+  if (!k) return "—";
+  return String(k).replace("Alt+", IS_MAC ? "⌥+" : "Alt+")
     .replace(/Digit(\d)$/, "$1").replace(/Key([A-Z])$/, "$1").replace(/Numpad(\d)$/, "Num $1")
-    .replace(/Arrow(Up|Down|Left|Right)$/, (m, d) => ({ Up: "↑", Down: "↓", Left: "←", Right: "→" })[d]).replace("Space", "Spatie");
+    .replace(/Arrow(Up|Down|Left|Right)$/, (m, d) => ({ Up: "↑", Down: "↓", Left: "←", Right: "→" })[d])
+    .replace("Space", "Spatie").replace("Escape", "Esc");
 }
 function camHotkey(c, i) { return c.hotkey || (i < 9 ? "Shift+Digit" + (i + 1) : ""); }
+// welke toets staat er nu in een veld van het venster (leeg = standaard)
+const hkValue = (inp) => inp.dataset.key === "none" ? "" : (inp.dataset.key || inp.dataset.def || "");
 function hotkeyProblem(k, input) {
-  if (USED_KEYS.includes(k)) return "Deze toets gebruikt de app al (presets, bewegen, zoom, …).";
-  const rows = $$("#keyList .hk");
-  for (let j = 0; j < rows.length; j++) {
-    if (rows[j] === input) continue;
-    if ((rows[j].dataset.key || (j < 9 ? "Shift+Digit" + (j + 1) : "")) === k) return "Deze toets is al gekozen voor een andere camera.";
+  if (!k) return "";
+  if (k === "Escape") return "Esc is vast: volledig scherm en opslaan-modus verlaten.";
+  for (const other of $$("#dlgKeys .hk")) {
+    if (other !== input && hkValue(other) === k) return "Deze toets is al gekozen voor: " + other.dataset.label;
   }
   return "";
 }
@@ -957,29 +957,38 @@ function hotkeyInput(inp) {
   const ph = inp.placeholder || "standaard";
   const show = () => {
     const k = inp.dataset.key;
-    inp.value = k ? keyLabel(k) : "";
-    const p = k ? hotkeyProblem(k, inp) : "";
-    inp.classList.toggle("warn", !!p); inp.title = p || "Klik en druk een toets. Backspace = standaard.";
+    inp.value = k === "none" ? "— (uit)" : k ? keyLabel(k) : "";
+    const p = hotkeyProblem(hkValue(inp), inp);
+    inp.classList.toggle("warn", !!p); inp.title = p || "Klik en druk een toets. Backspace = standaard, Delete = uit.";
   };
+  inp._show = show;
   inp.addEventListener("focus", () => { inp.value = ""; inp.placeholder = "druk een toets…"; });
-  inp.addEventListener("blur", () => { inp.placeholder = ph; show(); });
+  inp.addEventListener("blur", () => { inp.placeholder = ph; $$("#dlgKeys .hk").forEach(x => x._show?.()); });
   inp.addEventListener("keydown", (e) => {
     if (e.key === "Tab") return;
     e.preventDefault(); e.stopPropagation();
     if (e.key === "Escape") return inp.blur();
-    if (e.key === "Backspace" || e.key === "Delete") { inp.dataset.key = ""; return inp.blur(); }
+    if (e.key === "Backspace") { inp.dataset.key = ""; return inp.blur(); }
+    if (e.key === "Delete") { inp.dataset.key = "none"; return inp.blur(); }
     const k = comboOf(e); if (!k) return;
-    inp.dataset.key = k; inp.blur();
+    inp.dataset.key = k === inp.dataset.def ? "" : k; inp.blur();
     const p = hotkeyProblem(k, inp); if (p) toast(p);
   });
   show();
 }
-
+// toetsen die nu worden vastgehouden (code → actie), zodat loslaten werkt ook als Shift e.d. al los is
+const holding = new Map();
+function keyAction(e) {
+  const combos = combosOf(e); if (!combos.length) return null;
+  for (const [a] of Object.entries(KEY_ACTIONS)) { const k = keyOf(a); if (k && combos.includes(k)) return a; }
+  return null;
+}
 document.addEventListener("keydown", (e) => {
   if (anyDialog() || e.target.matches("input[type=text],input[type=number],input[type=password]")) return;
+  if (e.metaKey) return;   // Cmd-combinaties (kopiëren, zoeken, …) blijven van de browser
+  const combos = combosOf(e);
   // camera kiezen met de ingestelde sneltoets
-  const combo = comboOf(e);
-  const ci = combo ? cfg.cameras.findIndex((c, i) => camHotkey(c, i) === combo) : -1;
+  const ci = combos.length ? cfg.cameras.findIndex((c, i) => combos.includes(camHotkey(c, i))) : -1;
   if (ci >= 0) {
     e.preventDefault();
     if (e.repeat) return;
@@ -987,33 +996,40 @@ document.addEventListener("keydown", (e) => {
     if (view === ALL) selectCam(c, "key"); else setView(c.id);
     return;
   }
-  const k = e.key.toLowerCase();
-  if (e.repeat) { if (keyMove[e.key] || "qasw".includes(k)) e.preventDefault(); return; }
-  if (keyMove[e.key]) { e.preventDefault(); pressed.add(e.key); moved(); sendMove(); }
-  else if (k === "q") { moved(); cmd("zoom", { dir: "in", speed: sp("#spZoom") }); }
-  else if (k === "a") { moved(); cmd("zoom", { dir: "out", speed: sp("#spZoom") }); }
-  else if (k === "w") cmd("focus", { dir: "far", speed: sp("#spFocus") });
-  else if (k === "s") cmd("focus", { dir: "near", speed: sp("#spFocus") });
-  else if (k === "h") { moved(); cmd("home"); }
-  else if (k === "t" && ctrlCam) toggleTrack(ctrlCam);
-  else if (k === "f" && !e.metaKey && !e.ctrlKey) setWall(!document.body.classList.contains("wall"));
-  else if (k === "y" && !e.metaKey && !e.ctrlKey) ytToggle();
-  else if (e.key === " ") { e.preventDefault(); cmd("stop"); cmd("zoom", { dir: "stop" }); }
-  else if (e.key === "Escape" && storeMode) setStore(false);
-  else if (e.key === "Escape" && document.body.classList.contains("wall")) setWall(false);
-  else if (/^Digit[1-9]$/.test(e.code)) {
-    const n = +e.code.slice(5);
-    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;   // camera-sneltoetsen zijn hierboven al afgehandeld
-    if (ctrlCam) presetClick(ctrlCam, n);
+  if (e.key === "Escape") {
+    if (storeMode) setStore(false);
+    else if (document.body.classList.contains("wall")) setWall(false);
+    return;
   }
+  const a = keyAction(e); if (!a) return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (KEY_ACTIONS[a][3]) holding.set(e.code, a);
+  if (["up", "down", "left", "right"].includes(a)) { pressed.add(a); moved(); sendMove(); }
+  else if (a === "zoom_in") { moved(); cmd("zoom", { dir: "in", speed: sp("#spZoom") }); }
+  else if (a === "zoom_out") { moved(); cmd("zoom", { dir: "out", speed: sp("#spZoom") }); }
+  else if (a === "focus_far") cmd("focus", { dir: "far", speed: sp("#spFocus") });
+  else if (a === "focus_near") cmd("focus", { dir: "near", speed: sp("#spFocus") });
+  else if (a === "home") { moved(); cmd("home"); }
+  else if (a === "track") { if (ctrlCam) toggleTrack(ctrlCam); }
+  else if (a === "wall") setWall(!document.body.classList.contains("wall"));
+  else if (a === "youtube") ytToggle();
+  else if (a === "stop") { cmd("stop"); cmd("zoom", { dir: "stop" }); }
+  else if (a.startsWith("preset_")) { if (ctrlCam) presetClick(ctrlCam, +a.slice(7)); }
 });
 document.addEventListener("keyup", (e) => {
-  const k = e.key.toLowerCase();
-  if (keyMove[e.key]) { if (pressed.delete(e.key)) pressed.size ? sendMove() : cmd("stop"); }   // alleen als dit pijltje echt bewoog
-  else if ("qa".includes(k) && k) cmd("zoom", { dir: "stop" });
-  else if ("ws".includes(k) && k) cmd("focus", { dir: "stop" });
+  const a = holding.get(e.code); if (!a) return;
+  holding.delete(e.code);
+  if (["up", "down", "left", "right"].includes(a)) { if (pressed.delete(a)) pressed.size ? sendMove() : cmd("stop"); }   // alleen als dit pijltje echt bewoog
+  else if (a === "zoom_in" || a === "zoom_out") cmd("zoom", { dir: "stop" });
+  else if (a === "focus_far" || a === "focus_near") cmd("focus", { dir: "stop" });
 });
-window.addEventListener("blur", () => { if (pressed.size) { pressed.clear(); cmd("stop"); } });
+window.addEventListener("blur", () => {
+  if (pressed.size) { pressed.clear(); cmd("stop"); }
+  if ([...holding.values()].some(a => a.startsWith("zoom"))) cmd("zoom", { dir: "stop" });
+  if ([...holding.values()].some(a => a.startsWith("focus"))) cmd("focus", { dir: "stop" });
+  holding.clear();
+});
 
 /* ================= bediening inklappen / volledig scherm ================= */
 function setFold(on) {
@@ -1071,19 +1087,41 @@ function camRow(c) {
 // venster Sneltoetsen
 function renderKeys() {
   $("#keyList").innerHTML = cfg.cameras.map((c, i) => `<b>${esc(c.name)}</b>
-    <input type="text" readonly class="hk" data-id="${esc(c.id)}" data-key="${esc(c.hotkey || "")}"
-      placeholder="${esc(i < 9 ? "standaard: " + keyLabel("Shift+Digit" + (i + 1)) : "geen")}">`).join("")
+    <input type="text" readonly class="hk" data-cam="${esc(c.id)}" data-label="${esc(c.name)}" data-key="${esc(c.hotkey || "")}"
+      data-def="${i < 9 ? "Shift+Digit" + (i + 1) : ""}" placeholder="${esc(i < 9 ? "standaard: " + keyLabel("Shift+Digit" + (i + 1)) : "geen")}">`).join("")
     || '<span class="small">Nog geen camera\'s.</span>';
-  $$("#keyList .hk").forEach(hotkeyInput);
+  const groups = {};
+  Object.entries(KEY_ACTIONS).forEach(([a, [label, def, group]]) => (groups[group] ||= []).push([a, label, def]));
+  $("#keyActions").innerHTML = Object.entries(groups).map(([g, rows]) => `<h4 style="margin:14px 0 6px">${esc(g)}</h4>
+    <div class="keylist">${rows.map(([a, label, def]) => `<span>${esc(label)}</span>
+      <input type="text" readonly class="hk" data-act="${a}" data-label="${esc(label)}" data-def="${def}"
+        data-key="${esc((cfg.keymap || {})[a] || "")}" placeholder="standaard: ${esc(keyLabel(def))}">`).join("")}</div>`).join("");
+  $$("#dlgKeys .hk").forEach(hotkeyInput);
 }
 $("#btnKeys").onclick = () => { renderKeys(); $("#dlgKeys").showModal(); };
 $("#keysCancel").onclick = () => $("#dlgKeys").close();
-$("#keysReset").onclick = () => { $$("#keyList .hk").forEach(x => { x.dataset.key = ""; x.dispatchEvent(new Event("blur")); }); };
+$("#keysReset").onclick = () => { $$("#dlgKeys .hk").forEach(x => x.dataset.key = ""); $$("#dlgKeys .hk").forEach(x => x._show()); };
 $("#keysSave").onclick = async () => {
-  const keys = Object.fromEntries($$("#keyList .hk").map(x => [x.dataset.id, x.dataset.key]));
-  cfg.cameras.forEach(c => { if (keys[c.id]) c.hotkey = keys[c.id]; else delete c.hotkey; });
-  $("#dlgKeys").close(); await saveConfig(); render(); toast("Sneltoetsen opgeslagen", true);
+  const cams = Object.fromEntries($$("#keyList .hk").map(x => [x.dataset.cam, x.dataset.key]));
+  cfg.cameras.forEach(c => { if (cams[c.id]) c.hotkey = cams[c.id]; else delete c.hotkey; });
+  const km = {};
+  $$("#keyActions .hk").forEach(x => { if (x.dataset.key) km[x.dataset.act] = x.dataset.key; });
+  if (Object.keys(km).length) cfg.keymap = km; else delete cfg.keymap;
+  $("#dlgKeys").close(); await saveConfig(); render(); renderKeyHints(); toast("Sneltoetsen opgeslagen", true);
 };
+// toetsen in de uitleg onder de zijbalk, het menu en het YouTube-menu volgen de instellingen
+function renderKeyHints() {
+  const k = (a) => `<kbd>${esc(keyLabel(keyOf(a)))}</kbd>`;
+  const p1 = keyOf("preset_1"), p9 = keyOf("preset_9");
+  const presets = p1 === "Digit1" && p9 === "Digit9" ? "<kbd>1</kbd>–<kbd>9</kbd>" : `${k("preset_1")}…${k("preset_9")}`;
+  $("#keyHints").innerHTML = `${presets} preset · ${cfg.cameras.slice(0, 3).map((c, i) => `<kbd>${esc(keyLabel(camHotkey(c, i)))}</kbd>`).join(" ")} camera ·
+    ${k("left")}${k("up")}${k("right")}${k("down")} bewegen · ${k("zoom_in")}/${k("zoom_out")} zoom · ${k("focus_far")}/${k("focus_near")} focus ·
+    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("stop")} stop ·
+    <a href="#" id="keyHintsEdit">aanpassen</a> · rechtsklik of lang drukken op een preset = bewerken`;
+  $("#keyHintsEdit").onclick = (e) => { e.preventDefault(); $("#btnKeys").click(); };
+  const wk = $("#btnWall kbd"); if (wk) wk.textContent = keyLabel(keyOf("wall"));
+  $("#btnWall").title = `Alle camera's op het volledige scherm (toets ${keyLabel(keyOf("wall"))})`;
+}
 
 $("#btnSettings").onclick = () => {
   $("#camList").innerHTML = ""; cfg.cameras.forEach(c => { const r = camRow(c); $("#camList").append(r, r._extra); });
@@ -1594,7 +1632,7 @@ function ytRender() {
   $("#ytLbl").textContent = yt.live ? "LIVE" : yt.upcoming ? "Gepland" : "YouTube";
   btn.title = (!yt.channel ? "YouTube: nog geen kanaal ingesteld"
     : yt.live ? "Live: " + (yt.title || "") : yt.upcoming ? "Gepland: " + (yt.title || "") : "Kanaal is niet live")
-    + (yt.error ? "\n" + yt.error : "") + "\nKlik = keuzemenu · toets Y = venster tonen/verbergen";
+    + (yt.error ? "\n" + yt.error : "") + `\nKlik = keuzemenu · toets ${keyLabel(keyOf("youtube"))} = venster tonen/verbergen`;
   if (!$("#ytMenu").hidden) ytMenuRender();
 
   ytWin.classList.toggle("live", !!yt.live);
@@ -1661,7 +1699,7 @@ function ytMenuRender() {
     : yt.error ? esc(yt.error) : "Niet live" + (yt.checked ? " · gecontroleerd " + esc(yt.checked) : "");
   $("#ytMenu").innerHTML = `
     <div class="ystat" title="${esc(yt.channel || "")}">${stat}</div>
-    <button class="mi" data-y="toggle" role="menuitem">${ytWin.hidden ? "📺 Venster tonen" : "📺 Venster verbergen"} <kbd>Y</kbd></button>
+    <button class="mi" data-y="toggle" role="menuitem">${ytWin.hidden ? "📺 Venster tonen" : "📺 Venster verbergen"} <kbd>${esc(keyLabel(keyOf("youtube")))}</kbd></button>
     <button class="mi" data-y="auto" role="menuitem" title="Zelf een vrije plek naast of onder de tegels zoeken">⌖ Automatisch plaatsen ${chk(g.auto)}</button>
     <div class="ysize"><span class="lbl">↔ Grootte</span>${[["260", "Klein"], ["360", "Middel"], ["520", "Groot"]]
       .map(([w, t]) => `<button data-w="${w}" class="${Math.abs(g.w - w) < 2 ? "on" : ""}">${t}</button>`).join("")}</div>

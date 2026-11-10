@@ -139,7 +139,8 @@ en de stream verschijnt in een **klein venster** (standaard automatisch, zonder 
 Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
 
 ## Sneltoetsen
-Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen (instelbaar per camera; in Alle camera's blijf je in die weergave) · H = home · T = volgen · F = volledig scherm · Y = YouTube-venster · Spatie = stop
+Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · Y = YouTube-venster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
+**Alle toetsen zijn aan te passen** via 🎮 Menu → ⌨ Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
 
 ## Tip
 Geef de pc met deze app een vast IP-adres (DHCP-reservering), dan blijft het tabletadres hetzelfde.
