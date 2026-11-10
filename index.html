@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>PTZ Control</title>
 <link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Inter (huisstijl) niet-blokkerend laden: zonder internet valt hij terug op system-ui en tekent de pagina meteen -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <script>
   // thema vóór het tekenen zetten (geen witte/zwarte flits)
   (function () {
@@ -15,33 +18,44 @@
 </script>
 <style>
   /* Thema: donker (standaard) en licht. Keuze per apparaat via het menu (localStorage.theme: auto/dark/light). */
+  /* Huisstijl (gebaseerd op Voordienst): rustig, licht, één accentkleur (indigo), donkere kopbalk.
+     --accent = hoofdkleur (selectie, actief, primaire knop); --live = LIVE/fout (rood); --ok = groen;
+     --warn = let op (amber); --busy = onderweg/oefenstand (oranje). Huisstijl aanpassen = alleen deze variabelen. */
   :root {
-    --tourdim: rgba(0,0,0,.62);
+    --tourdim: rgba(5,6,12,.6);
     color-scheme: dark;
-    --bg: #111317; --panel: #1a1d23; --panel2: #22262e; --line: #2e333d;
-    --text: #e8eaed; --muted: #8b93a1; --accent: #f2a93b; --live: #e5484d; --ok: #3fb950;
-    --img: #0b0c0f; --imgtxt: #3a404c; --onaccent: #1a1200;
-    --okbg: #12301c; --oktxt: #7ee2a0; --warnbg: #3a2a10; --warntxt: #f5d49a; --errbg: #2b1416; --errline: #5a2a2c;
-    --shadow: rgba(0,0,0,.45); --backdrop: rgba(0,0,0,.65);
-    --editbg: rgba(17,19,23,.72); --editfg: #e8eaed; --editline: rgba(255,255,255,.14);
-    --mixoff: #2a2e36; --mixgreen: #2f9e4f; --mixred: #e5484d; --mixtxt: #ffffff; --logbg: #0d0f12;
-    --pc-rood: #e5484d; --pc-oranje: #f08c2e; --pc-geel: #e8c33c; --pc-groen: #3fb950; --pc-blauw: #4c8dff; --pc-paars: #a371f7;
+    --bg: #0f1220; --panel: #161a2b; --panel2: #1d2236; --line: #2a3048; --hover: #262c44;
+    --text: #e6e9f2; --muted: #9098ad; --accent: #6366f1; --accentdark: #4f46e5; --ring: rgba(129,140,248,.25);
+    --live: #ef4444; --ok: #22c55e; --warn: #f59e0b; --busy: #f97316; --onbusy: #ffffff;
+    --img: #0b0d18; --imgtxt: #343b55; --onaccent: #ffffff;
+    --okbg: #0f2e1b; --oktxt: #86efac; --okline: #166534; --warnbg: #3a2a0c; --warntxt: #fcd34d; --errbg: #3a1416; --errline: #6b2a2c;
+    --shadow: rgba(0,0,0,.45); --backdrop: rgba(5,6,12,.6);
+    --cardshadow: 0 1px 3px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
+    --modalshadow: 0 24px 64px rgba(0,0,0,.5);
+    --hdr: #161a2b; --hdrtxt: #c7ccdb; --hdrbtn: rgba(255,255,255,.08); --hdrhover: rgba(255,255,255,.16); --hdrline: rgba(255,255,255,.07);
+    --editbg: rgba(22,26,43,.85); --editfg: #e6e9f2; --editline: #2a3048;
+    --mixoff: #2a3048; --mixgreen: #22c55e; --mixred: #ef4444; --mixtxt: #ffffff; --logbg: #0f1220;
+    --pc-rood: #ef4444; --pc-oranje: #f97316; --pc-geel: #eab308; --pc-groen: #22c55e; --pc-blauw: #6366f1; --pc-paars: #a855f7;
   }
   :root[data-theme=light] {
-    --tourdim: rgba(20,24,32,.45);
+    --tourdim: rgba(15,18,33,.45);
     color-scheme: light;
-    --bg: #f3f4f6; --panel: #ffffff; --panel2: #eceef2; --line: #d3d8e0;
-    --text: #16181d; --muted: #5d6573; --accent: #e09415; --live: #d6343a; --ok: #1f8f3d;
-    --img: #dde1e7; --imgtxt: #a3abb8; --onaccent: #1a1200;
-    --okbg: #dcf3e2; --oktxt: #17692f; --warnbg: #fff1d6; --warntxt: #7a4a00; --errbg: #fde6e6; --errline: #efb4b6;
-    --shadow: rgba(20,24,32,.18); --backdrop: rgba(20,24,32,.45);
-    --editbg: rgba(255,255,255,.88); --editfg: #2b303a; --editline: rgba(20,24,32,.14);
-    --mixoff: #c9ced6; --mixgreen: #2a9d4b; --mixred: #d6343a; --mixtxt: #ffffff; --logbg: #f7f8fa;
-    --pc-rood: #d6343a; --pc-oranje: #e07b14; --pc-geel: #c9a10e; --pc-groen: #1f8f3d; --pc-blauw: #2f6fe0; --pc-paars: #8250df;
+    --bg: #f4f6fb; --panel: #ffffff; --panel2: #f7f8fc; --line: #e3e7ef; --hover: #f0f2f8;
+    --text: #1c2333; --muted: #6b7488; --accent: #4f46e5; --accentdark: #4338ca; --ring: rgba(79,70,229,.12);
+    --live: #dc2626; --ok: #16a34a; --warn: #d97706; --busy: #ea580c; --onbusy: #ffffff;
+    --img: #e8ebf2; --imgtxt: #b4bccb; --onaccent: #ffffff;
+    --okbg: #dcfce7; --oktxt: #166534; --okline: #bbf7d0; --warnbg: #fef3c7; --warntxt: #92400e; --errbg: #fee2e2; --errline: #f3c4c4;
+    --shadow: rgba(20,25,45,.12); --backdrop: rgba(15,18,33,.45);
+    --cardshadow: 0 1px 3px rgba(20,25,45,.08), 0 8px 24px rgba(20,25,45,.05);
+    --modalshadow: 0 24px 64px rgba(15,18,33,.3);
+    --hdr: #161a2b; --hdrtxt: #c7ccdb; --hdrbtn: rgba(255,255,255,.08); --hdrhover: rgba(255,255,255,.16); --hdrline: rgba(255,255,255,.07);
+    --editbg: rgba(255,255,255,.9); --editfg: #1c2333; --editline: #e3e7ef;
+    --mixoff: #e3e7ef; --mixgreen: #16a34a; --mixred: #dc2626; --mixtxt: #ffffff; --logbg: #f7f8fc;
+    --pc-rood: #dc2626; --pc-oranje: #ea580c; --pc-geel: #d97706; --pc-groen: #16a34a; --pc-blauw: #4f46e5; --pc-paars: #9333ea;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; user-select: none; -webkit-user-select: none; }
+    font: 14px/1.4 "Inter", "Segoe UI", system-ui, -apple-system, sans-serif; user-select: none; -webkit-user-select: none; }
   button { font: inherit; color: inherit; }
 
   header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line);
@@ -114,8 +128,8 @@
   .trk { margin-left: 6px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2);
     font-size: 12px; cursor: pointer; white-space: nowrap; }
   .trk.on { background: var(--okbg); border-color: var(--ok); color: var(--oktxt); }
-  .trk.wait { border-color: var(--accent); color: var(--accent); }
-  .trk.warn { background: var(--warnbg); border-color: var(--accent); color: var(--accent); }
+  .trk.wait { border-color: var(--warn); color: var(--warn); }
+  .trk.warn { background: var(--warnbg); border-color: var(--warn); color: var(--warntxt); }
   .tile .tb { position: absolute; bottom: 38px; right: 6px; background: var(--okbg); color: var(--oktxt);
     font-size: 11px; padding: 1px 6px; border-radius: 4px; }
   .camrow2 { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
@@ -166,9 +180,9 @@
   #dlgMap .padset { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
   #padMap .hit { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
   /* onderweg naar een preset, status per camera, kleurlabels, verslepen, sneltoets, ongedaan maken */
-  .tile.moving { border-color: var(--accent); }
-  .tile.moving::after { content: "ONDERWEG…"; position: absolute; top: 6px; left: 6px; background: var(--accent); color: var(--onaccent);
-    font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; animation: mvpulse .7s ease-in-out infinite alternate; }
+  .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }
+  .tile.moving::after { content: "ONDERWEG…"; position: absolute; top: 6px; left: 6px; background: var(--busy); color: var(--onbusy);
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; animation: mvpulse .7s ease-in-out infinite alternate; }
   @keyframes mvpulse { from { opacity: 1; } to { opacity: .45; } }
   .cdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex-shrink: 0; align-self: center; }
   .cdot.ok { background: var(--ok); } .cdot.err { background: var(--live); box-shadow: 0 0 6px var(--live); }
@@ -196,7 +210,7 @@
   body.viewonly #btnStore, body.viewonly #btnLoad, body.viewonly .tile .edit, body.viewonly #ctrlCard, body.viewonly #padCard,
   body.viewonly .colhead .trk, body.viewonly #btnOrderReset, body.viewonly .tilectl, body.viewonly #btnOsd { display: none !important; }
   body.viewonly .tile { cursor: default; }
-  #viewBanner { display: none; background: var(--warnbg); color: var(--warntxt); border-bottom: 1px solid var(--accent); padding: 6px 16px;
+  #viewBanner { display: none; background: var(--warnbg); color: var(--warntxt); border-bottom: 1px solid var(--warn); padding: 6px 16px;
     font-size: 13px; text-align: center; }
   body.viewonly #viewBanner { display: block; }
   /* 🧑 foutbalk (alle schermen, ook volledig scherm) en oefenbalk */
@@ -210,9 +224,9 @@
     padding: 3px 10px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
   #alertBar.ok button { display: none; }
   #alertBar { top: calc(var(--headh, 0px) + var(--practh, 0px)); }
-  #practiceBar { background: var(--accent); color: #1a1205; }
+  #practiceBar { background: var(--busy); color: var(--onbusy); }
   #practiceBar button { border-color: rgba(0,0,0,.35); }
-  body.practice { box-shadow: inset 0 0 0 4px var(--accent); }
+  body.practice { box-shadow: inset 0 0 0 4px var(--busy); }
   @keyframes alertPulse { 50% { filter: brightness(1.25); } }
   #alertBar.new { animation: alertPulse .8s ease-in-out 3; }
   #pinInput { font-size: 28px; letter-spacing: 10px; text-align: center; width: 100%; padding: 10px; border-radius: 8px;
@@ -311,14 +325,14 @@
     white-space: nowrap; flex-shrink: 0; align-self: center; }
   .tab .onair { margin-left: 6px; }
   /* 🖥 OSD-menu van de camera */
-  .colhead .osdtag, .tab .osdtag { background: var(--accent); color: #111; font-size: 11px; font-weight: 700; border-radius: 4px;
+  .colhead .osdtag, .tab .osdtag { background: var(--warn); color: var(--onbusy); font-size: 11px; font-weight: 700; border-radius: 4px;
     padding: 1px 6px; white-space: nowrap; flex-shrink: 0; align-self: center; }
   .tab .osdtag { margin-left: 6px; }
   #dlgOsd { width: min(520px, 94vw); }
   .osdtop { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .osdtop select { width: auto !important; min-width: 160px; }
   .osdst { font-size: 13px; font-weight: 600; color: var(--muted); }
-  .osdst.on { color: var(--accent); }
+  .osdst.on { color: var(--warn); }
   .osdwrap { display: flex; gap: 18px; align-items: center; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
   .osdpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 6px; }
   .osdpad button { font-size: 22px; padding: 0; border-radius: 10px; }
@@ -334,15 +348,15 @@
   .bcams td, .bcams th { padding: 6px 8px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
   .bcams th { color: var(--muted); font-weight: 500; font-size: 12px; }
   .bstat { font-size: 12px; }
-  .bstat.ok { color: var(--oktxt); } .bstat.warn { color: var(--accent); } .bstat.err { color: var(--live); } .bstat.busy { color: var(--accent); }
-  .warnbox { background: var(--warnbg); border: 1px solid var(--accent); color: var(--warntxt); border-radius: 8px; padding: 8px 10px;
+  .bstat.ok { color: var(--oktxt); } .bstat.warn { color: var(--warn); } .bstat.err { color: var(--live); } .bstat.busy { color: var(--busy); }
+  .warnbox { background: var(--warnbg); border: 1px solid var(--warn); color: var(--warntxt); border-radius: 8px; padding: 8px 10px;
     font-size: 13px; margin-top: 8px; }
   .tilectl { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
   .tilectl input[type=number] { width: 52px; background: var(--panel2); border: 1px solid var(--line); color: var(--text);
     border-radius: 6px; padding: 5px 4px; font: inherit; text-align: center; -moz-appearance: textfield; }
   .tilectl input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   .tbtn { width: 30px; height: 30px; padding: 0; font-size: 16px; line-height: 1; color: var(--text); }
-  .hidden-hint { font-size: 12px; color: var(--accent); margin-top: 6px; cursor: pointer; }
+  .hidden-hint { font-size: 12px; color: var(--warn); margin-top: 6px; cursor: pointer; }
   .camsec { margin-bottom: 18px; }
   .camsec h3 { font-size: 14px; margin: 0 0 8px; display: flex; gap: 8px; align-items: center; }
   .camsec h3 button { font-size: 12px; }
@@ -381,7 +395,7 @@
     touch-action: none; display: grid; place-items: center; font-size: 18px; }
   .btn:active, .btn.held { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
   .btn.sm { font-size: 13px; height: 40px; }
-  .btn.on { background: var(--ok); border-color: var(--ok); color: #04150a; }
+  .btn.on { background: var(--okbg); border-color: var(--okline); color: var(--oktxt); }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; }
   .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 5px; }
   details { margin-top: 10px; }
@@ -399,7 +413,8 @@
     background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 7px;
     font: inherit; font-size: 14px; width: 100%; user-select: text; -webkit-user-select: text; }
   .actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  .primary { background: var(--accent); color: var(--onaccent); border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+  .primary { background: var(--accent); color: var(--onaccent); border: 0; border-radius: 9px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+  .primary:hover { background: var(--accentdark); }
   .danger { color: var(--live); border-color: var(--errline); }
   #dlgPreset { width: min(460px, 94vw); }
   #dlgPreset .img { aspect-ratio: 16/9; background: var(--img) center/cover no-repeat; border-radius: 8px; margin-bottom: 12px;
@@ -422,7 +437,7 @@
   #btnYt .ytdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
   #btnYt.live { border-color: var(--live); color: var(--text); }
   #btnYt.live .ytdot { background: var(--live); box-shadow: 0 0 6px var(--live); animation: padpulse 1s ease-in-out infinite alternate; }
-  #btnYt.upcoming .ytdot { background: var(--accent); }
+  #btnYt.upcoming .ytdot { background: var(--warn); }
   #btnYt.shown { background: var(--panel2); }
   #btnYt .caret, #btnWs .caret { font-size: 11px; opacity: .7; }
   #btnWs { display: flex; gap: 6px; align-items: center; font-size: 13px; max-width: 220px; }
@@ -453,7 +468,7 @@
   .ythead .ytbadge { background: var(--muted); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
     letter-spacing: .05em; flex: none; }
   #ytWin.live .ytbadge { background: var(--live); }
-  #ytWin.upcoming .ytbadge { background: var(--accent); color: var(--onaccent); }
+  #ytWin.upcoming .ytbadge { background: var(--warn); color: var(--onbusy); }
   .ythead button { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 5px;
     font-size: 13px; line-height: 1.2; flex: none; }
   .ythead button:hover { background: var(--panel2); color: var(--text); }
@@ -515,6 +530,52 @@
   #tour .tcount { font-size: 12px; color: var(--muted); flex: 1; white-space: nowrap; }
   #tour .tbar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 10px; overflow: hidden; }
   #tour .tbar i { display: block; height: 100%; background: var(--accent); transition: width .25s; }
+
+  /* ---- huisstijl (Voordienst): vormen, schaduw, kopbalk. Alleen variabelen, geen losse kleuren ---- */
+  header { background: var(--hdr); color: var(--onaccent); border-bottom: 1px solid var(--hdrline); }
+  header h1 { font-size: 17px; font-weight: 700; letter-spacing: .3px; color: var(--onaccent); }
+  header .icon { background: var(--hdrbtn); border: 0; color: var(--hdrtxt); border-radius: 9px; }
+  header .icon:hover { background: var(--hdrhover); color: var(--onaccent); }
+  header .tab { background: transparent; border: 0; color: var(--hdrtxt); border-radius: 9px; font-weight: 500; }
+  header .tab:hover { background: var(--hdrbtn); color: var(--onaccent); }
+  header .tab.active { background: var(--accent); color: var(--onaccent); }
+  header .tab.all { border: 1px dashed var(--hdrhover); }
+  header .tab.all.active { border-color: var(--accent); }
+  header #btnLock.locked { box-shadow: inset 0 0 0 1px var(--warn); color: var(--warn); }
+  header #btnYt.live { color: var(--onaccent); box-shadow: inset 0 0 0 1px var(--live); }
+  header #btnYt.shown { background: var(--hdrhover); }
+  header #btnSongBar.on { color: var(--onaccent); box-shadow: inset 0 0 0 1px var(--ok); }
+  .card { box-shadow: var(--cardshadow); padding: 18px; }
+  .card h2 { font-size: 13px; letter-spacing: .5px; }
+  .col { background: var(--panel); border: 1px solid var(--line); box-shadow: var(--cardshadow); }
+  .col.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring), var(--cardshadow); }
+  .colhead .ctl { font-weight: 600; }
+  .tile { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--cardshadow); }
+  .tile:hover { border-color: var(--accent); }
+  .tile .num { background: var(--ring); color: var(--accent); border-radius: 999px; padding: 1px 8px; }
+  .tile.live { border-color: var(--live); box-shadow: 0 0 0 2px var(--live); }
+  .tile.live::after { border-radius: 999px; padding: 2px 8px; }
+  .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }   /* onderweg gaat voor LIVE */
+  .chip, .trk, .icon { border-radius: 9px; }
+  .chip { background: var(--panel); font-weight: 500; }
+  .chip:hover, .icon:hover, .trk:hover { background: var(--hover); }
+  .chip.on, .chip.on:hover { background: var(--live); }
+  .btn { background: var(--panel); font-weight: 500; transition: background .12s, border-color .12s; }
+  .btn:hover { background: var(--hover); }
+  .btn:active, .btn.held { background: var(--accent); }
+  .btn.trackbtn.on, .trk.on, .padbadge { border-color: var(--okline); }
+  dialog input[type=text], dialog input[type=password], dialog input[type=number], dialog select,
+  #presetSearch, .tilectl input[type=number], .padprofrow select, .padprofcard select, #dlgAccess input[type=password], #pinInput {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 7px 9px; }
+  #presetSearch, .tilectl input[type=number] { padding: 6px 10px; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--ring); }
+  input[type=checkbox] { accent-color: var(--accent); }
+  .menu { border-radius: 12px; box-shadow: 0 12px 32px var(--shadow); }
+  .mi { border-radius: 9px; }
+  .mi:hover, .mi:focus-visible { background: var(--hover); }
+  dialog { border: 0; border-radius: 16px; padding: 22px; box-shadow: var(--modalshadow); }
+  dialog h3 { font-size: 19px; }
+  #toast, #undoNote { border-radius: 9px; box-shadow: var(--cardshadow); }
 </style>
 </head>
 <body>
@@ -1993,7 +2054,7 @@ function renderBackup() {
         <td><b>${esc(c.name)}</b><br><span class="small">${esc(c.host)}</span></td>
         <td class="small">${n ? `${n} presetposities` : "geen presetposities"} · ${img ? "beeldinstellingen" : "geen beeld"}${when ? `<br>gelezen ${fmtDate(when)}` : ""}</td>
         <td><span class="bstat ${cls}">${st ? esc(st.status + (st.msg ? " · " + st.msg : "")) : ""}</span>
-          ${st?.errors?.length ? `<div class="small" style="color:var(--accent)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
+          ${st?.errors?.length ? `<div class="small" style="color:var(--warn)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
     }).join("");
   $("#bkTable").dataset.init = "1";
   $("#bkCapture").disabled = $("#bkApply").disabled = job.running;
@@ -2083,7 +2144,7 @@ function renderLoad() {
     return `<tr><td><input type="checkbox" data-cam="${esc(c.id)}" ${first || prev.has(c.id) ? "checked" : ""}></td>
       <td><b>${esc(c.name)}</b><br><span class="small">${esc(c.host)}</span></td>
       <td><span class="bstat ${cls}">${st ? esc(st.status + (st.msg ? " · " + st.msg : "")) : ""}</span>
-        ${st?.errors?.length ? `<div class="small" style="color:var(--accent)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
+        ${st?.errors?.length ? `<div class="small" style="color:var(--warn)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
   }).join("");
   $("#ldTable").dataset.init = "1";
   $("#ldStart").disabled = job.running;
@@ -2117,11 +2178,11 @@ function renderCap() {
       `<span title="${esc(t.note || "")}" style="color:${t.ok ? "var(--oktxt)" : "var(--live)"}">${t.n}${t.ok ? "✓" : "✗"}</span>`).join(" ")}</div>` : "";
     const summary = cap ? `<b>${cap.max ? `max. preset ${cap.max}` : "geen werkende preset"}</b> · ${cap.total} bruikbaar` +
       (cap._tested ? ` <span class="small">(${fmtDate(cap._tested)})</span>` : "") +
-      (cap.gaps?.length ? `<div class="small" style="color:var(--accent)">Let op: lager nummer werkte niet: ${cap.gaps.join(", ")}</div>` : "") : "";
+      (cap.gaps?.length ? `<div class="small" style="color:var(--warn)">Let op: lager nummer werkte niet: ${cap.gaps.join(", ")}</div>` : "") : "";
     return `<tr><td><input type="checkbox" data-cam="${esc(c.id)}" ${first || prev.has(c.id) ? "checked" : ""}></td>
       <td><b>${esc(c.name)}</b><br><span class="small">${esc(c.host)}</span></td>
       <td>${st && st.status !== "klaar" && st.status !== "klaar met meldingen" ? `<span class="bstat ${cls}">${esc(st.status + (st.msg ? " · " + st.msg : ""))}</span>` : summary || '<span class="small">nog niet getest</span>'}
-        ${detail}${st?.errors?.length ? `<div class="small" style="color:var(--accent)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
+        ${detail}${st?.errors?.length ? `<div class="small" style="color:var(--warn)">${st.errors.map(esc).join("<br>")}</div>` : ""}</td></tr>`;
   }).join("");
   $("#capTable").dataset.init = "1";
   $("#capStart").disabled = job.running;
