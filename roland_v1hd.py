@@ -134,18 +134,22 @@ class V1HDState:
             self.leds = leds
         return ", ".join(out) or None
 
-    def live(self, a_is_zero=True):
+    def live(self, live_bus="A", a_is_zero=True):
         """Welke ingang staat (vermoedelijk) op program.
 
-        ⚠️ Aanname: A/B-modus, fader helemaal aan één kant = die bus live.
-        Tussen de uitersten (overgang) → beide ingangen. a_is_zero: fader 0 = A.
+        🧑 De fader wordt in de kerk nooit gebruikt: hij staat vast aan één kant,
+        dus één rij (live_bus) is altijd program en een knop daarin = direct
+        schakelen. Is de faderstand wel bekend (SysEx/CC17), dan gaat die voor.
+        ⚠️ Fader helemaal aan één kant = die bus live; ertussen → beide.
+        a_is_zero: fader 0 = A (nog niet gecontroleerd).
         """
         if self.fader14 is not None:
             pos = self.fader14 / 16383.0
         elif self.fader is not None:
             pos = self.fader / 127.0
         else:
-            return None
+            v = self.sel.get(live_bus)
+            return [v] if v else None
         if not a_is_zero:
             pos = 1 - pos
         if pos <= 0.02:
