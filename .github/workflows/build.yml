@@ -1,10 +1,21 @@
 name: Losse app bouwen
 
 # Bouwt "PTZ Control.exe" (Windows) en "PTZ Control.app" (macOS, Apple-chip).
-# - Handmatig: Actions → "Losse app bouwen" → Run workflow (bestanden onder Artifacts).
-# - Tag v* pushen (bv. v1.0.0): ook een GitHub-release met beide downloads.
+# - Handmatig: Actions → "Losse app bouwen" → Run workflow.
+#     Zonder vinkje: alleen bouwen (bestanden onder Artifacts).
+#     Met "Release maken" + versie (bv. 1.0.0): GitHub maakt zelf tag v1.0.0 en een release met beide downloads.
+# - Of zelf een tag v* pushen: ook een release.
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Release maken (tag + downloads bij Releases)"
+        type: boolean
+        default: false
+      versie:
+        description: "Versie, bv. 1.0.0 (alleen bij release)"
+        type: string
+        default: ""
   push:
     tags: ["v*"]
 
@@ -23,8 +34,13 @@ jobs:
             naam: macos
     runs-on: ${{ matrix.os }}
     env:
-      PTZ_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('0.0.{0}', github.run_number) }}
+      PTZ_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || (inputs.release && inputs.versie != '' && format('v{0}', inputs.versie)) || format('0.0.{0}', github.run_number) }}
     steps:
+      - name: Versie controleren
+        if: inputs.release && inputs.versie == ''
+        shell: bash
+        run: echo "::error::Vul een versie in (bv. 1.0.0) als je een release wilt maken" && exit 1
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -87,7 +103,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || inputs.release
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -98,4 +114,8 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: out/*
+          # bij Run workflow maakt deze stap de tag zelf aan op de gebouwde commit
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.versie) }}
+          name: PTZ Control ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.versie) }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true

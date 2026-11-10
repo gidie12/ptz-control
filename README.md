@@ -153,5 +153,5 @@ Download ze bij **Releases** op GitHub (of onder *Actions → Losse app bouwen �
 - Via het icoon: *Bediening openen*, het adres voor andere schermen, *Map met instellingen openen* en *Afsluiten*. Afsluiten kan ook in de bediening: 🎮 Menu → **⏻ PTZ Control afsluiten**. Nog een keer op de app klikken terwijl hij draait opent alleen de bediening.
 - **Instellingen en foto's** staan bij de losse app in een eigen map: Windows `%APPDATA%\PTZ Control`, Mac `~/Library/Application Support/PTZ Control`. Overstappen vanaf de Python-versie: maak daar een **Back-up** (met wachtwoorden) en zet die terug in de app, of kopieer `cameras.json` en de map `thumbs` naar die map.
 - **Persoon volgen** werkt in de losse app met de ingebouwde OpenCV-detector (minder nauwkeurig dan YOLO). Wil je YOLO, gebruik dan de Python-versie (`Start PTZ Control`).
-- Een nieuwe versie maken: tag pushen (`git tag v1.1.0 && git push origin v1.1.0`); GitHub bouwt dan beide apps en zet ze bij Releases.
+- Een nieuwe versie maken: GitHub → *Actions* → **Losse app bouwen** → *Run workflow* → vink **Release maken** aan en vul de versie in (bv. `1.1.0`). GitHub maakt dan zelf de tag, bouwt beide apps en zet ze bij Releases. Zonder vinkje wordt alleen gebouwd (downloads onder *Artifacts*).
 
