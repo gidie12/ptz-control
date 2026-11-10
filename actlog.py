@@ -4,7 +4,7 @@
 
 - Regels staan in het geheugen (laatste ``KEEP``) en in ``<data>/activiteit.log`` (één JSON-object per regel),
   zodat ze een herstart overleven. Boven ``MAX_BYTES`` wordt het bestand ingekort tot de laatste ``KEEP`` regels.
-- Een regel: ``{id, t, kind, who, ip, cam, msg, n}``. ``kind`` = ``actie`` | ``fout`` | ``systeem``.
+- Een regel: ``{id, t, kind, who, ip, cam, msg, n}``. ``kind`` = ``actie`` | ``fout`` | ``systeem`` | ``lied`` (nummers uit ProPresenter/draaiboek).
 - Herhaling: is de nieuwe regel gelijk aan de laatste van dezelfde bron (who + cam + msg) en minder dan
   ``MERGE_S`` seconden later, dan telt die regel op (``n``, ``last``) in plaats van een nieuwe te maken.
   Zo geeft een Xbox-stick of het automatisch opslaan van de tegelgrootte geen honderden regels.
@@ -18,7 +18,7 @@ import time
 KEEP = 2000
 MAX_BYTES = 2_000_000
 MERGE_S = 60
-KINDS = ("actie", "fout", "systeem")
+KINDS = ("actie", "fout", "systeem", "lied")
 
 
 class Log:

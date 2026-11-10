@@ -42,6 +42,7 @@ Bij de eerste start (nog geen camera's) opent de **wizard** 🧭: camera's zoeke
 
 Of met de hand:
 1. **Menu → 📷 Camera's** (menu rechtsboven): voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
+   Een ingevuld **wachtwoord** wordt na het opslaan nooit meer getoond (het veld zegt *opgeslagen*): leeg laten houdt het, iets nieuws typen vervangt het, de gebruikersnaam leegmaken haalt het weg.
 2. Je bestaande presets op de camera werken meteen. Rechtsklik, lang indrukken of ✎ op een tegel om een naam te geven
    en een **thumbnail** te maken van het huidige beeld.
 3. **＋ Preset opslaan** → tik op een tegel: de huidige positie wordt opgeslagen en er wordt automatisch een thumbnail gemaakt.
@@ -157,7 +158,8 @@ Met **Menu → 📋 Activiteitenlog** zie je achteraf wat er gebeurd is:
 
 - **wie wat deed en vanaf welk apparaat**: presets oproepen en opslaan, handbediening, home, volgen, foto's, instellingen, back-ups, workspaces, pincode;
 - **fouten**: camera niet bereikbaar (en weer terug), commando mislukt, videomixer weg, foute pincode, bediening geweigerd;
-- **wat er gebeurde**: welke camera op de mixer in beeld stond, YouTube-stream live of afgelopen, back-up- en laadtaken klaar, nieuwe versie.
+- **wat er gebeurde**: welke camera op de mixer in beeld stond, YouTube-stream live of afgelopen, back-up- en laadtaken klaar, nieuwe versie;
+- **welke liederen er gezongen zijn** (soort *Liederen*), uit ProPresenter en de Voordienst app, zie [Liederen](#liederen-propresenter-en-voordienst-app).
 
 Geef elk apparaat onderin het venster een **naam** (bijv. *iPad regie*); die komt dan in het log in plaats van alleen het IP-adres. Handbediening en herhalingen binnen een minuut worden samengevoegd (×3). Nieuwe fouten zie je als rood getal achter het menu-item. Filteren op soort of camera, zoeken en **⬇ Downloaden** als tekstbestand kan ook. Het log staat in `activiteit.log` in de instellingenmap (laatste 2000 regels, één log voor alle workspaces) en blijft bewaard na een herstart.
 
@@ -245,6 +247,23 @@ Sluit de V-1HD met een **USB-kabel** aan op de computer waar PTZ Control draait 
 De koppeling geldt voor alle schermen en wordt per workspace en in de back-up bewaard. Nodig zijn de packages `mido` en `python-rtmidi` (installeert de starter vanzelf).
 
 ![Videomixer](docs/screenshots/videomixer.png)
+
+## Liederen (ProPresenter en Voordienst app)
+Met Menu → **🎵 Liederen (ProPresenter)** ziet PTZ Control welke nummers er gezongen worden. Elk nummer komt in het **📋 Activiteitenlog** (filter *Liederen*), met de plek in de playlist en het nummer uit de Voordienst app. De camera's bewegen hierdoor niet.
+
+- **ProPresenter**: zet in ProPresenter *Instellingen → Netwerk* → **Netwerk inschakelen** aan. Vul in PTZ Control het IP-adres van die computer en de poort in (staan in hetzelfde ProPresenter-scherm; `127.0.0.1` als ProPresenter op dezelfde computer draait). PTZ Control kijkt elke 2 seconden welke presentatie op het scherm staat en welke playlist actief is. In het log: *Playlist: Zondag 10:00 (7 items): …* en per nummer *▶ Opwekking 733 – … (2 van 7 in Zondag 10:00, voordienst nr. 1)*. Hetzelfde nummer na een leeg scherm komt er niet twee keer in. Werkt met ProPresenter 7.9 en nieuwer; PTZ Control vraagt alleen informatie op en wijzigt niets in ProPresenter.
+- **Voordienst app**: vul het **API-adres** van de liederen in (`https://…`) en het **API-token** dat je in de Voordienst app aanmaakt. PTZ Control stuurt het mee als `Authorization: Bearer <token>` en leest de lijst elke 30 seconden opnieuw. Het token wordt na het opslaan nooit meer getoond (ook niet aan andere schermen) en zit niet in een back-up zonder wachtwoorden; met **Wissen** haal je het weg. Bij een nieuwe of gewijzigde lijst komt *Liederen geladen: … (n liederen): …* in het log; een ongeldig of verlopen token geeft een fout (*HTTP 401*). Verwacht formaat:
+  ```json
+  {"titel": "Zondag 10 november",
+   "liederen": ["Opwekking 733", "Psalm 42:1 en 3", "10.000 redenen"],
+   "huidig": 2}
+  ```
+  `liederen` mag ook `items`, `songs` of `nummers` heten, en de items mogen objecten zijn (`{"type": "lied", "titel": "…"}`; staan er ook andere soorten in, dan tellen alleen de liederen). `huidig` (nummer vanaf 1, of de naam) is optioneel. Tekst met één lied per regel werkt ook, en zonder token mag het ook een `.json`/`.txt`-bestand op deze computer zijn.
+- Het venster toont de playlist en de liederen uit de Voordienst app met het nummer dat nu op het scherm staat. **↻ Nu controleren** leest beide meteen opnieuw; **📋 In het log bekijken** opent het log met alleen de liederen.
+
+De instellingen gelden voor alle schermen en worden per workspace en in de back-up bewaard.
+
+<img src="docs/screenshots/liederen.png" width="720" alt="Liederen: ProPresenter"> <img src="docs/screenshots/voordienst-app.png" width="720" alt="Liederen: Voordienst app">
 
 ## Licht of donker
 Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
