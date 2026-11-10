@@ -89,12 +89,29 @@ overgeslagen. De positie wordt meteen bewaard voor de back-up; bestaande presetn
 daarna een naam met ✎. ⚠ De camera's bewegen hierbij: niet tijdens een dienst.
 
 **Gereserveerde presets:** PTZOptics gebruikt 90 (home), 95 (OSD-menu) en 91–99 voor vaste functies. De app roept deze nooit op
-en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 100–254.
+en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 100–254. Het OSD-menu open je via
+**Menu → 🖥 OSD-menu camera** (zie hieronder).
 
 ## Presetaantal testen
 Menu → **🧪 Presetaantal testen**. Test per camera hoeveel presets hij echt kan opslaan en oproepen (ca. 1 minuut per
 camera; de camera's bewegen, dus niet tijdens een dienst). Bestaande presets worden daarna exact teruggezet en lege nummers
 weer gewist. Het resultaat (bijv. "max. preset 254 · 244 bruikbaar") blijft bewaard en is later terug te zien.
+
+## OSD-menu van de camera
+Menu → **🖥 OSD-menu camera** bedient het menu van de camera zelf (belichting, kleur, beeld, enzovoort), net als met de
+afstandsbediening. Kies de camera, klik **Menu openen** en navigeer met **▲▼◀▶**, **OK** en **↩ Terug**. Dat kan ook met het
+toetsenbord (pijltjes, Enter = OK, Backspace = terug) of de Xbox-controller (D-pad of linker stick, A = OK, B = terug).
+**📷 Beeld bekijken** haalt één foto van de camera op, zodat je ziet waar je in het menu bent (geen live beeld).
+
+- ⚠ **Het menu staat ook in de livestream.** Zet eerst op de videomixer een andere camera in beeld. Staat de camera
+  *IN BEELD*, dan vraagt de app eerst of je het zeker weet.
+- Zolang het menu open is, staat er **OSD-MENU** bij de camera (op alle schermen) en reageert die camera niet op presets,
+  handbediening, volgen of back-uptaken: die commando's zouden anders door het menu lopen.
+- **Venster sluiten = menu dicht** op de camera. Na 5 minuten zonder OSD-knop neemt de app aan dat het menu dicht is
+  (bijv. dichtgedaan met de afstandsbediening). Wisselen van workspace of afsluiten sluit het menu ook.
+- Werkt via VISCA (TCP-poort 5678), ook als de camera op HTTP-CGI staat.
+
+<img src="docs/screenshots/osd-menu.png" width="560" alt="OSD-menu camera">
 
 ## Tegels instellen
 Boven het presetraster: **Tegels − 12 +** bepaalt hoeveel presettegels je per camera ziet (90–99 worden overgeslagen),
@@ -193,7 +210,7 @@ Gebruik:
 
 ## Xbox-controller
 Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
-De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, Oefenstand, Activiteitenlog, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
+De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, OSD-menu camera, Oefenstand, Activiteitenlog, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
