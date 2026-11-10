@@ -361,13 +361,14 @@
   body.wall header, body.wall aside { display: none; }
   body.wall main { grid-template-columns: 1fr; padding: 10px; }
   body.wall #presetCard { border: 0; background: none; padding: 0; }
-  #wallBtns { display: none; position: fixed; bottom: 12px; right: 12px; z-index: 20; gap: 8px; }
+  /* knoppen staan in de presetbalk (niet zwevend rechtsonder), zodat ze nooit over een presettegel vallen */
+  #wallBtns { display: none; gap: 8px; }
   body.wall #wallBtns { display: flex; }
-  #wallBtns .icon { background: var(--panel2); color: var(--text); }
-  #btnWallSide.on { border-color: var(--accent); }
+  #wallBtns .chip { white-space: nowrap; }
+  #btnWallSide.on { background: var(--panel2); color: var(--text); border-color: var(--accent); }   /* niet rood: rood = LIVE */
   body.viewonly #btnWallSide { display: none; }
   /* volledig scherm + uitgeklapte bediening: zijbalk als kolom rechts, onder het YouTube-venster (als dat automatisch geplaatst is) */
-  body.wall.wallside aside { display: grid; position: fixed !important; right: 10px; top: var(--sidetop, 10px); bottom: 62px;
+  body.wall.wallside aside { display: grid; position: fixed !important; right: 10px; top: var(--sidetop, 10px); bottom: 10px;
     width: var(--sidew, 340px); grid-template-columns: minmax(0, 1fr) !important; align-content: start; gap: 10px;
     overflow-y: auto; overscroll-behavior: contain; z-index: 19; }
   body.wall.wallside main { padding-right: calc(var(--sidew, 340px) + 20px); }
@@ -585,6 +586,10 @@
         </div>
         <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset">📥 Laden van camera</button>
         <button class="chip" id="btnStore">＋ Preset opslaan</button>
+        <span id="wallBtns">
+          <button class="chip" id="btnWallSide" title="Camerabediening en Xbox-controller rechts tonen (toets B)">◂ Bediening</button>
+          <button class="chip" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
+        </span>
       </div>
     </div>
     <div class="hint" id="storeHint" hidden>Tik op een tegel om de huidige camerapositie daar op te slaan.</div>
@@ -873,10 +878,6 @@
   <div class="ytgrip" id="ytGrip" title="Sleep om de grootte te wijzigen"></div>
 </div>
 
-<div id="wallBtns">
-  <button class="icon" id="btnWallSide" title="Camerabediening en Xbox-controller rechts tonen (toets B)">◂ Bediening</button>
-  <button class="icon" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
-</div>
 <dialog id="dlgMidi">
   <h3>🎛 Videomixer (Roland V-1HD)</h3>
   <p class="small">Via een USB-kabel van de V-1HD naar deze computer ziet PTZ Control welke ingang op de mixer gekozen is (rode knop).
