@@ -3,7 +3,9 @@ name: Losse app bouwen
 # Bouwt "PTZ Control.exe" (Windows) en "PTZ Control.app" (macOS, Apple-chip).
 # - Handmatig: Actions → "Losse app bouwen" → Run workflow.
 #     Zonder vinkje: alleen bouwen (bestanden onder Artifacts).
-#     Met "Release maken" + versie (bv. 1.0.0): GitHub maakt zelf tag v1.0.0 en een release met beide downloads.
+#     Met "Release maken": GitHub maakt zelf een tag en een release met beide downloads.
+#       Versieveld leeg = automatisch de volgende versie (nieuwste tag v1.2.3 → v1.2.4; nog geen tag → v1.0.0).
+#       Zelf invullen (bv. 2.0.0) mag ook.
 # - Of zelf een tag v* pushen: ook een release.
 on:
   workflow_dispatch:
@@ -13,7 +15,7 @@ on:
         type: boolean
         default: false
       versie:
-        description: "Versie, bv. 1.0.0 (alleen bij release)"
+        description: "Versie (leeg = automatisch volgende, bv. v1.0.3 → v1.0.4)"
         type: string
         default: ""
   push:
@@ -23,7 +25,48 @@ permissions:
   contents: write
 
 jobs:
+  versie:
+    runs-on: ubuntu-latest
+    outputs:
+      versie: ${{ steps.v.outputs.versie }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0           # alle tags, om de nieuwste te vinden
+      - name: Versie bepalen
+        id: v
+        shell: bash
+        env:
+          RELEASE: ${{ inputs.release }}
+          INVOER: ${{ inputs.versie }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            v="$GITHUB_REF_NAME"
+          elif [ "$RELEASE" = "true" ]; then
+            invoer="${INVOER#v}"; invoer="${invoer// /}"
+            if [ -n "$invoer" ]; then
+              if ! [[ "$invoer" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "::error::Versie '$INVOER' klopt niet; gebruik bv. 1.0.4 of laat het veld leeg"; exit 1
+              fi
+              v="v$invoer"
+            else
+              laatste=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1)
+              if [ -z "$laatste" ]; then v="v1.0.0"
+              else IFS=. read -r a b c <<< "${laatste#v}"; v="v$a.$b.$((c + 1))"; fi
+              echo "Nieuwste tag: ${laatste:-geen}"
+            fi
+            if git rev-parse -q --verify "refs/tags/$v" >/dev/null; then
+              echo "::error::Tag $v bestaat al; vul een hogere versie in of laat het veld leeg"; exit 1
+            fi
+          else
+            v="0.0.$GITHUB_RUN_NUMBER"
+          fi
+          echo "Versie: $v"
+          echo "versie=$v" >> "$GITHUB_OUTPUT"
+          echo "### Versie: $v" >> "$GITHUB_STEP_SUMMARY"
+
   build:
+    needs: versie
     strategy:
       fail-fast: false
       matrix:
@@ -34,13 +77,8 @@ jobs:
             naam: macos
     runs-on: ${{ matrix.os }}
     env:
-      PTZ_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || (inputs.release && inputs.versie != '' && format('v{0}', inputs.versie)) || format('0.0.{0}', github.run_number) }}
+      PTZ_VERSION: ${{ needs.versie.outputs.versie }}
     steps:
-      - name: Versie controleren
-        if: inputs.release && inputs.versie == ''
-        shell: bash
-        run: echo "::error::Vul een versie in (bv. 1.0.0) als je een release wilt maken" && exit 1
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -104,7 +142,7 @@ jobs:
 
   release:
     if: github.ref_type == 'tag' || inputs.release
-    needs: build
+    needs: [versie, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -115,7 +153,7 @@ jobs:
         with:
           files: out/*
           # bij Run workflow maakt deze stap de tag zelf aan op de gebouwde commit
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.versie) }}
-          name: PTZ Control ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.versie) }}
+          tag_name: ${{ needs.versie.outputs.versie }}
+          name: PTZ Control ${{ needs.versie.outputs.versie }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
