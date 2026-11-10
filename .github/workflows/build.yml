@@ -64,11 +64,13 @@ jobs:
           fi
           echo "Versie: $v"
           echo "versie=$v" >> "$GITHUB_OUTPUT"
-          # releasenotes = onderwerpen van de commits sinds de vorige tag (de app toont ze in de updatemelding)
+          # releasenotes = docs/releasenotes/<versie>.md als die bestaat, anders de commitonderwerpen sinds de vorige tag
+          # (de app toont de "- "-regels in de updatemelding)
           vorige=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | grep -vx "$v" | tail -1)
           {
             echo "notes<<NOTES_EOF"
-            if [ -n "$vorige" ]; then git log --no-merges --format='- %s' -n 30 "$vorige..HEAD"; else git log --no-merges --format='- %s' -n 30; fi
+            if [ -f "docs/releasenotes/$v.md" ]; then cat "docs/releasenotes/$v.md"   # zelf geschreven notes gaan voor
+            elif [ -n "$vorige" ]; then git log --no-merges --format='- %s' -n 30 "$vorige..HEAD"; else git log --no-merges --format='- %s' -n 30; fi
             echo
             echo "Alle wijzigingen: https://github.com/${GITHUB_REPOSITORY}/compare/${vorige:-HEAD}...$v"
             echo "NOTES_EOF"
