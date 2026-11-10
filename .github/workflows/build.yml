@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       versie: ${{ steps.v.outputs.versie }}
+      notes: ${{ steps.v.outputs.notes }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,6 +64,15 @@ jobs:
           fi
           echo "Versie: $v"
           echo "versie=$v" >> "$GITHUB_OUTPUT"
+          # releasenotes = onderwerpen van de commits sinds de vorige tag (de app toont ze in de updatemelding)
+          vorige=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | grep -vx "$v" | tail -1)
+          {
+            echo "notes<<NOTES_EOF"
+            if [ -n "$vorige" ]; then git log --no-merges --format='- %s' -n 30 "$vorige..HEAD"; else git log --no-merges --format='- %s' -n 30; fi
+            echo
+            echo "Alle wijzigingen: https://github.com/${GITHUB_REPOSITORY}/compare/${vorige:-HEAD}...$v"
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
           echo "### Versie: $v" >> "$GITHUB_STEP_SUMMARY"
 
   build:
@@ -156,4 +166,4 @@ jobs:
           tag_name: ${{ needs.versie.outputs.versie }}
           name: PTZ Control ${{ needs.versie.outputs.versie }}
           target_commitish: ${{ github.sha }}
-          generate_release_notes: true
+          body: ${{ needs.versie.outputs.notes }}

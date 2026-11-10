@@ -2166,24 +2166,27 @@ function updRender() {
   $("#btnUpd").title = `Kijken of er een nieuwe versie van PTZ Control is${upd.current ? " (nu " + upd.current + ")" : ""}`;
   if (!show) return;
   $("#updTitle").textContent = u.installing ? "⏳ Bijwerken…" : "⬆ Nieuwe versie beschikbaar";
-  $("#updInfo").textContent = u.installing ? "PTZ Control start zo opnieuw; deze pagina ververst vanzelf (ca. 10 seconden)."
+  $("#updInfo").textContent = u.installing
+    ? (u.mode === "release" && u.progress != null && u.progress < 100 ? `Nieuwe versie downloaden… ${u.progress}%`
+      : "PTZ Control start zo opnieuw; deze pagina ververst vanzelf (ca. 10–30 seconden).")
     : u.mode === "release" ? `Versie ${u.latest} (nu ${u.current})`
     : `${u.count} ${u.count === 1 ? "wijziging" : "wijzigingen"} · nu ${u.current}`;
   const notes = u.installing ? [] : (u.notes || []);
   $("#updNotes").innerHTML = notes.slice(0, 5).map(n => `<li>${esc(n)}</li>`).join("") + (notes.length > 5 ? `<li class="muted">en nog ${notes.length - 5}…</li>` : "");
   $("#updNotes").hidden = !notes.length;
   const err = u.error && !u.installing && u.error.startsWith("Bijwerken") ? u.error
-    : !u.installing && u.mode === "git" && !u.can_install && u.blocked ? `Automatisch bijwerken kan niet: ${u.blocked}. Werk bij met git pull.` : "";
+    : !u.installing && !u.can_install && u.blocked ? `Automatisch bijwerken kan niet: ${u.blocked}.${u.mode === "git" ? " Werk bij met git pull." : ""}` : "";
   $("#updErr").textContent = err; $("#updErr").hidden = !err;
   $("#updActions").hidden = !!u.installing;
-  $("#updGo").textContent = u.mode === "release" ? "Downloaden" : u.can_install ? "Nu bijwerken" : "Bekijken";
+  $("#updGo").textContent = u.can_install ? "Nu bijwerken" : u.mode === "release" ? "Downloaden" : "Bekijken";
 }
 function updDismiss() { lsSet("updDismiss", updKey()); updRender(); }
 $("#updLater").onclick = updDismiss;
 $("#updClose").onclick = updDismiss;
 $("#updGo").onclick = async () => {
-  if (upd.mode === "release" || !upd.can_install) { if (upd.url) window.open(upd.url, "_blank", "noopener"); return; }
-  if (!confirm("PTZ Control bijwerken?\n\nDe bediening is ongeveer 10 seconden weg terwijl de app opnieuw start. Niet doen tijdens een dienst.")) return;
+  if (!upd.can_install) { if (upd.url) window.open(upd.url, "_blank", "noopener"); return; }
+  const mb = upd.size ? ` (${Math.round(upd.size / 1048576)} MB downloaden)` : "";
+  if (!confirm(`PTZ Control bijwerken${mb}?\n\nDe bediening is even weg terwijl de app opnieuw start. Niet doen tijdens een dienst.`)) return;
   const r = await post("/api/update/install", {});
   if (r.error) return toast(r.error);
   updUpdate({ ...upd, installing: true });
@@ -2250,7 +2253,7 @@ const TOUR_STEPS = [
     title: "⬆ Nieuwe versie", text: () => `<p>Is er een nieuwe versie, dan verschijnt <b>rechtsonder</b> zo'n melding met wat er nieuw is.</p>
       <ul><li><b>Nu bijwerken</b>: de app werkt zichzelf bij en start opnieuw (ca. 10 seconden geen bediening, dus niet tijdens een dienst).</li>
       <li><b>Later</b>: verbergt de melding voor deze versie op dit apparaat.</li></ul>
-      <p class="muted">Bij de losse app (.exe/.app) opent <i>Downloaden</i> de pagina met de nieuwe versie. Op volledig scherm blijft de melding weg.</p>` },
+      <p class="muted">Ook de losse app (.exe/.app) downloadt de nieuwe versie zelf, vervangt zichzelf en start opnieuw. Op volledig scherm blijft de melding weg.</p>` },
   { target: ["#btnQuit"], menu: "main", title: "⏻ Afsluiten", text: () => `<p>Stopt PTZ Control op deze computer. Alle schermen verliezen dan de verbinding tot de app opnieuw wordt gestart. De camera's blijven staan waar ze zijn.</p>` },
   { title: "Klaar! 🎉", text: () => `<p>Je kent nu alle functies. ${cfg.cameras.length ? "Veel succes bij de dienst!" : "Begin met <b>Menu → 📷 Camera's</b> om je camera's toe te voegen."}</p>
       <p class="muted">Deze rondleiding start niet meer vanzelf. Opnieuw bekijken: <b>Menu → 🎓 Rondleiding</b>.</p>` },

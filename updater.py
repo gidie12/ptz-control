@@ -4,13 +4,16 @@ Twee manieren, afhankelijk van hoe de app draait:
 - **git**: de app draait uit een git-checkout (Start PTZ Control). `git fetch` en vergelijken met de upstream-branch;
   bijwerken = `git pull --ff-only`, zo nodig packages bijwerken, daarna de server opnieuw starten.
 - **release**: de losse app (PyInstaller). Nieuwste GitHub-release vergelijken met de ingebouwde versie;
-  bijwerken = de downloadpagina openen (een draaiende .exe/.app kan zichzelf niet vervangen).
+  bijwerken = het bestand voor dit platform downloaden, daarna vervangt een klein hulpscript de .exe/.app zodra
+  deze app gestopt is en start de nieuwe versie (een draaiend programma kan zichzelf niet overschrijven).
 Alleen stdlib.
 """
 import json
 import os
 import re
 import shutil
+import stat
+import tempfile
 import ssl
 import subprocess
 import sys
@@ -39,7 +42,7 @@ class Updater:
         self.mode = self._detect_mode()
         self.state = {"type": "update", "mode": self.mode, "current": self._current(), "available": False,
                       "latest": None, "notes": [], "count": 0, "url": None, "can_install": False,
-                      "checked": None, "error": None, "installing": False}
+                      "checked": None, "error": None, "installing": False, "progress": None}
 
     # ------------------------------------------------------------ algemeen
     def _detect_mode(self):
@@ -138,44 +141,66 @@ class Updater:
                 pass
         return tok
 
+    @staticmethod
+    def _ssl():
+        ctx = ssl.create_default_context()   # systeemcertificaten (en SSL_CERT_FILE)
+        try:
+            import certifi  # noqa: PLC0415  # python.org-Python op macOS heeft vaak geen eigen rootcertificaten
+            ctx.load_verify_locations(certifi.where())
+        except Exception:  # noqa: BLE001
+            pass
+        return ctx
+
+    @staticmethod
+    def _asset_suffix():
+        return "-Windows.exe" if sys.platform == "win32" else "-macOS.zip" if sys.platform == "darwin" else None
+
+    def _app_path(self):
+        """Pad van de draaiende losse app: de .exe (Windows) of de .app-map (macOS)."""
+        exe = os.path.abspath(sys.executable)
+        if sys.platform == "darwin" and ".app/Contents/MacOS" in exe:
+            return exe[: exe.index(".app/Contents/MacOS") + 4]
+        return exe
+
     def _check_release(self):
         req = urllib.request.Request(f"{API_BASE}/repos/{REPO}/releases/latest",
                                      headers={"Accept": "application/vnd.github+json", "User-Agent": "PTZ-Control"})
         tok = self._token()
         if tok:
             req.add_header("Authorization", "Bearer " + tok)
-        ctx = None
         try:
-            import certifi  # noqa: PLC0415
-            ctx = ssl.create_default_context(cafile=certifi.where())
-        except Exception:  # noqa: BLE001
-            pass
-        try:
-            with urllib.request.urlopen(req, timeout=15, context=ctx) as r:
+            with urllib.request.urlopen(req, timeout=15, context=self._ssl()) as r:
                 rel = json.load(r)
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                raise RuntimeError("geen release gevonden (privé-repository? zet een token in github_token.txt)") from e
+                raise RuntimeError("geen release gevonden") from e
             raise
         latest = rel.get("tag_name") or ""
         cur = self.state["current"]
         avail = _ver_tuple(latest) > _ver_tuple(cur)
-        notes = [ln.strip().lstrip("-*• ").strip() for ln in (rel.get("body") or "").splitlines()
-                 if ln.strip() and not ln.strip().startswith("#")][:8]
+        notes = [ln.strip().lstrip("-*• ").replace("**", "").strip() for ln in (rel.get("body") or "").splitlines()
+                 if ln.strip() and not ln.strip().startswith("#") and "Changelog" not in ln and "Alle wijzigingen:" not in ln
+                 and "://" not in ln][:8]
+        suf = self._asset_suffix()
+        asset = next((a for a in rel.get("assets") or [] if suf and a.get("name", "").endswith(suf)), None)
+        self._asset = asset
         return {"available": avail, "latest": latest, "count": 0, "notes": notes if avail else [],
-                "url": rel.get("html_url") or f"https://github.com/{REPO}/releases/latest", "can_install": False, "blocked": None}
+                "url": rel.get("html_url") or f"https://github.com/{REPO}/releases/latest",
+                "can_install": bool(avail and asset), "size": (asset or {}).get("size"),
+                "blocked": None if asset or not avail else "geen download voor dit besturingssysteem in deze release"}
 
-    # ------------------------------------------------------------ bijwerken (alleen git)
+    # ------------------------------------------------------------ bijwerken
     def install(self):
-        if self.mode != "git":
-            raise RuntimeError("Bijwerken kan alleen bij de versie uit git; download de nieuwe losse app.")
+        if self.mode not in ("git", "release"):
+            raise RuntimeError("Bijwerken is hier niet beschikbaar.")
         st = self.check()
         if not st["available"]:
             raise RuntimeError("Er is geen nieuwe versie.")
         if not st["can_install"]:
             raise RuntimeError(f"Automatisch bijwerken kan niet: {st.get('blocked') or 'onbekende reden'}.")
-        self._set(installing=True, error=None)
-        threading.Thread(target=self._install, daemon=True, name="update-install").start()
+        self._set(installing=True, error=None, progress=None)
+        target = self._install if self.mode == "git" else self._install_release
+        threading.Thread(target=target, daemon=True, name="update-install").start()
 
     def _install(self):
         try:
@@ -200,3 +225,102 @@ class Updater:
         venv = os.path.join(self.here, ".venv")
         if os.path.isdir(venv) and os.path.realpath(sys.prefix) == os.path.realpath(venv):
             shutil.copyfile(req, os.path.join(venv, "requirements.installed"))
+
+    # ------------------------------------------------------------ losse app vervangen
+    def _download(self, url, dest, size):
+        req = urllib.request.Request(url, headers={"User-Agent": "PTZ-Control", "Accept": "application/octet-stream"})
+        got, last = 0, -1
+        with urllib.request.urlopen(req, timeout=60, context=self._ssl()) as r, open(dest, "wb") as f:
+            total = int(r.headers.get("Content-Length") or size or 0)
+            while True:
+                chunk = r.read(1 << 16)
+                if not chunk:
+                    break
+                f.write(chunk)
+                got += len(chunk)
+                pct = int(got * 100 / total) if total else None
+                if pct is not None and pct != last and (pct - last >= 2 or pct == 100):
+                    last = pct
+                    self._set(progress=pct)
+        if size and got != size:
+            raise RuntimeError(f"download onvolledig ({got} van {size} bytes)")
+
+    def _install_release(self):
+        try:
+            asset = getattr(self, "_asset", None)
+            if not asset:
+                raise RuntimeError("geen download gevonden")
+            work = tempfile.mkdtemp(prefix="ptz-update-")
+            dest = os.path.join(work, asset["name"])
+            self._download(asset["browser_download_url"], dest, asset.get("size"))
+            app = self._app_path()
+            self._set(progress=100)
+            if sys.platform == "win32":
+                script = self._script_windows(app, dest, work)
+                flags = 0x00000008 | 0x00000200 | 0x08000000   # DETACHED_PROCESS | NEW_PROCESS_GROUP | NO_WINDOW
+                subprocess.Popen(["cmd", "/c", script], creationflags=flags, close_fds=True)
+            else:
+                new_app = self._unzip_mac(dest, work)
+                script = self._script_mac(app, new_app, work)
+                subprocess.Popen(["/bin/bash", script], start_new_session=True, close_fds=True,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"Nieuwe versie gedownload; PTZ Control wordt vervangen en opnieuw gestart ({app}).")
+            time.sleep(0.5)
+            os._exit(0)
+        except Exception as e:  # noqa: BLE001
+            self._set(installing=False, progress=None, error=f"Bijwerken mislukt: {e}")
+
+    @staticmethod
+    def _unzip_mac(zip_path, work):
+        out = os.path.join(work, "uitgepakt")
+        r = subprocess.run(["ditto", "-x", "-k", zip_path, out], capture_output=True, text=True, timeout=300)
+        if r.returncode != 0:
+            raise RuntimeError("uitpakken mislukt: " + (r.stderr.strip() or "?"))
+        apps = [n for n in os.listdir(out) if n.endswith(".app")]
+        if not apps:
+            raise RuntimeError("geen .app in de download")
+        return os.path.join(out, apps[0])
+
+    @staticmethod
+    def _script_mac(app, new_app, work):
+        """Wacht tot deze app gestopt is, wisselt de .app om (oude eerst opzij) en start de nieuwe.
+        Lukt omwisselen niet (geen schrijfrechten), dan blijft de oude staan en toont Finder de nieuwe."""
+        q = lambda p: "'" + p.replace("'", "'\\''") + "'"  # noqa: E731
+        path = os.path.join(work, "bijwerken.sh")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"""#!/bin/bash
+while kill -0 {os.getpid()} 2>/dev/null; do sleep 0.5; done
+APP={q(app)}; NEW={q(new_app)}
+rm -rf "$APP.oud"
+if mv "$APP" "$APP.oud" && mv "$NEW" "$APP"; then
+  rm -rf "$APP.oud"
+  xattr -dr com.apple.quarantine "$APP" 2>/dev/null
+  open "$APP" --args --no-open
+else
+  [ -d "$APP.oud" ] && [ ! -d "$APP" ] && mv "$APP.oud" "$APP"
+  open -R "$NEW"; open "$APP" --args --no-open
+fi
+""")
+        os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
+        return path
+
+    @staticmethod
+    def _script_windows(exe, new_exe, work):
+        """Wacht tot deze .exe gestopt is, zet de nieuwe ervoor in de plaats en start hem."""
+        path = os.path.join(work, "bijwerken.bat")
+        pid = os.getpid()
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"""@echo off
+chcp 65001 >nul
+:wacht
+tasklist /fi "PID eq {pid}" 2>nul | find "{pid}" >nul && (timeout /t 1 /nobreak >nul & goto wacht)
+set /a n=0
+:kopie
+copy /y "{new_exe}" "{exe}" >nul && goto start
+set /a n+=1
+if %n% lss 20 (timeout /t 1 /nobreak >nul & goto kopie)
+start "" explorer /select,"{new_exe}"
+:start
+start "" "{exe}" --no-open
+""")
+        return path

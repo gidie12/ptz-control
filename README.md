@@ -191,7 +191,8 @@ PTZ Control kijkt zelf elke 6 uur (en kort na het starten) of er een nieuwe vers
 - **Nu bijwerken** (versie via *Start PTZ Control* / git): de app haalt de nieuwe versie op (`git pull`), werkt zo nodig de packages bij en start zichzelf opnieuw. De bediening is dan ongeveer 10 seconden weg; open schermen verversen vanzelf. ⚠ Niet tijdens een dienst.
 - **Later** verbergt de melding voor die versie op dit apparaat. Op volledig scherm blijft de melding altijd weg.
 - Lukt automatisch bijwerken niet (bijv. omdat er op deze computer bestanden zijn aangepast), dan zegt de melding dat; werk dan bij met `git pull` en start de app opnieuw.
-- **Losse app (.exe/.app):** de melding heeft een knop **Downloaden** naar de nieuwe release; de app kan zichzelf niet vervangen. Omdat de repository privé is, heeft de losse app een GitHub-token nodig om releases te zien: zet een token met leesrecht in `github_token.txt` in de map met instellingen (of in de omgevingsvariabele `PTZ_GITHUB_TOKEN`). Zonder token blijft de melding weg.
+- Wat er nieuw is komt bij een release uit de releasenotes; die maakt de bouwstap zelf uit de commitberichten sinds de vorige versie.
+- **Losse app (.exe/.app):** ook die werkt zichzelf bij: **Nu bijwerken** downloadt de nieuwe versie van GitHub (Releases), sluit de app, zet de nieuwe ervoor in de plaats en start hem opnieuw. Mag de app zijn eigen map niet overschrijven (bijv. een .app die door een beheerder in *Programma's* is gezet), dan blijft de oude staan en opent Finder/Verkenner de gedownloade versie, zodat je hem zelf kunt vervangen.
 - Uitzetten: start met de omgevingsvariabele `PTZ_UPDATE=0`.
 
 <img src="docs/screenshots/update-melding.png" width="400" alt="Updatemelding rechtsonder">
