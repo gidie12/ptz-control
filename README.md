@@ -143,6 +143,7 @@ Klik op **📍 Standaard ▾** naast de titel. Een workspace is een aparte set c
 - *Nieuwe workspace…*: kies een naam en begin leeg of als kopie van een bestaande.
 - Wisselen geldt voor alle schermen die met deze computer verbonden zijn (ze herladen vanzelf). Volgen stopt bij het wisselen.
 - *Workspaces beheren…*: hernoemen, openen of verwijderen (verwijderen wist alles van die workspace; maak eerst een back-up als je het wilt bewaren).
+- **Back-ups:** 🎮 Menu → 💾 Back-up maakt een back-up van de workspace die nu open is (de naam staat in het bestand). Vink *alle workspaces* aan voor één bestand met alles. Bij terugzetten kies je: in de huidige workspace, of als nieuwe workspace. Een back-up van alle workspaces zet ze allemaal terug (workspaces die er niet in staan blijven staan).
 - Direct in een bepaalde workspace starten: `python3 ptz_control.py --workspace "Kerk Zwolle"` (ook als extra argument achter `Start PTZ Control`).
 
 ## Sneltoetsen

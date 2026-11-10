@@ -304,9 +304,9 @@ def run_command(cam, action, args):
     return visca_command(cam, action, args)
 
 
-def thumb_path(cam, n):
+def thumb_path(cam, n, tdir=None):
     safe = "".join(ch for ch in cam["id"] if ch.isalnum() or ch in "-_")
-    return os.path.join(THUMB_DIR, f"{safe}_{int(n)}.jpg")
+    return os.path.join(tdir or THUMB_DIR, f"{safe}_{int(n)}.jpg")
 
 
 def snapshot_thumb(cam, n, tries=2):
@@ -555,10 +555,10 @@ def _safe_id(cam_id):
     return "".join(ch for ch in cam_id if ch.isalnum() or ch in "-_")
 
 
-def list_thumbs(cam):
+def list_thumbs(cam, tdir=None):
     prefix = _safe_id(cam["id"]) + "_"
     try:
-        files = os.listdir(THUMB_DIR)
+        files = os.listdir(tdir or THUMB_DIR)
     except OSError:
         return []
     return sorted(int(f[len(prefix):-4]) for f in files
@@ -569,45 +569,107 @@ def now_stamp():
     return datetime.datetime.now().isoformat(timespec="seconds")
 
 
-def make_backup(with_passwords=True):
-    cfg = load_config()
+def _ws_name(ws_id):
+    return next((w["name"] for w in WS["list"] if w["id"] == ws_id), ws_id)
+
+
+def make_backup(with_passwords=True, ws_id=None):
+    """Back-up van één workspace (standaard de actieve)."""
+    ws_id = ws_id or WS["active"]
+    if ws_id == WS["active"]:
+        cfg, tdir = load_config(), THUMB_DIR
+    else:
+        cfg_path, tdir = ws_paths(ws_id)
+        try:
+            with open(cfg_path, encoding="utf-8") as f:
+                cfg = json.load(f)
+        except (OSError, ValueError):
+            cfg = json.loads(json.dumps(DEFAULT_CONFIG))
     if not with_passwords:
         for cam in cfg.get("cameras", []):
             cam.pop("password", None)
     thumbs = {}
     for cam in cfg.get("cameras", []):
-        for n in list_thumbs(cam):
-            with open(thumb_path(cam, n), "rb") as f:
+        for n in list_thumbs(cam, tdir):
+            with open(thumb_path(cam, n, tdir), "rb") as f:
                 thumbs[f"{cam['id']}/{n}"] = base64.b64encode(f.read()).decode()
     return {"type": "ptz-control-backup", "version": 1, "created": now_stamp(),
+            "workspace": {"id": ws_id, "name": _ws_name(ws_id)},
             "with_passwords": with_passwords, "config": cfg, "thumbs": thumbs}
 
 
-def restore_backup(data):
+def make_backup_all(with_passwords=True):
+    """Alle workspaces in één bestand."""
+    return {"type": "ptz-control-backup-all", "version": 1, "created": now_stamp(),
+            "with_passwords": with_passwords, "active": WS["active"],
+            "workspaces": [make_backup(with_passwords, w["id"]) for w in WS["list"]]}
+
+
+def restore_backup(data, ws_id=None):
+    """Back-up van één workspace terugzetten in ws_id (standaard de actieve)."""
     if not isinstance(data, dict) or data.get("type") != "ptz-control-backup":
         raise ValueError("Dit is geen PTZ Control-back-upbestand")
     new = data.get("config") or {}
     if not isinstance(new.get("cameras"), list):
         raise ValueError("Back-up bevat geen camera's")
-    current = {c["id"]: c for c in load_config().get("cameras", [])}
+    ws_id = ws_id or WS["active"]
+    active = ws_id == WS["active"]
+    cfg_path, tdir = ws_paths(ws_id)
+    try:
+        with open(cfg_path, encoding="utf-8") as f:
+            current = {c["id"]: c for c in json.load(f).get("cameras", [])}
+    except (OSError, ValueError):
+        current = {}
     for cam in new["cameras"]:
         cam.pop("thumbs", None)
         old = current.get(cam.get("id"), {})
         if "password" not in cam and old.get("password"):   # back-up zonder wachtwoorden: huidige houden
             cam["password"] = old["password"]
-    save_config(new)
-    os.makedirs(THUMB_DIR, exist_ok=True)
+    os.makedirs(tdir, exist_ok=True)
+    with LOCK:
+        tmp = cfg_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(new, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, cfg_path)
     count = 0
     cams = {c["id"]: c for c in new["cameras"]}
     for key, b64 in (data.get("thumbs") or {}).items():
         cam_id, _, n = key.rpartition("/")
         if cam_id in cams and n.isdigit():
-            with open(thumb_path(cams[cam_id], int(n)), "wb") as f:
+            with open(thumb_path(cams[cam_id], int(n), tdir), "wb") as f:
                 f.write(base64.b64decode(b64))
             count += 1
-    broadcast({"type": "config"})
-    YT.refresh()
-    return {"cameras": len(new["cameras"]), "thumbs": count}
+    if active:
+        broadcast({"type": "config"})
+        YT.refresh()
+    return {"cameras": len(new["cameras"]), "thumbs": count, "workspace": ws_id}
+
+
+def restore_any(body):
+    """Terugzetten: één workspace (in de huidige of als nieuwe) of een back-up van alle workspaces."""
+    if body.get("type") == "ptz-control-backup-all":
+        done = []
+        for item in body.get("workspaces") or []:
+            src = item.get("workspace") or {}
+            wid, name = str(src.get("id") or ""), str(src.get("name") or "").strip() or "Workspace"
+            if not any(w["id"] == wid for w in WS["list"]):
+                taken = {w["id"] for w in WS["list"]}
+                wid = wid if re.fullmatch(r"[a-z0-9-]{1,40}", wid) and wid not in taken else _ws_slug(name, taken)
+                WS["list"].append({"id": wid, "name": name})
+                ws_save(WS)
+            r = restore_backup(item, wid)
+            done.append({"id": wid, "name": _ws_name(wid), "cameras": r["cameras"], "thumbs": r["thumbs"]})
+        broadcast({"type": "workspaces"})
+        return {"workspaces": done}
+    target = body.pop("_target", "current")
+    if target == "new":
+        name = str(body.pop("_name", "") or (body.get("workspace") or {}).get("name") or "Teruggezet").strip()[:60]
+        if any(w["name"].lower() == name.lower() for w in WS["list"]):
+            name = f"{name} ({datetime.date.today().isoformat()})"
+        created = ws_action({"action": "create", "name": name})["created"]
+        r = restore_backup(body, created)
+        return {**r, "created": created, "name": name}
+    return restore_backup(body)
 
 
 def _job_update(cam_id, **kw):
@@ -785,12 +847,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, cfg)
         if u.path == "/api/backup":
             q = parse_qs(u.query)
-            data = make_backup(with_passwords=q.get("passwords", ["1"])[0] == "1")
+            pw = q.get("passwords", ["1"])[0] == "1"
+            if q.get("all", ["0"])[0] == "1":
+                data, label = make_backup_all(pw), "alle-workspaces"
+            else:
+                data = make_backup(pw)
+                label = re.sub(r"[^a-z0-9]+", "-", _ws_name(WS["active"]).lower()).strip("-") or "workspace"
             body = json.dumps(data, ensure_ascii=False, indent=1).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Disposition",
-                             f'attachment; filename="ptz-control-backup-{datetime.date.today().isoformat()}.json"')
+                             f'attachment; filename="ptz-control-backup-{label}-{datetime.date.today().isoformat()}.json"')
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -927,7 +994,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if u.path == "/api/backup/restore":
             try:
-                return self._send(200, {"ok": True, **restore_backup(body)})
+                return self._send(200, {"ok": True, **restore_any(body)})
             except Exception as e:  # noqa: BLE001
                 return self._send(400, {"ok": False, "error": str(e)})
 

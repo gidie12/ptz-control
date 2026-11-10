@@ -484,10 +484,12 @@
 
   <div class="bsec">
     <h4>1. Back-upbestand</h4>
-    <div class="small">Cameralijst, presetnamen, volg-instellingen, thumbnails en (als uitgelezen) presetposities en beeldinstellingen, in één bestand.</div>
+    <div class="small">Cameralijst, presetnamen, volg-instellingen, sneltoetsen, knoppenindeling, YouTube-kanaal, thumbnails en (als uitgelezen)
+      presetposities en beeldinstellingen, in één bestand. Van workspace <b id="bkWsName">Standaard</b>, of van alle workspaces samen.</div>
     <div class="row">
       <button class="primary" id="bkDownload">⬇ Back-up downloaden</button>
       <label class="small"><input type="checkbox" id="bkPw"> camerawachtwoorden meenemen</label>
+      <label class="small" id="bkAllLbl"><input type="checkbox" id="bkAll"> alle workspaces</label>
       <span style="flex:1"></span>
       <button class="icon" id="bkRestoreBtn">⬆ Back-up terugzetten…</button>
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
@@ -541,6 +543,17 @@
   <div class="actions"><span class="small" id="ldInfo"></span>
     <span style="display:flex;gap:8px"><button class="icon" id="ldClose">Sluiten</button>
     <button class="primary" id="ldStart">Laden</button></span></div>
+</dialog>
+
+<dialog id="dlgRestore">
+  <h3>⬆ Back-up terugzetten</h3>
+  <div id="rsInfo" class="small" style="white-space:pre-line"></div>
+  <p class="small" style="margin-top:10px">De camera's zelf veranderen pas als je daarna <i>Naar camera's terugzetten</i> kiest.</p>
+  <div class="actions" style="flex-wrap:wrap;gap:8px"><button class="icon" id="rsCancel">Annuleren</button>
+    <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="icon" id="rsNew">Als nieuwe workspace</button>
+      <button class="primary" id="rsCur">In huidige workspace</button>
+      <button class="primary" id="rsAll" hidden>Alles terugzetten</button></span></div>
 </dialog>
 
 <dialog id="dlgWs">
@@ -1415,25 +1428,53 @@ function renderBackup() {
   $("#bkJobInfo").textContent = job.running ? (job.kind === "capture" ? "Bezig met uitlezen…" : "Bezig met terugzetten…") : "";
 }
 const bkSelected = () => $$("#bkTable input[data-cam]:checked").map(i => i.dataset.cam);
-$("#btnBackup").onclick = () => { $("#bkTable").dataset.init = ""; $("#dlgBackup").showModal(); renderBackup(); };
+$("#btnBackup").onclick = () => {
+  $("#bkWsName").textContent = wsCurName();
+  $("#bkAllLbl").hidden = wsData.list.length < 2; if (wsData.list.length < 2) $("#bkAll").checked = false;
+  $("#bkTable").dataset.init = ""; $("#dlgBackup").showModal(); renderBackup();
+};
 $("#bkClose").onclick = () => $("#dlgBackup").close();
-$("#bkDownload").onclick = () => { location.href = `/api/backup?passwords=${$("#bkPw").checked ? 1 : 0}`; };
+$("#bkDownload").onclick = () => { location.href = `/api/backup?passwords=${$("#bkPw").checked ? 1 : 0}&all=${$("#bkAll").checked ? 1 : 0}`; };
 $("#bkRestoreBtn").onclick = () => $("#bkFile").click();
+let rsData = null;
+const wsCurName = () => wsData.list.find(w => w.id === wsData.active)?.name || "Standaard";
+const camLine = (c) => `• ${c.name} (${c.host}): ${Object.keys(c.presets || {}).length} presetnamen, ${Object.keys(c.saved_positions || {}).length} posities${c.saved_image ? ", beeld" : ""}`;
 $("#bkFile").onchange = async () => {
   const f = $("#bkFile").files[0]; $("#bkFile").value = "";
   if (!f) return;
-  let data;
-  try { data = JSON.parse(await f.text()); } catch { return toast("Bestand is geen geldige back-up"); }
-  if (data.type !== "ptz-control-backup") return toast("Dit is geen PTZ Control-back-upbestand");
-  const cams = data.config?.cameras || [];
-  const msg = `Back-up van ${fmtDate(data.created)} terugzetten?\n\n` +
-    cams.map(c => `• ${c.name} (${c.host}): ${Object.keys(c.presets || {}).length} presetnamen, ${Object.keys(c.saved_positions || {}).length} posities${c.saved_image ? ", beeld" : ""}`).join("\n") +
-    `\n• ${Object.keys(data.thumbs || {}).length} thumbnails\n\n` +
-    `Dit vervangt de huidige instellingen van de app. De camera's zelf veranderen pas als je daarna 'Naar camera's terugzetten' kiest.`;
-  if (!confirm(msg)) return;
-  const r = await post("/api/backup/restore", data);
-  r.ok ? toast(`Teruggezet: ${r.cameras} camera's, ${r.thumbs} thumbnails`, true) : toast(r.error || "Terugzetten mislukt");
+  try { rsData = JSON.parse(await f.text()); } catch { return toast("Bestand is geen geldige back-up"); }
+  const all = rsData.type === "ptz-control-backup-all";
+  if (!all && rsData.type !== "ptz-control-backup") return toast("Dit is geen PTZ Control-back-upbestand");
+  if (all) {
+    const have = new Set(wsData.list.map(w => w.id));
+    $("#rsInfo").textContent = `Back-up van alle workspaces, ${fmtDate(rsData.created)}:\n\n` +
+      (rsData.workspaces || []).map(w => `• ${w.workspace?.name || "?"}: ${(w.config?.cameras || []).length} camera's, ${Object.keys(w.thumbs || {}).length} foto's` +
+        (have.has(w.workspace?.id) ? "  (vervangt de bestaande)" : "  (nieuw)")).join("\n") +
+      `\n\nWorkspaces die niet in de back-up staan blijven ongemoeid.`;
+  } else {
+    const src = rsData.workspace?.name;
+    $("#rsInfo").textContent = `Back-up${src ? ` van workspace "${src}"` : ""}, ${fmtDate(rsData.created)}:\n\n` +
+      (rsData.config?.cameras || []).map(camLine).join("\n") + `\n• ${Object.keys(rsData.thumbs || {}).length} thumbnails\n\n` +
+      `"In huidige workspace" vervangt de instellingen van "${wsCurName()}". "Als nieuwe workspace" laat alles staan en maakt er een workspace bij.`;
+  }
+  $("#rsCur").hidden = $("#rsNew").hidden = all; $("#rsAll").hidden = !all;
+  $("#rsCur").textContent = `In huidige workspace (${wsCurName()})`;
+  $("#dlgRestore").showModal();
 };
+$("#rsCancel").onclick = () => { rsData = null; $("#dlgRestore").close(); };
+async function rsDo(extra) {
+  const r = await post("/api/backup/restore", { ...rsData, ...extra });
+  $("#dlgRestore").close(); rsData = null;
+  if (!r.ok) return toast(r.error || "Terugzetten mislukt");
+  if (r.workspaces) { toast(`Teruggezet: ${r.workspaces.length} workspaces`, true); wsLoad(); }
+  else if (r.created) {
+    toast(`Teruggezet als workspace "${r.name}"`, true); wsLoad();
+    if (confirm(`Workspace "${r.name}" is gemaakt. Nu openen?`)) post("/api/workspaces", { action: "select", id: r.created });
+  } else toast(`Teruggezet: ${r.cameras} camera's, ${r.thumbs} thumbnails`, true);
+}
+$("#rsCur").onclick = () => rsDo({ _target: "current" });
+$("#rsNew").onclick = () => rsDo({ _target: "new" });
+$("#rsAll").onclick = () => rsDo({});
 $("#bkCapture").onclick = async () => {
   const cams = bkSelected(), positions = $("#bkPos").checked, image = $("#bkImg").checked;
   if (!cams.length || !(positions || image)) return toast("Kies minstens één camera en wat je wilt lezen");
