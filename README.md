@@ -61,9 +61,12 @@ Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke c
 Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
 
 **⛶ Volledig scherm** (in het menu onder 🎮 rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop rechtsonder.
+Met **◂ Bediening** rechtsonder (of toets **B**) klap je op volledig scherm rechts de **camerabediening en de Xbox-controller** uit. Staat het YouTube-venster open, dan staat de speler bovenaan in die kolom en de bediening er direct onder; de tegels schuiven op, er wordt niets afgedekt. Nog een keer klikken (**Bediening ▸**) klapt hem weer in. Elk scherm onthoudt of hij open stond.
 De **camerabediening** in de zijbalk klap je in en uit door op de titel te klikken; dat wordt per apparaat onthouden.
 
 ![Volledig scherm](docs/screenshots/volledig-scherm.png)
+
+![Volledig scherm met bediening naast YouTube](docs/screenshots/volledig-scherm-bediening.png)
 
 <img src="docs/screenshots/menu.png" width="440" alt="Menu">
 
@@ -302,7 +305,7 @@ Klik op **📍 Standaard ▾** naast de titel. Een workspace is een aparte set c
 - Direct in een bepaalde workspace starten: `python3 ptz_control.py --workspace "Kerk Zwolle"` (ook als extra argument achter `Start PTZ Control`).
 
 ## Sneltoetsen
-Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · Y = YouTube-venster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
+Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · B = bediening rechts (volledig scherm) · Y = YouTube-venster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
 **Alle toetsen zijn aan te passen** via Menu → ⌨ Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
 
 ![Sneltoetsen](docs/screenshots/sneltoetsen.png)
