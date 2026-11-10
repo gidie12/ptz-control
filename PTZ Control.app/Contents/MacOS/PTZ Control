@@ -1,6 +1,6 @@
 #!/bin/bash
 # Dock-app voor PTZ Control.
-# Draait de app al: open alleen de bediening in de browser.
+# Draait de app al: open alleen de bediening (app-venster van Chrome/Edge, anders de browser).
 # Anders: start "Start PTZ Control.command" in Terminal (installeert zo nodig, toont het logboek; venster sluiten = stoppen).
 # De app moet in de map van PTZ Control blijven staan; zet hem in het Dock door hem erheen te slepen (niet verplaatsen).
 APP="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -13,6 +13,18 @@ if [ ! -f "$DIR/ptz_control.py" ]; then
 fi
 
 if curl -s -m 1 -o /dev/null "http://127.0.0.1:$PORT/"; then
+  # Als app-venster (Chrome/Edge --app, zonder adresbalk); anders gewoon in de standaardbrowser.
+  if [ "${PTZ_BROWSER:-}" != "tab" ]; then
+    for B in "Google Chrome" "Microsoft Edge" "Chromium" "Brave Browser"; do
+      for R in /Applications "$HOME/Applications"; do
+        EXE="$R/$B.app/Contents/MacOS/$B"
+        if [ -x "$EXE" ]; then
+          "$EXE" --app="http://localhost:$PORT/" >/dev/null 2>&1 &
+          exit 0
+        fi
+      done
+    done
+  fi
   open "http://localhost:$PORT/"
   exit 0
 fi
