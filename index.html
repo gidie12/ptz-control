@@ -2321,9 +2321,10 @@ function updRender() {
   if (!show) return;
   $("#updTitle").textContent = u.installing ? "⏳ Bijwerken…" : "⬆ Nieuwe versie beschikbaar";
   $("#updInfo").textContent = u.installing
-    ? (u.mode === "release" && u.progress != null && u.progress < 100 ? `Nieuwe versie downloaden… ${u.progress}%`
+    ? (u.mode !== "git" && u.progress != null && u.progress < 100 ? `Nieuwe versie downloaden… ${u.progress}%`
       : "PTZ Control start zo opnieuw; deze pagina ververst vanzelf (ca. 10–30 seconden).")
-    : u.mode === "release" ? `Versie ${u.latest} (nu ${u.current})`
+    : u.mode === "bron" ? `Versie ${u.latest} als losse app. Die komt in plaats van deze versie; je instellingen blijven bewaard.`
+    : u.mode !== "git" ? `Versie ${u.latest} (nu ${u.current})`
     : `${u.count} ${u.count === 1 ? "wijziging" : "wijzigingen"} · nu ${u.current}`;
   const notes = u.installing ? [] : (u.notes || []);
   $("#updNotes").innerHTML = notes.slice(0, 5).map(n => `<li>${esc(n)}</li>`).join("") + (notes.length > 5 ? `<li class="muted">en nog ${notes.length - 5}…</li>` : "");
@@ -2332,7 +2333,7 @@ function updRender() {
     : !u.installing && !u.can_install && u.blocked ? `Automatisch bijwerken kan niet: ${u.blocked}.${u.mode === "git" ? " Werk bij met git pull." : ""}` : "";
   $("#updErr").textContent = err; $("#updErr").hidden = !err;
   $("#updActions").hidden = !!u.installing;
-  $("#updGo").textContent = u.can_install ? "Nu bijwerken" : u.mode === "release" ? "Downloaden" : "Bekijken";
+  $("#updGo").textContent = u.can_install ? "Nu bijwerken" : u.mode !== "git" ? "Downloaden" : "Bekijken";
 }
 function updDismiss() { lsSet("updDismiss", updKey()); updRender(); }
 $("#updLater").onclick = updDismiss;
@@ -2346,7 +2347,7 @@ $("#updGo").onclick = async () => {
   updUpdate({ ...upd, installing: true });
 };
 $("#btnUpd").onclick = async () => {
-  if (upd.mode === "off") return toast("Updatecontrole is niet beschikbaar: deze installatie komt niet uit git en is geen losse app");
+  if (upd.mode === "off") return toast("Updatecontrole is niet beschikbaar: de map van PTZ Control is niet schrijfbaar");
   toast("Controleren op updates…", true);
   const r = await post("/api/update/check", {});
   if (!r || r.ok === false) return;

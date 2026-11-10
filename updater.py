@@ -3,6 +3,12 @@
 Twee manieren, afhankelijk van hoe de app draait:
 - **git**: de app draait uit een git-checkout (Start PTZ Control). `git fetch` en vergelijken met de upstream-branch;
   bijwerken = `git pull --ff-only`, zo nodig packages bijwerken, daarna de server opnieuw starten.
+- **bron**: de app draait uit een map zonder git (bv. als ZIP van GitHub gedownload) of git werkt niet op deze
+  computer. 🧑 Bijwerken = overstappen op de **losse app**: die wordt gedownload en in deze map gezet als
+  `PTZ Control.app` (in plaats van de Dock-snelkoppeling) of `PTZ Control.exe`. 🧑 De instellingen gaan naar de
+  vaste plek buiten de app (Mac: ~/Library/Application Support/PTZ Control, Windows: %APPDATA%\\PTZ Control);
+  cameras.json in deze map wordt na een geslaagde wissel hernoemd naar cameras.json.overgezet (anders zou de
+  losse app deze map als "draagbaar" blijven gebruiken). Daarna werkt de losse app zichzelf bij.
 - **release**: de losse app (PyInstaller). Nieuwste GitHub-release vergelijken met de ingebouwde versie;
   bijwerken = het bestand voor dit platform downloaden, daarna vervangt een klein hulpscript de .exe/.app zodra
   deze app gestopt is en start de nieuwe versie (een draaiend programma kan zichzelf niet overschrijven).
@@ -50,9 +56,25 @@ class Updater:
             return "off"
         if self.frozen:
             return "release"
-        if os.path.isdir(os.path.join(self.here, ".git")) and shutil.which("git"):
+        if os.path.isdir(os.path.join(self.here, ".git")) and self._git_works():
             return "git"
+        if os.path.exists(os.path.join(self.here, "ptz_control.py")) and os.access(self.here, os.W_OK):
+            return "bron"
         return "off"
+
+    @staticmethod
+    def _git_works():
+        """Is git echt bruikbaar? Op macOS is /usr/bin/git een doorverwijzing die zonder de Command Line Tools
+        alleen een installatievenster opent; dat eerst stil controleren met xcode-select."""
+        if not shutil.which("git"):
+            return False
+        if sys.platform == "darwin" and os.path.realpath(shutil.which("git")) == "/usr/bin/git":
+            try:
+                if subprocess.run(["xcode-select", "-p"], capture_output=True, timeout=5).returncode != 0:
+                    return False
+            except Exception:  # noqa: BLE001
+                return False
+        return True
 
     def _git(self, *args, timeout=60):
         env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_ASKPASS="echo", LC_ALL="C")
@@ -73,6 +95,8 @@ class Updater:
                     return f.read().strip() or "0.0.0"
             except OSError:
                 return "0.0.0"
+        if self.mode == "bron":
+            return "onbekend"   # map zonder git: versie onbekend, de nieuwste losse app wordt aangeboden
         return None
 
     def snapshot(self):
@@ -155,8 +179,48 @@ class Updater:
     def _asset_suffix():
         return "-Windows.exe" if sys.platform == "win32" else "-macOS.zip" if sys.platform == "darwin" else None
 
+    @staticmethod
+    def _std_data_dir():
+        """Vaste plek voor instellingen van de losse app (gelijk aan _data_dir() in ptz_control.py)."""
+        if sys.platform == "win32":
+            base = os.environ.get("APPDATA") or os.path.expanduser("~")
+        elif sys.platform == "darwin":
+            base = os.path.expanduser("~/Library/Application Support")
+        else:
+            base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+        return os.path.join(base, "PTZ Control")
+
+    MIGRATE = ("cameras.json", "workspaces.json", "github_token.txt", "thumbs", "workspaces")
+
+    def _migrate_data(self):
+        """Modus bron: instellingen + foto's kopiëren naar de vaste plek buiten de app. Wat daar al stond,
+        gaat eerst naar een submap 'voor-overstap-<datum>' (niets wordt overschreven of weggegooid)."""
+        src = os.path.realpath(self.data_dir)
+        dst = self._std_data_dir()
+        if os.path.realpath(dst) == src:
+            return dst
+        os.makedirs(dst, exist_ok=True)
+        keep = os.path.join(dst, "voor-overstap-" + time.strftime("%Y%m%d-%H%M%S"))
+        for name in self.MIGRATE:
+            s_, d_ = os.path.join(src, name), os.path.join(dst, name)
+            if not os.path.exists(s_):
+                continue
+            if os.path.exists(d_):
+                os.makedirs(keep, exist_ok=True)
+                shutil.move(d_, os.path.join(keep, name))
+            if os.path.isdir(s_):
+                shutil.copytree(s_, d_)
+            else:
+                shutil.copy2(s_, d_)
+        if not os.path.isfile(os.path.join(dst, "cameras.json")) and os.path.isfile(os.path.join(src, "cameras.json")):
+            raise RuntimeError("instellingen kopiëren mislukt")
+        return dst
+
     def _app_path(self):
-        """Pad van de draaiende losse app: de .exe (Windows) of de .app-map (macOS)."""
+        """Waar de losse app komt: bij `release` de draaiende .exe/.app; bij `bron` in deze map
+        (`PTZ Control.app` vervangt de Dock-snelkoppeling, `PTZ Control.exe` naast de .bat)."""
+        if self.mode == "bron":
+            return os.path.join(self.here, "PTZ Control.exe" if sys.platform == "win32" else "PTZ Control.app")
         exe = os.path.abspath(sys.executable)
         if sys.platform == "darwin" and ".app/Contents/MacOS" in exe:
             return exe[: exe.index(".app/Contents/MacOS") + 4]
@@ -177,7 +241,7 @@ class Updater:
             raise
         latest = rel.get("tag_name") or ""
         cur = self.state["current"]
-        avail = _ver_tuple(latest) > _ver_tuple(cur)
+        avail = _ver_tuple(latest) > _ver_tuple(cur) or (self.mode == "bron" and cur == "onbekend" and bool(latest))
         notes = [ln.strip().lstrip("-*• ").replace("**", "").strip() for ln in (rel.get("body") or "").splitlines()
                  if ln.strip() and not ln.strip().startswith("#") and "Changelog" not in ln and "Alle wijzigingen:" not in ln
                  and "://" not in ln][:8]
@@ -191,7 +255,7 @@ class Updater:
 
     # ------------------------------------------------------------ bijwerken
     def install(self):
-        if self.mode not in ("git", "release"):
+        if self.mode not in ("git", "release", "bron"):
             raise RuntimeError("Bijwerken is hier niet beschikbaar.")
         st = self.check()
         if not st["available"]:
@@ -255,13 +319,19 @@ class Updater:
             self._download(asset["browser_download_url"], dest, asset.get("size"))
             app = self._app_path()
             self._set(progress=100)
+            moved = None
+            if self.mode == "bron":
+                moved_to = self._migrate_data()
+                src_cfg = os.path.join(self.data_dir, "cameras.json")
+                moved = src_cfg if os.path.isfile(src_cfg) and os.path.realpath(moved_to) != os.path.realpath(self.data_dir) else None
+                print(f"Instellingen gekopieerd naar {moved_to}")
             if sys.platform == "win32":
-                script = self._script_windows(app, dest, work)
+                script = self._script_windows(app, dest, work, moved)
                 flags = 0x00000008 | 0x00000200 | 0x08000000   # DETACHED_PROCESS | NEW_PROCESS_GROUP | NO_WINDOW
                 subprocess.Popen(["cmd", "/c", script], creationflags=flags, close_fds=True)
             else:
                 new_app = self._unzip_mac(dest, work)
-                script = self._script_mac(app, new_app, work)
+                script = self._script_mac(app, new_app, work, moved)
                 subprocess.Popen(["/bin/bash", script], start_new_session=True, close_fds=True,
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(f"Nieuwe versie gedownload; PTZ Control wordt vervangen en opnieuw gestart ({app}).")
@@ -282,18 +352,20 @@ class Updater:
         return os.path.join(out, apps[0])
 
     @staticmethod
-    def _script_mac(app, new_app, work):
+    def _script_mac(app, new_app, work, moved=None):
         """Wacht tot deze app gestopt is, wisselt de .app om (oude eerst opzij) en start de nieuwe.
         Lukt omwisselen niet (geen schrijfrechten), dan blijft de oude staan en toont Finder de nieuwe."""
         q = lambda p: "'" + p.replace("'", "'\\''") + "'"  # noqa: E731
         path = os.path.join(work, "bijwerken.sh")
+        rename = ("mv " + q(moved) + " " + q(moved + ".overgezet")) if moved else ":"
         with open(path, "w", encoding="utf-8") as f:
             f.write(f"""#!/bin/bash
 while kill -0 {os.getpid()} 2>/dev/null; do sleep 0.5; done
 APP={q(app)}; NEW={q(new_app)}
 rm -rf "$APP.oud"
-if mv "$APP" "$APP.oud" && mv "$NEW" "$APP"; then
+if {{ [ ! -e "$APP" ] || mv "$APP" "$APP.oud"; }} && mv "$NEW" "$APP"; then
   rm -rf "$APP.oud"
+  {rename}
   xattr -dr com.apple.quarantine "$APP" 2>/dev/null
   open "$APP" --args --no-open
 else
@@ -305,10 +377,11 @@ fi
         return path
 
     @staticmethod
-    def _script_windows(exe, new_exe, work):
+    def _script_windows(exe, new_exe, work, moved=None):
         """Wacht tot deze .exe gestopt is, zet de nieuwe ervoor in de plaats en start hem."""
         path = os.path.join(work, "bijwerken.bat")
         pid = os.getpid()
+        rename = ('move /y "' + moved + '" "' + moved + '.overgezet" >nul') if moved else "rem"
         with open(path, "w", encoding="utf-8") as f:
             f.write(f"""@echo off
 chcp 65001 >nul
@@ -320,7 +393,11 @@ copy /y "{new_exe}" "{exe}" >nul && goto start
 set /a n+=1
 if %n% lss 20 (timeout /t 1 /nobreak >nul & goto kopie)
 start "" explorer /select,"{new_exe}"
+if exist "{exe}" start "" "{exe}" --no-open
+goto eind
 :start
+{rename}
 start "" "{exe}" --no-open
+:eind
 """)
         return path
