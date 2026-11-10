@@ -157,10 +157,22 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - ⚠️ Windows met NVIDIA: `ultralytics` installeert standaard CPU-torch; GPU vereist de CUDA-index (zie README).
 - macOS Gatekeeper ("onbekende ontwikkelaar") en Windows SmartScreen/firewall vragen eenmalig om bevestiging.
 
+## 9a. Losse app (PyInstaller)
+
+- 🧑 Gevraagd: een **Windows-executable en een macOS-app** zonder Python te installeren.
+- `packaging/ptz_control.spec` + `packaging/requirements-build.txt`; gebouwd door **`.github/workflows/build.yml`** op `windows-latest` (één `PTZ Control.exe`, `console=False`) en `macos-14` (arm64, `PTZ Control.app`, `LSUIElement` = geen Dock-icoon, `NSLocalNetworkUsageDescription` voor macOS 15+, ad-hoc `codesign`). Start bij `workflow_dispatch` (artifacts) of tag `v*` (ook GitHub-release). Kruis-bouwen kan niet: een exe alleen op Windows, een .app alleen op een Mac.
+- ⚠️ **Niet op echte Windows/Mac geprobeerd.** Alleen een Linux-build van hetzelfde recept getest (start, `/api/state`, tweede start = "draait al", `/api/quit`, log). De workflow heeft per platform een rooktest (start met `--no-open --no-tray`, haalt `/` op). De Actions-API is vanuit de bouwomgeving niet bereikbaar, dus de uitkomst van de eerste run is hier niet gezien.
+- Losse app = `FROZEN`: `index.html` en `icon.png` uit `sys._MEIPASS` (`RES_DIR`); **config en thumbs in `DATA_DIR`**: `%APPDATA%\PTZ Control` / `~/Library/Application Support/PTZ Control` (of `PTZ_DATA`, of draagbaar: een `cameras.json` naast de .exe/.app). Uitvoer naar `DATA_DIR/ptz_control.log` (geen console).
+- Opent zelf de browser (tenzij `--no-open`). Poort bezet en het is PTZ Control → alleen browser openen en stoppen; anders melding (MessageBox / `osascript`).
+- **Icoon in systeemvak/menubalk** via `pystray` (hoofdthread; server in een thread): openen, LAN-adres, map openen, afsluiten. Zonder pystray draait hij gewoon door. ⚠️ pystray op macOS (PyObjC) en Windows niet getest.
+- 🧑 **⏻ PTZ Control afsluiten** in het 🎮-menu (`POST /api/quit` → `os._exit(0)` na 0,3 s), voor alle versies.
+- **Geen YOLO/torch** in de losse app (te groot); volgen valt terug op OpenCV-HOG (`opencv-python-headless<5`).
+- ⚠️ Niet ondertekend door Apple/Microsoft: Gatekeeper (Systeeminstellingen → Privacy en beveiliging → *Toch openen*, of `xattr -dr com.apple.quarantine`) en SmartScreen vragen eenmalig om bevestiging.
+
 ## 10. Werken aan deze repo
 
 - **Talen:** Nederlands voor UI-teksten, README, commitberichten en uitleg aan de gebruiker.
-- **Nooit committen:** `cameras.json`, `thumbs/`, `.venv/`, `*.pt`.
+- **Nooit committen:** `cameras.json`, `thumbs/`, `.venv/`, `*.pt`, `build/`, `dist/`.
 - **Controles na wijzigingen:**
   ```bash
   python3 -m py_compile ptz_control.py tracker.py backup.py youtube.py

@@ -143,3 +143,15 @@ Pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9
 
 ## Tip
 Geef de pc met deze app een vast IP-adres (DHCP-reservering), dan blijft het tabletadres hetzelfde.
+
+## Losse app (zonder Python installeren)
+Er is ook een kant-en-klare app: **`PTZ-Control-…-Windows.exe`** en **`PTZ-Control-…-macOS.zip`** (Mac met Apple-chip).
+Download ze bij **Releases** op GitHub (of onder *Actions → Losse app bouwen → Artifacts*).
+
+- **Windows:** dubbelklik op de .exe. De eerste keer: SmartScreen → *Meer informatie* → *Toch uitvoeren*, en bij de firewall *Privénetwerken* toestaan (anders kunnen andere schermen niet meedoen). Er verschijnt een camera-icoon in het systeemvak (rechtsonder, eventueel onder ^).
+- **macOS:** pak de zip uit en zet **PTZ Control.app** in *Programma's*. De app is niet door Apple gecontroleerd: de eerste keer weigert macOS hem. Ga dan naar *Systeeminstellingen → Privacy en beveiliging* en klik bij PTZ Control op *Toch openen* (of in Terminal: `xattr -dr com.apple.quarantine "/Applications/PTZ Control.app"`). Sta daarna *Lokaal netwerk* toe, anders bereikt hij de camera's niet. De app heeft geen Dock-icoon maar een icoon in de **menubalk** (rechtsboven).
+- Via het icoon: *Bediening openen*, het adres voor andere schermen, *Map met instellingen openen* en *Afsluiten*. Afsluiten kan ook in de bediening: 🎮 Menu → **⏻ PTZ Control afsluiten**. Nog een keer op de app klikken terwijl hij draait opent alleen de bediening.
+- **Instellingen en foto's** staan bij de losse app in een eigen map: Windows `%APPDATA%\PTZ Control`, Mac `~/Library/Application Support/PTZ Control`. Overstappen vanaf de Python-versie: maak daar een **Back-up** (met wachtwoorden) en zet die terug in de app, of kopieer `cameras.json` en de map `thumbs` naar die map.
+- **Persoon volgen** werkt in de losse app met de ingebouwde OpenCV-detector (minder nauwkeurig dan YOLO). Wil je YOLO, gebruik dan de Python-versie (`Start PTZ Control`).
+- Een nieuwe versie maken: tag pushen (`git tag v1.1.0 && git push origin v1.1.0`); GitHub bouwt dan beide apps en zet ze bij Releases.
+

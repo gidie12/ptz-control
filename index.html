@@ -315,6 +315,8 @@
       <div class="msep"></div>
       <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
       <button class="mi" id="btnPrefs" role="menuitem" title="YouTube-kanaal en -venster">⚙ Instellingen</button>
+      <div class="msep"></div>
+      <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)">⏻ PTZ Control afsluiten</button>
     </div>
   </div>
 </header>
@@ -1760,6 +1762,12 @@ function openPrefs() {
   $("#dlgPrefs").showModal();
 }
 $("#btnPrefs").onclick = openPrefs;
+$("#btnQuit").onclick = async () => {
+  if (!confirm("PTZ Control afsluiten?\n\nDe camera's blijven staan waar ze zijn, maar geen enkel scherm kan ze nog bedienen tot je de app opnieuw start.")) return;
+  await post("/api/quit", {}).catch(() => {});
+  document.body.innerHTML = '<div style="display:grid;place-items:center;height:100vh;font:16px system-ui;color:var(--muted);text-align:center">'
+    + '<div><div style="font-size:42px">⏻</div><p>PTZ Control is afgesloten.</p><p>Start de app opnieuw om verder te gaan.</p></div></div>';
+};
 $("#prefsCancel").onclick = () => $("#dlgPrefs").close();
 // aanzetten = ook automatisch plaatsen weer aan (anders blijft een versleept venster op zijn plek staan)
 function ytSetWallTop(on) {

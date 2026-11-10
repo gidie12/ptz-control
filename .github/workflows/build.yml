@@ -1,0 +1,101 @@
+name: Losse app bouwen
+
+# Bouwt "PTZ Control.exe" (Windows) en "PTZ Control.app" (macOS, Apple-chip).
+# - Handmatig: Actions → "Losse app bouwen" → Run workflow (bestanden onder Artifacts).
+# - Tag v* pushen (bv. v1.0.0): ook een GitHub-release met beide downloads.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            naam: windows
+          - os: macos-14            # Apple Silicon (arm64), zoals de Mac mini
+            naam: macos
+    runs-on: ${{ matrix.os }}
+    env:
+      PTZ_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('0.0.{0}', github.run_number) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bouwpakketten installeren
+        run: pip install -r packaging/requirements-build.txt
+
+      - name: Snelle controle
+        run: python -m py_compile ptz_control.py tracker.py backup.py youtube.py
+
+      - name: App bouwen
+        run: pyinstaller --noconfirm packaging/ptz_control.spec
+
+      - name: Rooktest (Windows)
+        if: matrix.naam == 'windows'
+        shell: pwsh
+        run: |
+          $env:PTZ_DATA = "$env:RUNNER_TEMP\ptzdata"
+          $p = Start-Process -FilePath "dist\PTZ Control.exe" -ArgumentList "--no-open","--no-tray","--port","8765" -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 40; $i++) {
+            Start-Sleep -Seconds 1
+            try { $r = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765/ ; if ($r.Content -match "PTZ Control") { $ok = $true; break } } catch {}
+          }
+          Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/quit -Body "{}" -ContentType "application/json" -ErrorAction SilentlyContinue | Out-Null
+          if (-not $ok) { Get-Content "$env:PTZ_DATA\ptz_control.log" -ErrorAction SilentlyContinue; throw "App reageert niet" }
+          Write-Host "Rooktest geslaagd"
+
+      - name: Rooktest (macOS)
+        if: matrix.naam == 'macos'
+        run: |
+          export PTZ_DATA="$RUNNER_TEMP/ptzdata"
+          "dist/PTZ Control.app/Contents/MacOS/PTZ Control" --no-open --no-tray --port 8765 &
+          for i in $(seq 1 40); do sleep 1; curl -fs http://127.0.0.1:8765/ | grep -q "PTZ Control" && ok=1 && break; done
+          curl -fs -X POST -d '{}' http://127.0.0.1:8765/api/quit || true
+          if [ -z "$ok" ]; then cat "$PTZ_DATA/ptz_control.log" || true; exit 1; fi
+          echo "Rooktest geslaagd"
+
+      - name: Inpakken (Windows)
+        if: matrix.naam == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item "dist\PTZ Control.exe" "out\PTZ-Control-${env:PTZ_VERSION}-Windows.exe"
+
+      - name: Inpakken (macOS)
+        if: matrix.naam == 'macos'
+        run: |
+          # ad-hoc ondertekenen (geen Apple-ontwikkelaarsaccount); nodig voor Apple-chip
+          codesign --force --deep --sign - "dist/PTZ Control.app"
+          mkdir -p out
+          ditto -c -k --keepParent "dist/PTZ Control.app" "out/PTZ-Control-${PTZ_VERSION}-macOS.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PTZ-Control-${{ matrix.naam }}
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true

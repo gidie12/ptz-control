@@ -15,6 +15,7 @@ Protocollen per camera:
 Autofocus/one-push-AF gaan altijd via VISCA (TCP 5678), ook bij http.
 """
 import argparse
+import sys
 import base64
 import datetime
 import json
@@ -32,9 +33,39 @@ import backup as _backup  # noqa: E402
 import youtube as _youtube  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(HERE, "cameras.json")
-INDEX_PATH = os.path.join(HERE, "index.html")
-THUMB_DIR = os.path.join(HERE, "thumbs")
+FROZEN = bool(getattr(sys, "frozen", False))   # losse app (PyInstaller): .exe / .app
+
+
+def _data_dir():
+    """Waar cameras.json en thumbs/ staan.
+
+    Als script: naast dit bestand (zoals altijd). Als losse app: een vaste, schrijfbare map per gebruiker,
+    want de app zelf is alleen-lezen (macOS) of wordt bij elke start uitgepakt (Windows).
+    PTZ_DATA kan dit overschrijven; staat er een cameras.json naast de .exe/.app, dan die map (draagbaar)."""
+    if os.environ.get("PTZ_DATA"):
+        return os.environ["PTZ_DATA"]
+    if not FROZEN:
+        return HERE
+    exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+    if sys.platform == "darwin" and ".app/Contents/MacOS" in exe_dir:
+        exe_dir = os.path.abspath(os.path.join(exe_dir, "..", "..", ".."))   # map waar de .app in staat
+    if os.path.isfile(os.path.join(exe_dir, "cameras.json")):
+        return exe_dir
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or os.path.expanduser("~")
+    elif sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    return os.path.join(base, "PTZ Control")
+
+
+RES_DIR = getattr(sys, "_MEIPASS", HERE)       # meegeleverde bestanden (index.html)
+DATA_DIR = _data_dir()
+os.makedirs(DATA_DIR, exist_ok=True)
+CONFIG_PATH = os.path.join(DATA_DIR, "cameras.json")
+INDEX_PATH = os.path.join(RES_DIR, "index.html")
+THUMB_DIR = os.path.join(DATA_DIR, "thumbs")
 LOCK = threading.Lock()
 TIMEOUT = 2.5
 
@@ -743,6 +774,12 @@ class Handler(BaseHTTPRequestHandler):
                 YT.refresh()
             return self._send(200, {"ok": True, "youtube_locked": yt_locked})
 
+        if u.path == "/api/quit":
+            # 🧑 app afsluiten vanuit het menu (de losse Mac-app heeft geen venster om te sluiten)
+            self._send(200, {"ok": True})
+            threading.Timer(0.3, lambda: os._exit(0)).start()
+            return None
+
         if u.path == "/api/youtube/check":
             YT.refresh()
             return self._send(200, {"ok": True})
@@ -838,22 +875,111 @@ def local_ip():
         return "127.0.0.1"
 
 
+def _melding(tekst):
+    """Foutmelding tonen, ook als de losse app geen consolevenster heeft."""
+    print(tekst)
+    if FROZEN and sys.platform == "win32":
+        try:
+            import ctypes  # noqa: PLC0415
+            ctypes.windll.user32.MessageBoxW(None, tekst, "PTZ Control", 0x30)
+        except Exception:  # noqa: BLE001
+            pass
+    elif FROZEN and sys.platform == "darwin":
+        try:
+            import subprocess  # noqa: PLC0415
+            subprocess.run(["osascript", "-e", f'display alert "PTZ Control" message {json.dumps(tekst)}'], timeout=60)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _log_naar_bestand():
+    """Losse app zonder console: uitvoer naar ptz_control.log in de instellingenmap."""
+    if FROZEN and (sys.stdout is None or sys.stderr is None or not sys.stdout.isatty()):
+        try:
+            f = open(os.path.join(DATA_DIR, "ptz_control.log"), "a", buffering=1, encoding="utf-8")  # noqa: SIM115
+            f.write(f"\n--- start {datetime.datetime.now():%Y-%m-%d %H:%M:%S} ---\n")
+            sys.stdout = sys.stderr = f
+        except OSError:
+            pass
+
+
+def _tray(url, lan_url):
+    """Icoon in de menubalk (Mac) / het systeemvak (Windows): openen, map, afsluiten. Blokkeert.
+
+    Geeft False terug als pystray/Pillow ontbreekt; dan draait de server gewoon zonder icoon."""
+    try:
+        import pystray  # noqa: PLC0415
+        from PIL import Image  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        return False
+    import webbrowser  # noqa: PLC0415
+
+    def open_map():
+        import subprocess  # noqa: PLC0415
+        if sys.platform == "win32":
+            os.startfile(DATA_DIR)  # noqa: S606
+        else:
+            subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", DATA_DIR])
+
+    def stoppen(icon, _item=None):
+        icon.stop()
+        os._exit(0)
+
+    img = Image.open(os.path.join(RES_DIR, "icon.png"))
+    menu = pystray.Menu(
+        pystray.MenuItem("Bediening openen", lambda *_: webbrowser.open(url), default=True),
+        pystray.MenuItem(f"Andere schermen: {lan_url}", lambda *_: webbrowser.open(lan_url)),
+        pystray.MenuItem("Map met instellingen openen", lambda *_: open_map()),
+        pystray.Menu.SEPARATOR,
+        pystray.MenuItem("PTZ Control afsluiten", stoppen),
+    )
+    pystray.Icon("PTZ Control", img, "PTZ Control", menu).run()
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser(description="Webbediening voor PTZOptics-camera's")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--bind", default="0.0.0.0")
     ap.add_argument("--open", action="store_true", help="open de bediening in de standaardbrowser")
+    ap.add_argument("--no-open", action="store_true", help="losse app: browser níet openen")
+    ap.add_argument("--no-tray", action="store_true", help="losse app: geen icoon in menubalk/systeemvak")
     args = ap.parse_args()
+    _log_naar_bestand()
+    if FROZEN and not args.no_open:
+        args.open = True   # dubbelklik op de app = bediening openen
+    url = f"http://localhost:{args.port}"
+    try:
+        srv = ThreadingHTTPServer((args.bind, args.port), Handler)
+    except OSError:
+        # poort bezet: draait PTZ Control al? Dan alleen de bediening openen.
+        try:
+            urllib.request.urlopen(url + "/api/state", timeout=2).read()
+            print(f"PTZ Control draait al op {url}")
+            if args.open:
+                import webbrowser
+                webbrowser.open(url)
+            return
+        except Exception:  # noqa: BLE001
+            _melding(f"Poort {args.port} is bezet door een ander programma. PTZ Control kan niet starten.")
+            raise SystemExit(1)
     load_config()
+    lan_url = f"http://{local_ip()}:{args.port}"
     STATE["server"] = f"{local_ip()}:{args.port}"
+    STATE["app"] = {"frozen": FROZEN, "data_dir": DATA_DIR}
     YT.start()
-    srv = ThreadingHTTPServer((args.bind, args.port), Handler)
     srv.daemon_threads = True
-    print(f"PTZ Control draait op http://localhost:{args.port}  en  http://{local_ip()}:{args.port}")
+    print(f"PTZ Control draait op {url}  en  {lan_url}")
+    print(f"Instellingen en foto's: {DATA_DIR}")
     print("Stoppen met Ctrl+C (of dit venster sluiten)")
     if args.open:
         import webbrowser
-        threading.Timer(1.0, lambda: webbrowser.open(f"http://localhost:{args.port}")).start()
+        threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+    if FROZEN and not args.no_tray:
+        threading.Thread(target=srv.serve_forever, daemon=True, name="http").start()
+        if _tray(url, lan_url):
+            os._exit(0)
+        threading.Event().wait()   # geen icoon mogelijk: blijven draaien (afsluiten via het menu in de bediening)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

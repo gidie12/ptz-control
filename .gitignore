@@ -13,3 +13,5 @@ thumbs/
 
 # macOS
 .DS_Store
+build/
+dist/
