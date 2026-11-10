@@ -152,6 +152,10 @@
   #dlgMap { width: min(720px, 95vw); }
   #dlgMap #padMap { grid-template-columns: 120px 1fr 120px 1fr; gap: 6px 12px; font-size: 13px; }
   @media (max-width: 600px) { #dlgMap #padMap { grid-template-columns: 110px 1fr; } }
+  .padprofrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .padprofrow select, .padprofcard select { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
+  .padprofcard { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .padprofcard select { flex: 1; }
   #dlgMap .padset { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
   #padMap .hit { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
   .bsec { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
@@ -403,6 +407,7 @@
         <label><input type="checkbox" id="padInvY"> Tilt omkeren (stick omhoog = camera omlaag)</label>
         <label>Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
       </div>
+      <label class="small padprofcard">Knoppenprofiel <select class="padprof" id="padProfCard" title="Welke knoppenindeling deze controller op dit scherm gebruikt"></select></label>
       <button class="icon" id="btnMap2" style="margin-top:6px">🎮 Knoppenindeling instellen…</button>
     </div>
     <div class="small" style="padding:0 4px" id="keyHints"></div>
@@ -462,13 +467,21 @@
 
 <dialog id="dlgMap">
   <h3>🎮 Knoppenindeling Xbox-controller</h3>
+  <div class="padprofrow">
+    <label class="small">Profiel <select class="padprof" id="padProfMap"></select></label>
+    <button class="icon" id="padProfNew" title="Nieuw profiel maken (kopie van het huidige)">＋ Nieuw profiel</button>
+    <button class="icon" id="padProfRen">Hernoemen</button>
+    <button class="icon danger" id="padProfDel" title="Dit profiel verwijderen">🗑</button>
+  </div>
+  <p class="small" style="margin:6px 0 10px">Elk profiel heeft een eigen knoppenindeling, bijvoorbeeld per persoon. Welk profiel actief is,
+    onthoudt elk scherm zelf; de profielen zelf zijn op alle schermen beschikbaar.</p>
   <p class="small" style="margin:0">Druk op een knop van de controller om de regel te laten oplichten. Zolang dit venster open is, bestuurt de controller niets.</p>
   <div class="map">
     <b>Linker stick</b><span>Pan / tilt: hoe verder je duwt, hoe sneller</span>
     <b>RT / LT</b><span>Zoom in / uit: hoe dieper je drukt, hoe sneller</span>
     <b>Rechter stick ↑ / ↓</b><span>Focus ver / dichtbij (zet autofocus uit)</span>
   </div>
-  <p class="small" style="margin:8px 0 0">Per knop instelbaar, geldt voor alle schermen. <b>Shift</b> en <b>Opslaan</b> werken
+  <p class="small" style="margin:8px 0 0">Per knop instelbaar voor profiel <b id="mapProfName">Standaard</b>. <b>Shift</b> en <b>Opslaan</b> werken
     als je ze ingedrukt houdt en dan een presetknop drukt (opslaan trilt ter bevestiging).</p>
   <div class="map" id="padMap"></div>
   <div class="padset">
@@ -661,7 +674,7 @@ async function loadConfig() {
   if (view === null && cfg.cameras.length > 1) view = ALL;
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
-  render(); renderBackup(); renderPadMap(); renderLoad(); renderCap(); renderKeyHints();
+  render(); renderBackup(); renderPadProfiles(); renderPadMap(); renderLoad(); renderCap(); renderKeyHints();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -1201,8 +1214,57 @@ const PAD_DEFAULT = {
              L3: "fine", R3: "af", VIEW: "stopall", MENU: "store" },
   shift: 4,
 };
+/* ---- profielen voor de knoppenindeling (per persoon) ----
+   cfg.pad_profiles = [{id, name, map}] in cameras.json; "standaard" = cfg.pad_map (bestaande indeling).
+   Welk profiel actief is, onthoudt elk scherm zelf (localStorage padProfile). */
+const PAD_STD = "standaard";
+const padProfiles = () => [{ id: PAD_STD, name: cfg.pad_std_name || "Standaard" }, ...(cfg.pad_profiles || [])];
+const padProfileId = () => { const id = store.get("padProfile") || PAD_STD; return padProfiles().some(p => p.id === id) ? id : PAD_STD; };
+const padProfileName = () => padProfiles().find(p => p.id === padProfileId())?.name || "Standaard";
+function padRawMap(id = padProfileId()) {
+  return id === PAD_STD ? (cfg.pad_map || {}) : ((cfg.pad_profiles || []).find(p => p.id === id)?.map || {});
+}
+function padSetRawMap(map, id = padProfileId()) {
+  if (id === PAD_STD) cfg.pad_map = map;
+  else { const p = (cfg.pad_profiles || []).find(p => p.id === id); if (p) p.map = map; }
+}
+function renderPadProfiles() {
+  const opts = padProfiles().map(p => `<option value="${esc(p.id)}"${p.id === padProfileId() ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  $$(".padprof").forEach(sel => sel.innerHTML = opts);
+  $("#padProfDel").disabled = padProfileId() === PAD_STD;
+  $("#mapProfName").textContent = padProfileName();
+}
+function padSelectProfile(id) {
+  store.set("padProfile", id); renderPadProfiles();
+  if ($("#dlgMap").open) renderPadMap();
+  toast(`Knoppenprofiel: ${padProfileName()}`, true);
+}
+$$(".padprof").forEach(sel => sel.onchange = () => padSelectProfile(sel.value));
+$("#padProfNew").onclick = async () => {
+  const name = (prompt(`Naam van het nieuwe profiel (begint als kopie van "${padProfileName()}"):`) || "").trim().slice(0, 40);
+  if (!name) return;
+  if (padProfiles().some(p => p.name.toLowerCase() === name.toLowerCase())) return toast("Er is al een profiel met die naam");
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "profiel";
+  let id = base, i = 2; while (padProfiles().some(p => p.id === id)) id = `${base}-${i++}`;
+  (cfg.pad_profiles ||= []).push({ id, name, map: JSON.parse(JSON.stringify(padMap())) });
+  await saveConfig(); padSelectProfile(id);
+};
+$("#padProfRen").onclick = async () => {
+  const name = (prompt("Nieuwe naam voor dit profiel:", padProfileName()) || "").trim().slice(0, 40);
+  if (!name || name === padProfileName()) return;
+  if (padProfiles().some(p => p.name.toLowerCase() === name.toLowerCase() && p.id !== padProfileId())) return toast("Er is al een profiel met die naam");
+  if (padProfileId() === PAD_STD) cfg.pad_std_name = name;
+  else (cfg.pad_profiles || []).find(p => p.id === padProfileId()).name = name;
+  await saveConfig(); renderPadProfiles(); toast("Profiel hernoemd", true);
+};
+$("#padProfDel").onclick = async () => {
+  const id = padProfileId(); if (id === PAD_STD) return;
+  if (!confirm(`Profiel "${padProfileName()}" verwijderen?\n\nSchermen die dit profiel gebruiken gaan terug naar "${padProfiles()[0].name}".`)) return;
+  cfg.pad_profiles = (cfg.pad_profiles || []).filter(p => p.id !== id);
+  await saveConfig(); padSelectProfile(PAD_STD);
+};
 const padMap = () => {
-  const m = cfg.pad_map || {};
+  const m = padRawMap();
   const b = { ...PAD_DEFAULT.buttons, ...(m.buttons || {}) };
   for (const k in b) if (/^scene/.test(b[k])) b[k] = "";   // scènes zijn verwijderd
   return { buttons: b, shift: m.shift ?? PAD_DEFAULT.shift };
@@ -1229,11 +1291,11 @@ function renderPadMap() {
 async function savePadMap() {
   const buttons = {};
   $$("#padMap select").forEach(s => buttons[s.dataset.btn] = s.value);
-  cfg.pad_map = { buttons, shift: Math.max(0, Math.min(60, +$("#padShift").value || 0)) };
-  await saveConfig(); toast("Knopindeling opgeslagen", true);
+  padSetRawMap({ buttons, shift: Math.max(0, Math.min(60, +$("#padShift").value || 0)) });
+  await saveConfig(); toast(`Knopindeling opgeslagen (${padProfileName()})`, true);
 }
 $("#padShift").onchange = savePadMap;
-const openMap = () => { renderPadMap(); $("#dlgMap").showModal(); };
+const openMap = () => { renderPadProfiles(); renderPadMap(); $("#dlgMap").showModal(); };
 $("#btnMap2").onclick = openMap;
 $("#btnMapClose").onclick = () => $("#dlgMap").close();
 function padHit(k) {
@@ -1244,8 +1306,8 @@ function padHit(k) {
   clearTimeout(sel._hit); sel._hit = setTimeout(() => els.forEach(e => e?.classList.remove("hit")), 700);
 }
 $("#padReset").onclick = async () => {
-  if (!confirm("Standaard knopindeling terugzetten (voor alle schermen)?")) return;
-  cfg.pad_map = JSON.parse(JSON.stringify(PAD_DEFAULT)); await saveConfig(); renderPadMap(); toast("Standaard teruggezet", true);
+  if (!confirm(`Standaard knopindeling terugzetten in profiel "${padProfileName()}"?`)) return;
+  padSetRawMap(JSON.parse(JSON.stringify(PAD_DEFAULT))); await saveConfig(); renderPadMap(); toast("Standaard teruggezet", true);
 };
 $("#padInvY").checked = pad.invY;
 $("#padSoft").checked = pad.soft;
