@@ -30,18 +30,19 @@ import urllib.request
 
 POLL_PP = 2          # s, ProPresenter (huidig nummer)
 POLL_PP_LIST = 30    # s, playlist-inhoud opnieuw ophalen
-POLL_DB = 30         # s, Voordienst app
+POLL_DB = 10         # s, Voordienst app (standaard; instelbaar 2–600 via voordienst.interval)
 TIMEOUT = 3
 MAX_ITEMS = 100
 
 DEFAULTS = {"pp": {"enabled": False, "host": "", "port": 50001},
-            "voordienst": {"enabled": False, "url": "", "token": ""}}
+            "voordienst": {"enabled": False, "url": "", "token": "", "interval": POLL_DB, "field": ""}}
 WHO = "Voordienst app"
 
 LIST_KEYS = ("liederen", "nummers", "songs", "items", "playlist", "lijst", "lied")
 TITLE_KEYS = ("titel", "title", "naam", "name", "dienst", "datum", "date")
 NAME_KEYS = ("titel", "title", "naam", "name", "lied", "song", "nummer", "tekst", "text")
 CUR_KEYS = ("huidig", "current", "actief", "active", "nu", "now")
+FLAG_TRUE = ("true", "1", "ja", "yes", "actief", "active", "huidig", "current", "nu", "now", "bezig", "live", "playing", "gezongen")
 SONG_TYPES = ("lied", "liederen", "song", "zang", "nummer", "worship", "aanbidding")
 
 
@@ -62,7 +63,33 @@ def norm_cfg(m):
         port = DEFAULTS["pp"]["port"]
     return {"pp": {"enabled": bool(pp.get("enabled")), "host": host, "port": port},
             "voordienst": {"enabled": bool(db.get("enabled")), "url": str(db.get("url") or "").strip()[:500],
-                           "token": re.sub(r"^\s*bearer\s+", "", str(db.get("token") or ""), flags=re.I).strip()[:2000]}}
+                           "token": re.sub(r"^\s*bearer\s+", "", str(db.get("token") or ""), flags=re.I).strip()[:2000],
+                           "interval": _clamp_int(db.get("interval"), 2, 600, POLL_DB),
+                           "field": re.sub(r"[^\w.\-]", "", str(db.get("field") or ""))[:60]}}
+
+
+def _clamp_int(v, lo, hi, default):
+    try:
+        return max(lo, min(hi, int(v)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _truthy(v):
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return v != 0
+    return isinstance(v, str) and v.strip().lower() in FLAG_TRUE
+
+
+def _get_path(d, path):
+    """Veld ophalen, ook genest met punten (bijv. "dienst.huidig")."""
+    for part in path.split("."):
+        if not isinstance(d, dict) or part not in d:
+            return None
+        d = d[part]
+    return d
 
 
 def public_cfg(cfg):
@@ -121,8 +148,13 @@ def _item_name(x):
     return ""
 
 
-def parse_voordienst(text):
-    """→ {title, items: [namen], current: index|None}. Gooit ValueError als er niets bruikbaars in staat."""
+def parse_voordienst(text, field=""):
+    """→ {title, items: [namen], current: index|None}. Gooit ValueError als er niets bruikbaars in staat.
+
+    🧑 Huidig lied ("triggeren op verandering van een veld"): met ``field`` ingesteld telt alleen dat veld, óf bovenaan
+    (index vanaf 1 of naam; mag genest zijn, bijv. ``dienst.huidig``) óf per lied als vlag (``{"titel": …, "actief": true}``,
+    ook "ja"/"bezig"/1). Zonder ``field``: automatisch ``huidig|current|actief|active|nu|now`` bovenaan of als vlag per lied.
+    Een index telt alleen de liederen (na het wegfilteren van mededelingen/preek)."""
     text = (text or "").lstrip("﻿")
     data = None
     if text.strip()[:1] in ("[", "{"):
@@ -151,9 +183,10 @@ def parse_voordienst(text):
             if isinstance(data.get(k), list):
                 raw = data[k]
                 break
-        for k in CUR_KEYS:
-            if k in data and data[k] not in (None, ""):
-                cur = data[k]
+        for k in ((field,) if field else CUR_KEYS):
+            v = _get_path(data, k) if field else data.get(k)
+            if v not in (None, "") and not isinstance(v, bool):
+                cur = v
                 break
         if raw is None:
             raise ValueError("geen lijst met liederen gevonden (verwacht bijv. \"liederen\": [...])")
@@ -162,10 +195,18 @@ def parse_voordienst(text):
     typed = [x for x in raw if isinstance(x, dict) and (x.get("type") or x.get("soort"))]
     if typed and any(str(x.get("type") or x.get("soort")).lower() in SONG_TYPES for x in typed):
         raw = [x for x in raw if not isinstance(x, dict) or str(x.get("type") or x.get("soort") or "lied").lower() in SONG_TYPES]
-    items = [n[:120] for n in (_item_name(x) for x in raw) if n][:MAX_ITEMS]
+    kept = [x for x in raw if _item_name(x)][:MAX_ITEMS]
+    items = [_item_name(x)[:120] for x in kept]
     if not items:
         raise ValueError("geen liederen gevonden")
     idx = None
+    # vlag per lied (laatste die aan staat telt, voor het geval er per ongeluk meer aan staan)
+    flag_keys = (field,) if field else CUR_KEYS
+    for i, x in enumerate(kept):
+        if isinstance(x, dict) and any(_truthy(x.get(k)) for k in flag_keys if k in x):
+            idx = i
+    if idx is not None:
+        return {"title": title[:120], "items": items, "current": idx}
     if isinstance(cur, bool):
         cur = None
     if isinstance(cur, int) or (isinstance(cur, str) and cur.strip().isdigit()):
@@ -351,19 +392,23 @@ class Watcher:
                 if old is None or old["pp"] != cfg["pp"]:
                     self.state["pp"] = self._empty()["pp"]
                     self._logged = {"pl": None, "cur": None}
-                if old is None or old["voordienst"] != cfg["voordienst"]:
+                src = lambda c: {k: c["voordienst"][k] for k in ("enabled", "url", "token")}   # interval/veld: geen nieuwe lijst
+                if old is None or src(old) != src(cfg):
                     self.state["voordienst"] = self._empty()["voordienst"]
                 self.state["pp"]["enabled"] = cfg["pp"]["enabled"]
                 self.state["voordienst"]["enabled"] = cfg["voordienst"]["enabled"]
             self._emit()
         now = time.time()
-        if cfg["voordienst"]["enabled"] and now - self._db_at >= POLL_DB:
+        if cfg["voordienst"]["enabled"] and now - self._db_at >= cfg["voordienst"]["interval"] - 0.05:
             self._db_at = now
             self._check_db(cfg["voordienst"])
+        waits = [3600]
         if cfg["pp"]["enabled"]:
             self._check_pp(now)
-            return POLL_PP
-        return min(POLL_DB, 3600) if cfg["voordienst"]["enabled"] else 3600
+            waits.append(POLL_PP)
+        if cfg["voordienst"]["enabled"]:
+            waits.append(max(0.5, cfg["voordienst"]["interval"] - (time.time() - self._db_at)))
+        return min(waits)
 
     def _emit(self):
         self.on_state(self.snapshot())
@@ -379,7 +424,7 @@ class Watcher:
         new = {"checked": time.strftime("%H:%M:%S")}
         quiet = not vc["url"]    # nog aan het instellen (geen adres): geen fout in het log
         try:
-            d = parse_voordienst(read_source(vc["url"], vc["token"] or None))
+            d = parse_voordienst(read_source(vc["url"], vc["token"] or None), vc["field"])
             new.update(ok=True, error=None, **d)
         except ValueError as e:
             new.update(ok=False, error=str(e))

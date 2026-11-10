@@ -899,7 +899,12 @@
     <h4>Voordienst app</h4>
     <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="dbOn"> Liederen uit de Voordienst app lezen</label>
     <div class="row small">API-adres van de liederen <input type="text" id="dbUrl" maxlength="500" placeholder="https://…/api/liederen" style="flex:1;min-width:220px"></div>
-    <div class="small muted" style="margin-top:6px">Elke 30 seconden opnieuw gelezen. Verwacht JSON met <code>"liederen": [...]</code> (of <code>items</code>/<code>songs</code>), of tekst met één lied per regel.
+    <div class="row small">Ophalen elke <input type="number" id="dbInterval" min="2" max="600" style="width:70px"> seconden
+      · veld voor het huidige lied <input type="text" id="dbField" maxlength="60" placeholder="automatisch" style="width:150px" autocomplete="off"></div>
+    <div class="small muted" style="margin-top:6px">Het <b>huidige lied</b> (groen) komt uit dat veld: bovenaan als nummer of naam (<code>"huidig": 3</code>, genest mag: <code>dienst.huidig</code>)
+      of per lied als vlag (<code>{"titel": "…", "actief": true}</code>, ook <code>"bezig"</code>/<code>"ja"</code>). Leeg = automatisch (<code>huidig</code>, <code>actief</code>, <code>current</code>, <code>now</code> …).
+      Verandert het veld, dan wordt het nieuwe lied bij de volgende keer ophalen groen en komt het in het log.
+      Verwacht JSON met <code>"liederen": [...]</code> (of <code>items</code>/<code>songs</code>), of tekst met één lied per regel.
       Staat een nummer uit de Voordienst app in ProPresenter op het scherm, dan komt het voordienstnummer erbij in het log.
       Zonder token mag het ook een <code>.json</code>/<code>.txt</code>-bestand op deze computer zijn.</div>
     <div class="row small">API-token <input type="password" id="dbToken" maxlength="2000" autocomplete="new-password" placeholder="(optioneel)" style="flex:1;min-width:220px">
@@ -3080,9 +3085,11 @@ function songsRender() {
   if (document.activeElement !== $("#ppHost")) $("#ppHost").value = pc.host;
   if (document.activeElement !== $("#ppPort")) $("#ppPort").value = pc.port;
   if (document.activeElement !== $("#dbUrl")) $("#dbUrl").value = dc.url;
+  if (document.activeElement !== $("#dbInterval")) $("#dbInterval").value = dc.interval;
+  if (document.activeElement !== $("#dbField")) $("#dbField").value = dc.field || "";
   if (document.activeElement !== $("#dbToken")) { $("#dbToken").value = ""; $("#dbToken").placeholder = dc.token_set ? "•••••• (opgeslagen)" : "(optioneel)"; }
   $("#dbTokenClear").hidden = !dc.token_set;
-  ["#ppOn", "#ppHost", "#ppPort", "#dbOn", "#dbUrl", "#dbToken", "#dbTokenClear"].forEach(s => $(s).disabled = viewOnly());
+  ["#ppOn", "#ppHost", "#ppPort", "#dbOn", "#dbUrl", "#dbToken", "#dbTokenClear", "#dbInterval", "#dbField"].forEach(s => $(s).disabled = viewOnly());
   const chk = (st) => st.checked ? ` · ${st.checked}` : "";
   if (!pc.enabled) songsStat($("#ppStat"), "off", "Uit.");
   else if (!pc.host) songsStat($("#ppStat"), "err", "Vul het IP-adres van de ProPresenter-computer in.");
@@ -3098,9 +3105,9 @@ function songsRender() {
     : `<li class="${n === ps.pos ? "now" : ""}"><span class="sn">${++n}</span>${esc(i.name)}</li>`).join("");
   if (!dc.enabled) songsStat($("#dbStat"), "off", "Uit.");
   else if (!dc.url) songsStat($("#dbStat"), "err", "Vul het API-adres van de liederen in.");
-  else if (ds.ok) songsStat($("#dbStat"), "ok", `● ${ds.title ? ds.title + ": " : ""}${ds.items.length} lied${ds.items.length === 1 ? "" : "eren"}${chk(ds)}`);
+  else if (ds.ok) songsStat($("#dbStat"), "ok", `● ${ds.title ? ds.title + ": " : ""}${ds.items.length} lied${ds.items.length === 1 ? "" : "eren"}${ds.current != null ? " · huidig nr. " + (ds.current + 1) : ""} · elke ${dc.interval} s${chk(ds)}`);
   else songsStat($("#dbStat"), "err", (ds.error ? "Niet te lezen: " + ds.error : "Lezen…") + chk(ds));
-  const di = dc.enabled && ds.ok ? ds.items : [], cur = ds.playing ?? ds.current;
+  const di = dc.enabled && ds.ok ? ds.items : [], cur = ds.current ?? ds.playing;   // veld uit de Voordienst app gaat voor
   $("#dbList").hidden = !di.length;
   $("#dbList").innerHTML = di.map((t, i) => `<li class="${i === cur ? "now" : ""}"><span class="sn">${i + 1}</span>${esc(t)}</li>`).join("");
 }
@@ -3111,6 +3118,8 @@ $("#ppHost").onchange = (e) => songsSave({ pp: { host: e.target.value.trim() } }
 $("#ppPort").onchange = (e) => songsSave({ pp: { port: +e.target.value } });
 $("#dbOn").onchange = (e) => songsSave({ voordienst: { enabled: e.target.checked } });
 $("#dbUrl").onchange = (e) => songsSave({ voordienst: { url: e.target.value.trim() } });
+$("#dbInterval").onchange = (e) => songsSave({ voordienst: { interval: Math.max(2, Math.min(600, +e.target.value || 10)) } });
+$("#dbField").onchange = (e) => songsSave({ voordienst: { field: e.target.value.trim() } });
 $("#dbToken").onchange = (e) => { if (e.target.value.trim()) songsSave({ voordienst: { token: e.target.value.trim() } }).then(() => { e.target.value = ""; }); };
 $("#dbTokenClear").onclick = () => songsSave({ voordienst: { token_clear: true } });
 $("#songsCheck").onclick = async () => {
@@ -3137,7 +3146,7 @@ function songLists() {
       cur: ps.pos, now: ps.current?.name || "" };
   }
   if (ds.enabled && ds.ok) out.vd = { label: "Voordienst app" + (ds.title ? " · " + ds.title : ""),
-    items: ds.items.map((t, i) => ({ name: t, n: i + 1 })), cur: ds.playing ?? ds.current, now: "" };
+    items: ds.items.map((t, i) => ({ name: t, n: i + 1 })), cur: ds.current ?? ds.playing, now: "" };
   return out;
 }
 function songWinRender() {
@@ -3156,7 +3165,8 @@ function songWinRender() {
   const cur = src ? L[src] : null;
   const songsOnly = cur ? cur.items.filter(i => !i.header) : [];
   const i = cur?.cur;
-  const nowName = ppNow || (i != null && songsOnly[i] ? songsOnly[i].name : "");
+  const own = i != null && songsOnly[i] ? songsOnly[i].name : "";
+  const nowName = src === "pp" ? (ppNow || own) : (own || ppNow);   // Voordienst-lijst: het veld uit de app gaat voor
   const next = i != null ? songsOnly[i + 1] : null;
   songWin.classList.toggle("on", !!nowName);
   $("#songBadge").textContent = nowName ? "NU" : "LIEDEREN";
