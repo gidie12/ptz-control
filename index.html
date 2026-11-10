@@ -25,6 +25,7 @@
     --shadow: rgba(0,0,0,.45); --backdrop: rgba(0,0,0,.65);
     --editbg: rgba(17,19,23,.72); --editfg: #e8eaed; --editline: rgba(255,255,255,.14);
     --mixoff: #2a2e36; --mixgreen: #2f9e4f; --mixred: #e5484d; --mixtxt: #ffffff; --logbg: #0d0f12;
+    --pc-rood: #e5484d; --pc-oranje: #f08c2e; --pc-geel: #e8c33c; --pc-groen: #3fb950; --pc-blauw: #4c8dff; --pc-paars: #a371f7;
   }
   :root[data-theme=light] {
     --tourdim: rgba(20,24,32,.45);
@@ -36,6 +37,7 @@
     --shadow: rgba(20,24,32,.18); --backdrop: rgba(20,24,32,.45);
     --editbg: rgba(255,255,255,.88); --editfg: #2b303a; --editline: rgba(20,24,32,.14);
     --mixoff: #c9ced6; --mixgreen: #2a9d4b; --mixred: #d6343a; --mixtxt: #ffffff; --logbg: #f7f8fa;
+    --pc-rood: #d6343a; --pc-oranje: #e07b14; --pc-geel: #c9a10e; --pc-groen: #1f8f3d; --pc-blauw: #2f6fe0; --pc-paars: #8250df;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
@@ -99,7 +101,7 @@
   .col { border: 2px solid var(--line); border-radius: 12px; padding: 10px; background: var(--bg); }
   .col.sel { border-color: var(--accent); }
   .colhead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; cursor: pointer; }
-  .colhead b { font-size: 15px; }
+  .colhead b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; max-width: 45%; }
   .colhead .key { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
   .colhead .livename { margin-left: auto; font-size: 12px; color: var(--live); font-weight: 600; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; }
@@ -162,6 +164,41 @@
   .padprofcard select { flex: 1; }
   #dlgMap .padset { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
   #padMap .hit { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+  /* onderweg naar een preset, status per camera, kleurlabels, verslepen, sneltoets, ongedaan maken */
+  .tile.moving { border-color: var(--accent); }
+  .tile.moving::after { content: "ONDERWEG…"; position: absolute; top: 6px; left: 6px; background: var(--accent); color: var(--onaccent);
+    font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; animation: mvpulse .7s ease-in-out infinite alternate; }
+  @keyframes mvpulse { from { opacity: 1; } to { opacity: .45; } }
+  .cdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex-shrink: 0; align-self: center; }
+  .cdot.ok { background: var(--ok); } .cdot.err { background: var(--live); box-shadow: 0 0 6px var(--live); }
+  .tab .cdot { margin-right: 6px; vertical-align: 1px; }
+  .colhead .offline { color: var(--live); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .tile .cbar { position: absolute; left: 0; right: 0; top: 0; height: 5px; z-index: 1; }
+  .tile.dragging { opacity: .35; }
+  .tile.dropb { box-shadow: -4px 0 0 var(--accent); } .tile.dropa { box-shadow: 4px 0 0 var(--accent); }
+  .tile .tkey { margin-left: auto; font: 11px ui-monospace, Menlo, monospace; color: var(--muted); border: 1px solid var(--line);
+    border-radius: 4px; padding: 0 4px; flex-shrink: 0; }
+  .pcolors { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .pcolors button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; background: var(--panel2); }
+  .pcolors button.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
+  .pcolors button[data-col=""] { font-size: 13px; color: var(--muted); }
+  #presetSearch { width: 140px; background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; }
+  .nomatch { color: var(--muted); font-size: 13px; padding: 10px 2px; }
+  #undoNote { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 21; background: var(--panel); color: var(--text);
+    border: 1px solid var(--accent); border-radius: 10px; padding: 8px 10px 8px 14px; display: flex; gap: 12px; align-items: center;
+    box-shadow: 0 6px 24px var(--shadow); font-size: 14px; }
+  #undoNote[hidden] { display: none; }
+  #undoNote .ubar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); border-radius: 0 0 10px 10px; }
+  /* 🧭 wizard bij de eerste start */
+  #dlgWizard { width: min(760px, 95vw); }
+  .wzsteps { display: flex; gap: 6px; margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+  .wzsteps span { padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); }
+  .wzsteps span.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); font-weight: 600; }
+  .wzrow { display: grid; grid-template-columns: 1fr 1.2fr 130px 90px 1.3fr 32px; gap: 6px; align-items: center; margin-top: 6px; }
+  .wzrow input, .wzrow select { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: inherit; min-width: 0; }
+  .wzrow .wzres { font-size: 12px; }
+  .wzres.ok { color: var(--oktxt); } .wzres.err { color: var(--live); }
+  @media (max-width: 640px) { .wzrow { grid-template-columns: 1fr 1fr; } }
   /* 🎛 Videomixer (Roland V-1HD via MIDI) */
   #dlgMidi { width: min(720px, 95vw); }
   .mixrow { display: grid; grid-template-columns: 70px repeat(4, 1fr); gap: 8px 12px; margin-top: 10px; align-items: center; }
@@ -404,6 +441,8 @@
         <label class="tilectl" title="Tegelgrootte (wordt automatisch opgeslagen)">
           <span>Grootte</span> ▫<input type="range" id="tileSize" min="100" max="320" value="170" style="width:90px">◻
         </label>
+        <input type="text" id="presetSearch" placeholder="🔍 Zoek preset" aria-label="Presets zoeken op naam of nummer" autocomplete="off">
+        <button class="icon" id="btnOrderReset" style="white-space:nowrap;padding:5px 10px;font-size:13px" hidden title="Eigen volgorde van de tegels weghalen (terug naar 1, 2, 3 …)">↺ Volgorde</button>
         </div>
         <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset">📥 Laden van camera</button>
         <button class="chip" id="btnStore">＋ Preset opslaan</button>
@@ -479,6 +518,7 @@
   <h3 id="pTitle">Preset</h3>
   <div class="img" id="pImg">Geen thumbnail</div>
   <label class="small">Naam<input type="text" id="pName" placeholder="Bijv. Preekstoel, Totaal, Band" maxlength="40"></label>
+  <div class="pcolors small" id="pColors">Kleur <button data-col="" title="Geen kleur">✕</button></div>
   <label class="small" style="display:flex;gap:8px;align-items:center;margin-top:10px">
     <input type="checkbox" id="pTrack"> 🎯 Na oproepen automatisch volgen (alleen pan)</label>
   <div class="stackbtn">
@@ -499,6 +539,7 @@
   <div class="camrow camhead"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span>VISCA-poort</span><span>Gebruiker</span><span>Wachtwoord</span><span></span></div>
   <div id="camList"></div>
   <button class="icon" id="btnAddCam" style="margin-top:6px">+ Camera toevoegen</button>
+  <button class="icon" id="btnWizard" style="margin-top:6px" title="Stap voor stap camera's zoeken, testen en presets laden">🧭 Hulp bij instellen…</button>
   <p class="small">Protocol <b>HTTP-CGI</b> werkt op vrijwel alle PTZOptics-camera's (en geeft thumbnails). Kies <b>VISCA (TCP)</b> als HTTP niet reageert.
     Gebruiker/wachtwoord alleen invullen als de camera om inloggen vraagt.</p>
   <div class="actions">
@@ -739,6 +780,31 @@
   </div>
 </div>
 <div id="toast"></div>
+<div id="undoNote" hidden role="status"><span id="undoText"></span><button class="primary" id="undoBtn">↶ Ongedaan maken</button><i class="ubar" id="undoBar"></i></div>
+<dialog id="dlgWizard">
+  <h3>🧭 PTZ Control instellen</h3>
+  <div class="wzsteps"><span data-s="1">1 · Camera's</span><span data-s="2">2 · Presets</span><span data-s="3">3 · Klaar</span></div>
+  <div data-step="1">
+    <p class="small">Welkom! Vul per camera een naam en het IP-adres in, of laat PTZ Control ze zoeken in het netwerk.
+      Met <b>Testen</b> zie je meteen of de camera reageert en beeld geeft.</p>
+    <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="icon" id="wzScan">🔍 Zoeken in netwerk</button><span class="small muted" id="wzScanInfo"></span></div>
+    <div class="wzrow small muted" style="margin-top:12px"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span></span><span>Resultaat</span><span></span></div>
+    <div id="wzList"></div>
+    <button class="icon" id="wzAdd" style="margin-top:8px">+ Camera</button>
+    <p class="small muted">Wachtwoord, VISCA-poort en volginstellingen kun je later aanpassen bij Menu → 📷 Camera's.</p>
+  </div>
+  <div data-step="2" hidden>
+    <p>Staan er al presets in de camera's (bijvoorbeeld van het PTZOptics-programma)? Dan kan PTZ Control ze ophalen, met een foto per preset.</p>
+    <div class="warnbox">⚠ De camera's <b>bewegen</b> tijdens het ophalen. Niet doen tijdens een dienst.</div>
+    <div class="row" style="margin-top:12px"><button class="primary" id="wzLoad">📥 Presets ophalen van de camera's</button></div>
+  </div>
+  <div data-step="3" hidden>
+    <p>Klaar! Je camera's staan erin. Hierna volgt een korte rondleiding langs alle functies (later opnieuw via Menu → 🎓 Rondleiding).</p>
+  </div>
+  <div class="actions"><button class="icon" id="wzSkip">Overslaan</button>
+    <span style="display:flex;gap:8px"><button class="icon" id="wzBack">← Terug</button><button class="primary" id="wzNext">Volgende →</button></span></div>
+</dialog>
 
 <script>
 const $ = (s) => document.querySelector(s);
@@ -803,7 +869,7 @@ function renderTabs() {
   cfg.cameras.forEach((c, i) => {
     const b = document.createElement("button");
     b.className = "tab" + (c.id === view ? " active" : "");
-    b.innerHTML = `${esc(c.name)}<small>${i + 1}</small>${midiOnAir(c.id) ? '<span class="onair">IN BEELD</span>' : ""}`;
+    b.innerHTML = `${camDot(c.id)}${esc(c.name)}<small>${i + 1}</small>${midiOnAir(c.id) ? '<span class="onair">IN BEELD</span>' : ""}`;
     b.onclick = () => setView(c.id);
     tabs.appendChild(b);
   });
@@ -835,11 +901,15 @@ function setView(id) {
 function tile(c, n) {
   const b = document.createElement("button");
   const live = lastPreset[c.id] === n;
-  b.className = "tile" + (live ? " live" : "");
+  const mv = moving[c.id] && (moving[c.id].n ?? lastPreset[c.id]) === n;
+  b.className = "tile" + (live ? " live" : "") + (mv ? " moving" : "");
   const name = c.presets[n];
+  const col = (c.preset_colors || {})[n];
+  const hk = c.id === ctrlCam && n <= 9 ? keyOf("preset_" + n) : "";
   b.innerHTML = `
     <div class="img" style="${hasThumb(c, n) ? `background-image:url('${thumbUrl(c.id, n)}')` : ""}">${hasThumb(c, n) ? "" : n}</div>
-    <div class="meta"><span class="num">${n}</span><span class="name ${name || hasThumb(c, n) ? "" : "empty"}">${esc(name || (hasThumb(c, n) ? `Preset ${n}` : "Leeg"))}</span></div>
+    ${col ? `<i class="cbar" style="background:var(--pc-${col})"></i>` : ""}
+    <div class="meta"><span class="num">${n}</span><span class="name ${name || hasThumb(c, n) ? "" : "empty"}">${esc(name || (hasThumb(c, n) ? `Preset ${n}` : "Leeg"))}</span>${hk ? `<kbd class="tkey" title="Sneltoets voor deze preset (bediende camera)">${esc(keyLabel(hk))}</kbd>` : ""}</div>
     <span class="edit" title="Bewerken" aria-label="Preset bewerken"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></span>${(c.track_presets || []).includes(n) ? '<span class="tb">🎯 volgt</span>' : ""}`;
   b.onclick = (e) => {
     if (e.target.closest(".edit")) return openPreset(c.id, n);
@@ -847,6 +917,7 @@ function tile(c, n) {
     presetClick(c.id, n, b);
   };
   b.oncontextmenu = (e) => { e.preventDefault(); openPreset(c.id, n); };
+  tileDrag(b, c, n);
   // lang indrukken op tablet
   let t;
   b.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") t = setTimeout(() => { b._long = true; openPreset(c.id, n); }, 550); });
@@ -883,7 +954,7 @@ function renderPresets() {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "") + (midiOnAir(c.id) ? " onair" : "");
       const ln = lastPreset[c.id];
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
-        <b>${esc(c.name)}</b>${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⌨ Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}
+        ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⌨ Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}
         <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
@@ -891,7 +962,7 @@ function renderPresets() {
       };
       const g = document.createElement("div"); g.className = "grid";
       const nums = presetNums();
-      nums.forEach(n => g.appendChild(tile(c, n)));
+      fillGrid(g, c);
       col.appendChild(g);
       const h = hiddenHint(c, nums); if (h) col.appendChild(h);
       cols.appendChild(col);
@@ -903,7 +974,7 @@ function renderPresets() {
   $("#presetTitle").textContent = `Presets · ${c.name}`;
   const g = document.createElement("div"); g.className = "grid";
   const nums = presetNums();
-  nums.forEach(n => g.appendChild(tile(c, n)));
+  fillGrid(g, c);
   area.appendChild(g);
   const h = hiddenHint(c, nums); if (h) area.appendChild(h);
 }
@@ -930,7 +1001,7 @@ async function presetClick(camId, n, el) {
     const r = await cmd("preset_set", { n }, camId);
     el?.classList.remove("busy");
     setStore(false);
-    if (r?.ok) { storedToast(`Preset ${n} opgeslagen`, r); openPreset(camId, n, true); }
+    if (r?.ok) { storedToast(`Preset ${n} opgeslagen`, r, camId, n); openPreset(camId, n, true); }
     return;
   }
   lastPreset[camId] = n;            // direct feedback; server bevestigt via event
@@ -939,9 +1010,10 @@ async function presetClick(camId, n, el) {
 }
 
 // na het vastzetten van een positie: melden of de thumbnail ook gelukt is
-function storedToast(msg, r) {
+function storedToast(msg, r, camId, n) {
   if (r.thumb_error) toast(`${msg}, maar geen thumbnail: ${r.thumb_error}`);
   else toast(`${msg} + thumbnail`, true);
+  if (r.undo && camId) undoOffer(`${camById(camId)?.name || ""} · ${msg}`, camId, n);   // 🧑 oude positie terugzetten kan
 }
 
 function setStore(on) {
@@ -960,6 +1032,7 @@ function openPreset(camId, n, focusName = false) {
   $("#pTitle").textContent = `${c.name} · preset ${n}`;
   $("#pName").value = c.presets[n] || "";
   $("#pTrack").checked = (c.track_presets || []).includes(n);
+  editColor = (c.preset_colors || {})[n] || ""; renderPColors();
   $("#pTrack").disabled = !!cfg.tracking_error;
   updatePresetImg();
   $("#dlgPreset").showModal();
@@ -974,6 +1047,8 @@ $("#pCancel").onclick = () => $("#dlgPreset").close();
 $("#pSave").onclick = async () => {
   const c = camById(edit.camId), v = $("#pName").value.trim();
   if (v) c.presets[edit.n] = v; else delete c.presets[edit.n];
+  c.preset_colors ||= {};
+  if (editColor) c.preset_colors[edit.n] = editColor; else delete c.preset_colors[edit.n];
   const tp = new Set(c.track_presets || []);
   $("#pTrack").checked ? tp.add(edit.n) : tp.delete(edit.n);
   c.track_presets = [...tp].sort((a, b) => a - b);
@@ -984,7 +1059,7 @@ $("#pRecall").onclick = () => { $("#dlgPreset").close(); presetClick(edit.camId,
 $("#pStore").onclick = async () => {
   if (!confirm("Huidige camerapositie op deze preset opslaan?")) return;
   const r = await cmd("preset_set", { n: edit.n }, edit.camId);
-  if (r?.ok) storedToast("Positie opgeslagen", r);
+  if (r?.ok) storedToast("Positie opgeslagen", r, edit.camId, edit.n);
 };
 $("#pThumb").onclick = async () => {
   const r = await post("/api/thumb", { cam: edit.camId, n: edit.n });
@@ -1478,7 +1553,7 @@ function padAction(action, gp, mods) {
     case "preset": {
       const n = +arg + (mods.shift ? mods.shiftBy : 0);
       padStopAll();
-      if (mods.store) cmd("preset_set", { n }).then(r => { if (r?.ok) { rumble(gp, 350, 1); storedToast(`Preset ${n} opgeslagen`, r); } });
+      if (mods.store) { const cid = ctrlCam; cmd("preset_set", { n }).then(r => { if (r?.ok) { rumble(gp, 350, 1); storedToast(`Preset ${n} opgeslagen`, r, cid, n); } }); }
       else { presetClick(ctrlCam, n); rumble(gp, 60, 0.3); }
       break;
     }
@@ -2194,6 +2269,11 @@ function connectEvents() {
       ytUpdate(ev);
     } else if (ev.type === "midi") {
       midiUpdate(ev);
+    } else if (ev.type === "moving") {
+      if (ev.moving) moving[ev.cam] = { n: ev.n }; else delete moving[ev.cam];
+      renderPresets();
+    } else if (ev.type === "camstatus") {
+      camst = ev.cams || {}; renderTabs(); renderPresets();
     } else if (ev.type === "config") {
       loadConfig();
     } else if (ev.type === "workspace") {
@@ -2203,6 +2283,153 @@ function connectEvents() {
     }
   };
 }
+
+/* ---- Onderweg / status / kleurlabels / volgorde / zoeken / ongedaan maken ----
+   moving: SSE "moving" (server leest de camerapositie na een preset tot hij stilstaat).
+   camst: SSE "camstatus" (server probeert elke 10 s een verbinding met elke camera).
+   cfg.cameras[i].preset_colors {n: kleur} en preset_order [n…] staan in cameras.json (gedeeld). */
+let moving = {}, camst = {}, editColor = "", dragSrc = null;
+const PCOLORS = ["rood", "oranje", "geel", "groen", "blauw", "paars"];
+function camDot(id) {
+  const st = camst[id];
+  if (!st) return '<span class="cdot" title="Status onbekend"></span>';
+  return st.ok ? `<span class="cdot ok" title="Camera bereikbaar (${esc(st.checked)})"></span>`
+    : `<span class="cdot err" title="${esc(st.error || "niet bereikbaar")}"></span>`;
+}
+function orderedNums(c) {
+  const nums = presetNums(), set = new Set(nums);
+  const ord = (c.preset_order || []).filter((n, i, a) => set.has(n) && a.indexOf(n) === i);
+  return [...ord, ...nums.filter(n => !ord.includes(n))];
+}
+const searchQ = () => ($("#presetSearch")?.value || "").trim().toLowerCase();
+function presetMatch(c, n, q) {
+  if (!q) return true;
+  return String(n) === q || (c.presets[n] || "").toLowerCase().includes(q) || ((c.preset_colors || {})[n] || "") === q;
+}
+function fillGrid(g, c) {
+  const q = searchQ();
+  let shown = 0;
+  orderedNums(c).forEach(n => { if (presetMatch(c, n, q)) { g.appendChild(tile(c, n)); shown++; } });
+  if (q && !shown) g.insertAdjacentHTML("beforeend", `<div class="nomatch">Geen preset gevonden voor “${esc(q)}”</div>`);
+  $("#btnOrderReset").hidden = !cfg.cameras.some(x => (x.preset_order || []).length);
+}
+$("#presetSearch").addEventListener("input", () => renderPresets());
+$("#presetSearch").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.target.value = ""; e.target.blur(); renderPresets(); } });
+$("#btnOrderReset").onclick = async () => {
+  if (!confirm("Eigen volgorde van de tegels weghalen? De tegels staan dan weer op nummer.")) return;
+  cfg.cameras.forEach(c => delete c.preset_order); renderPresets(); await saveConfig();
+};
+// verslepen (muis): alleen de volgorde op het scherm; het presetnummer in de camera blijft gelijk
+function tileDrag(b, c, n) {
+  if (storeMode || document.body.classList.contains("wall")) return;
+  b.draggable = true;
+  b.addEventListener("dragstart", (e) => { dragSrc = { cam: c.id, n }; b.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(n)); });
+  b.addEventListener("dragend", () => { dragSrc = null; $$(".tile.dragging,.tile.dropb,.tile.dropa").forEach(t => t.classList.remove("dragging", "dropb", "dropa")); });
+  b.addEventListener("dragover", (e) => {
+    if (!dragSrc || dragSrc.cam !== c.id || dragSrc.n === n) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = "move";
+    const after = e.offsetX > b.offsetWidth / 2;
+    b.classList.toggle("dropa", after); b.classList.toggle("dropb", !after);
+  });
+  b.addEventListener("dragleave", () => b.classList.remove("dropa", "dropb"));
+  b.addEventListener("drop", async (e) => {
+    if (!dragSrc || dragSrc.cam !== c.id) return;
+    e.preventDefault();
+    const after = b.classList.contains("dropa"), ord = orderedNums(c).filter(x => x !== dragSrc.n);
+    ord.splice(ord.indexOf(n) + (after ? 1 : 0), 0, dragSrc.n);
+    c.preset_order = ord; dragSrc = null;
+    renderPresets(); await saveConfig();
+  });
+}
+function renderPColors() {
+  const box = $("#pColors");
+  if (box.children.length < 2) PCOLORS.forEach(k => box.insertAdjacentHTML("beforeend", `<button data-col="${k}" title="${k}" style="background:var(--pc-${k})"></button>`));
+  box.querySelectorAll("button").forEach(bt => { bt.classList.toggle("on", bt.dataset.col === editColor); bt.onclick = () => { editColor = bt.dataset.col; renderPColors(); }; });
+}
+// ↶ ongedaan maken na overschrijven (server bewaart de oude positie 60 s)
+let undoT = null;
+function undoOffer(msg, camId, n) {
+  const box = $("#undoNote"), secs = 10;
+  $("#undoText").textContent = msg; box.hidden = false;
+  const bar = $("#undoBar"); bar.style.transition = "none"; bar.style.width = "100%";
+  requestAnimationFrame(() => { bar.style.transition = `width ${secs}s linear`; bar.style.width = "0"; });
+  clearTimeout(undoT); undoT = setTimeout(() => box.hidden = true, secs * 1000);
+  $("#undoBtn").disabled = false;
+  $("#undoBtn").onclick = async () => {
+    $("#undoBtn").disabled = true; toast("Oude positie terugzetten…", true);
+    const r = await post("/api/preset/undo", { cam: camId, n });
+    box.hidden = true; clearTimeout(undoT);
+    r?.ok ? toast(`Preset ${n} weer zoals eerst`, true) : toast(r?.error || "Ongedaan maken mislukt");
+  };
+}
+
+/* ---- 🧭 Wizard bij de eerste start ----
+   cfg.first_run (server): nog geen camera's of alleen de voorbeeldcamera. Overslaan onthoudt dit apparaat (wizardSkip). */
+let wzStep = 1;
+function wzRow(c = {}) {
+  const d = document.createElement("div"); d.className = "wzrow";
+  d.innerHTML = `<input type="text" data-f="name" placeholder="Naam" value="${esc(c.name || "")}">
+    <input type="text" data-f="host" placeholder="192.168.100.88" value="${esc(c.host || "")}">
+    <select data-f="protocol"><option value="http">HTTP-CGI</option><option value="visca" ${c.protocol === "visca" ? "selected" : ""}>VISCA (TCP)</option></select>
+    <button class="icon" data-a="test">Testen</button><span class="wzres"></span><button class="icon" data-a="del" title="Verwijderen">✕</button>`;
+  d.dataset.id = c.id || "";
+  d.querySelector("[data-a=del]").onclick = () => d.remove();
+  d.querySelector("[data-a=test]").onclick = async () => {
+    const res = d.querySelector(".wzres"), host = d.querySelector("[data-f=host]").value.trim();
+    res.className = "wzres"; res.textContent = "testen…";
+    const r = await post("/api/camtest", { host, protocol: d.querySelector("[data-f=protocol]").value, visca_port: c.visca_port || 5678, user: c.user, password: c.password });
+    if (!r?.ok) { res.className = "wzres err"; res.textContent = r?.error || "mislukt"; return; }
+    const ok = r.snapshot || r.visca;
+    res.className = "wzres " + (ok ? "ok" : "err");
+    res.textContent = r.snapshot ? "✓ beeld ontvangen" : r.visca ? "✓ bereikbaar (VISCA), geen beeld" : r.http ? "✗ geen beeld: " + r.error : "✗ niet bereikbaar";
+  };
+  return d;
+}
+function wzShow(step) {
+  wzStep = step;
+  $$("#dlgWizard [data-step]").forEach(el => el.hidden = +el.dataset.step !== step);
+  $$("#dlgWizard .wzsteps span").forEach(el => el.classList.toggle("on", +el.dataset.s === step));
+  $("#wzBack").hidden = step === 1;
+  $("#wzNext").textContent = step === 3 ? "Rondleiding starten" : step === 2 ? "Overslaan en verder →" : "Opslaan en verder →";
+}
+function wizardOpen() {
+  const list = $("#wzList"); list.innerHTML = "";
+  const cams = cfg.first_run ? [] : cfg.cameras;
+  (cams.length ? cams : [{ name: "Camera 1" }]).forEach(c => list.appendChild(wzRow(c)));
+  $("#wzScanInfo").textContent = "";
+  wzShow(1); $("#dlgWizard").showModal();
+}
+async function wzSave() {
+  const rows = $$("#wzList .wzrow").map(d => ({ id: d.dataset.id, name: d.querySelector("[data-f=name]").value.trim(),
+    host: d.querySelector("[data-f=host]").value.trim(), protocol: d.querySelector("[data-f=protocol]").value })).filter(r => r.host);
+  if (!rows.length) { toast("Vul minstens één IP-adres in"); return false; }
+  const old = Object.fromEntries((cfg.first_run ? [] : cfg.cameras).map(c => [c.id, c]));
+  cfg.cameras = rows.map((r, i) => ({ ...(old[r.id] || { visca_port: 5678, user: "", password: "", presets: {} }),
+    id: r.id || "cam" + Date.now().toString(36) + i, name: r.name || `Camera ${i + 1}`, host: r.host, protocol: r.protocol }));
+  await saveConfig(); await loadConfig();
+  return true;
+}
+$("#wzScan").onclick = async () => {
+  $("#wzScanInfo").textContent = "Zoeken… (paar seconden)";
+  const r = await post("/api/scan", {});
+  if (!r?.ok) return;
+  const have = new Set($$("#wzList [data-f=host]").map(i => i.value.trim()));
+  const nieuw = (r.found || []).filter(h => !have.has(h));
+  $$("#wzList .wzrow").forEach(d => { if (!d.querySelector("[data-f=host]").value.trim()) d.remove(); });   // lege regels weg
+  nieuw.forEach((h, i) => $("#wzList").appendChild(wzRow({ name: `Camera ${$$("#wzList .wzrow").length + 1}`, host: h })));
+  $("#wzScanInfo").textContent = r.found?.length ? `${r.found.length} gevonden in ${r.network}` + (nieuw.length ? "" : " (stonden er al)")
+    : `Niets gevonden in ${r.network || "dit netwerk"}. Vul het IP-adres zelf in (staat op het camerascherm of in de router).`;
+};
+$("#wzAdd").onclick = () => $("#wzList").appendChild(wzRow({ name: `Camera ${$$("#wzList .wzrow").length + 1}` }));
+$("#wzBack").onclick = () => wzShow(Math.max(1, wzStep - 1));
+$("#wzNext").onclick = async () => {
+  if (wzStep === 1) { if (await wzSave()) wzShow(2); return; }
+  if (wzStep === 2) return wzShow(3);
+  $("#dlgWizard").close(); store.set("wizardSkip", "1"); tourStart();
+};
+$("#wzLoad").onclick = () => { $("#dlgWizard").close(); store.set("wizardSkip", "1"); $("#btnLoad").click(); };
+$("#wzSkip").onclick = () => { $("#dlgWizard").close(); store.set("wizardSkip", "1"); if (!store.get("tourDone")) tourStart(); };
+$("#btnWizard").onclick = () => { $("#dlg").close(); wizardOpen(); };
 
 /* ---- 🎛 Videomixer (Roland V-1HD via MIDI) ----
    Server (midi.py) leest de knopdrukken van de mixer en stuurt SSE "midi" met live_cams.
@@ -2366,13 +2593,18 @@ const TOUR_STEPS = [
   { target: ["#tabs"], title: "Camera's en weergave", text: () => `<p>Kies hier één camera, of <b>Alle camera's</b> om alle presetrasters naast elkaar te zien.</p>
       <p>In <i>Alle camera's</i> kies je met de cameratoets (standaard <kbd>Shift</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>) welke camera je bedient; die kolom licht op.</p>` },
   { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>LIVE</b>.</p>
-      <p>Met het toetsenbord: <kbd>1</kbd>–<kbd>9</kbd> roept preset 1–9 op van de camera die je bedient.</p>
+      <p>Met het toetsenbord: <kbd>1</kbd>–<kbd>9</kbd> roept preset 1–9 op van de camera die je bedient; de toets staat klein rechtsonder op de tegel.</p>
+      <p>Na het oproepen staat er <b>ONDERWEG…</b> op de tegel tot de camera stilstaat. Dan kun je veilig op de mixer overschakelen.</p>
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
   { target: ["#presetArea .tile .edit", "#presetArea"], title: "Preset bewerken", text: () => `<p>Het potlood (of rechtsklik / lang drukken op een tegel) opent het presetvenster:</p>
-      <ul><li>naam geven</li><li>oproepen of de huidige positie hier opslaan</li><li>thumbnail vernieuwen</li>
+      <ul><li>naam en <b>kleur</b> geven (een gekleurde streep bovenop de tegel, bijv. per soort shot)</li><li>oproepen of de huidige positie hier opslaan</li><li>thumbnail vernieuwen</li>
       <li>🎯 <i>na oproepen automatisch volgen</i></li><li>naam en foto wissen</li></ul>` },
   { target: ["#btnStore"], title: "Preset opslaan", text: () => `<p>Zet de camera goed, klik op <b>＋ Preset opslaan</b> en tik op de tegel waar de positie moet komen. Er wordt meteen een foto gemaakt voor de tegel.</p>
-      <p>Met de Xbox-controller: <b>Menu</b>-knop vasthouden en een presetknop indrukken.</p>` },
+      <p>Met de Xbox-controller: <b>Menu</b>-knop vasthouden en een presetknop indrukken.</p>
+      <p>Per ongeluk overschreven? Onderin verschijnt even <b>↶ Ongedaan maken</b>: de camera gaat terug naar de oude positie en de preset en foto worden zoals ze waren.</p>` },
+  { target: ["#presetSearch"], title: "🔍 Zoeken en volgorde", text: () => `<p>Typ een naam, nummer of kleur (bijv. <i>blauw</i>) om alleen die presets te zien. <kbd>Esc</kbd> wist het zoeken.</p>
+      <p>Met de muis kun je <b>tegels verslepen</b> om ze in een eigen volgorde te zetten (per camera, voor elk scherm). Het presetnummer in de camera blijft gelijk. <b>↺ Volgorde</b> zet alles terug op nummer.</p>` },
+  { target: [".colhead .cdot", ".tab .cdot", "#tabs"], title: "● Camerastatus", text: () => `<p>Het bolletje bij elke camera is <b>groen</b> als de camera bereikbaar is en <b>rood</b> als hij niet reageert (met <i>niet bereikbaar</i> erbij). Zo zie je vóór de dienst al dat er iets mis is.</p>` },
   { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>📥 Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
   { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
@@ -2399,7 +2631,7 @@ const TOUR_STEPS = [
   { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>` },
   { target: ["#btnBackup"], menu: "main", title: "💾 Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p>` },
-  { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p>` },
+  { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
   { target: ["#btnMidi"], menu: "main", title: "🎛 Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
   { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
   { target: ["#btnTheme"], menu: "main", title: "☀ / 🌙 Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
@@ -2498,7 +2730,10 @@ addEventListener("scroll", () => tourPlace(), true);
 loadConfig().then(() => {
   connectEvents();
   // 🧑 nieuwe gebruiker (dit apparaat): rondleiding start vanzelf; daarna alleen via het menu
-  if (!store.get("tourDone") && !new URLSearchParams(location.search).has("notour")) setTimeout(tourStart, 700);
+  const notour = new URLSearchParams(location.search).has("notour");
+  // 🧑 nog niet ingesteld: eerst de wizard (camera's), daarna de rondleiding
+  if (cfg.first_run && !store.get("wizardSkip") && !notour) setTimeout(wizardOpen, 500);
+  else if (!store.get("tourDone") && !notour) setTimeout(tourStart, 700);
 });
 </script>
 </body>

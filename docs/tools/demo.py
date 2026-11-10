@@ -63,7 +63,11 @@ cfg = {"cameras": [], "preset_count": 8, "tile_size": 170, "youtube": {"channel"
        "midi": {"enabled": True, "port": "V-1HD", "dev": 16, "live_bus": "A", "map": {"1": "links", "2": "midden", "3": "rechts"}}}
 for ci, (cid, name, ps) in enumerate(cams):
     cfg["cameras"].append({"id": cid, "name": name, "host": f"192.168.100.{81 + ci}", "protocol": "http", "visca_port": 5678,
-                           "user": "admin", "password": "", "presets": {str(i + 1): n for i, (n, _) in enumerate(ps)}})
+                           "user": "admin", "password": "", "presets": {str(i + 1): n for i, (n, _) in enumerate(ps)},
+                           # kleurlabels als voorbeeld: totaal = blauw, spreker = oranje, muziek = paars
+                           "preset_colors": {str(i + 1): c for i, (n, _) in enumerate(ps)
+                                             for c in [("blauw" if "otaal" in n or "emeente" in n else "oranje" if n in ("Preekstoel", "Spreker close", "Kansel")
+                                                        else "paars" if n in ("Band", "Piano", "Drums", "Gitaar", "Zang", "Zangers", "Band breed") else "")] if c}})
     for i, (_, k) in enumerate(ps):
         scene(k, ci * 10 + i).save(f"{out}/thumbs/{cid}_{i + 1}.jpg", quality=86)
 json.dump(cfg, open(out + "/cameras.json", "w"), indent=1)

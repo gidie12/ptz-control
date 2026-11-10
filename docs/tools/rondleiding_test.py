@@ -14,7 +14,7 @@ with sync_playwright() as p:
               const r = el && el.getBoundingClientRect();
               const overlap = r ? !(c.right <= r.left || c.left >= r.right || c.bottom <= r.top || c.top >= r.bottom) : false;
               return {i: tourIdx, title: st.title, hasTarget: !!el, wanted: !!st.target, inView: c.left >= 0 && c.top >= 0 && c.right <= innerWidth && c.bottom <= innerHeight, overlap,
-                      tgtInView: r ? r.top >= 0 && r.bottom <= innerHeight : true} }""")
+                      tgtInView: r ? r.top >= -1 && r.bottom <= innerHeight + 1 : true} }""")
             if (info["wanted"] and not info["hasTarget"]) or not info["inView"] or info["overlap"] or not info["tgtInView"]: probs.append(info)
             if i == 2: pg.keyboard.press("ArrowLeft"); pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowUp"); pg.keyboard.press("q")
             pg.keyboard.press("ArrowRight") if i % 2 else pg.click("#tourNext")

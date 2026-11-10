@@ -36,6 +36,11 @@ Open `http://localhost:8080`, of op een tablet `http://<ip-van-deze-pc>:8080` (h
 Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (volgen: zie hieronder). Instellingen komen in `cameras.json`.
 
 ## Eerste keer
+Bij de eerste start (nog geen camera's) opent de **wizard** 🧭: camera's zoeken in het netwerk of zelf invullen (naam + IP), per camera **Testen** (krijgt de app beeld?), en daarna eventueel de presets ophalen die al in de camera's staan. Daarna volgt de rondleiding. Later opnieuw: **Menu → 📷 Camera's → 🧭 Hulp bij instellen…**
+
+![Wizard](docs/screenshots/wizard.png)
+
+Of met de hand:
 1. **Menu → 📷 Camera's** (menu rechtsboven): voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
 2. Je bestaande presets op de camera werken meteen. Rechtsklik, lang indrukken of ✎ op een tegel om een naam te geven
    en een **thumbnail** te maken van het huidige beeld.
@@ -61,6 +66,19 @@ De **camerabediening** in de zijbalk klap je in en uit door op de titel te klikk
 
 <img src="docs/screenshots/menu.png" width="440" alt="Menu">
 
+
+## Tijdens de dienst
+- **ONDERWEG…** op een tegel: de camera rijdt nog naar die preset. Het label verdwijnt zodra hij stilstaat; dan kun je veilig op de mixer overschakelen. (De app leest daarvoor de positie van de camera uit; lukt dat niet, dan staat het label er 3 seconden.)
+- **● Camerastatus**: het bolletje bij elke camera (kolom en tabblad) is groen als de camera bereikbaar is en rood als hij niet reageert, met *niet bereikbaar* erbij. De app controleert dit elke 10 seconden en bij elk commando.
+- **Sneltoets op de tegel**: bij de camera die je bedient staat rechtsonder op tegel 1–9 de toets waarmee je die preset oproept.
+- **↶ Ongedaan maken**: heb je een preset overschreven, dan verschijnt onderin 10 seconden *Ongedaan maken*. De camera gaat dan terug naar de oude positie, slaat de preset daar opnieuw op en zet de oude foto terug. Dat kan als de app de oude positie kent: van presets die je met de app opslaat (of uitleest bij Back-up) onthoudt hij die vanzelf.
+
+<img src="docs/screenshots/ongedaan-maken.png" width="560" alt="Ongedaan maken na overschrijven">
+
+## Presets ordenen
+- **Kleur**: geef een preset in het presetvenster (✎) een kleur; de tegel krijgt bovenaan een gekleurde streep. Handig per soort shot, bijv. blauw = totaal, oranje = spreker, paars = muziek.
+- **Zoeken**: typ in *🔍 Zoek preset* een naam, nummer of kleur. Alleen de presets die passen blijven staan; **Esc** wist het.
+- **Verslepen**: sleep een tegel met de muis naar een andere plek. Dat verandert alleen de volgorde op het scherm (per camera, voor alle schermen); het presetnummer in de camera blijft gelijk. **↺ Volgorde** zet alles terug op nummer.
 
 ## Presets laden van de camera
 Staan er al presets in de camera's (bijv. gemaakt met het oude PTZOptics-programma of de afstandsbediening)? Klik op **📥 Laden van camera**
