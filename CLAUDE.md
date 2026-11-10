@@ -204,7 +204,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - **Geen YOLO/torch** in de losse app (te groot); volgen valt terug op OpenCV-HOG (`opencv-python-headless<5`).
 - ⚠️ Niet ondertekend door Apple/Microsoft: Gatekeeper (Systeeminstellingen → Privacy en beveiliging → *Toch openen*, of `xattr -dr com.apple.quarantine`) en SmartScreen vragen eenmalig om bevestiging.
 
-## 9b. Videomixer: Roland V-1HD via MIDI (branch `verken/midi-roland`)
+## 9b. Videomixer: Roland V-1HD via MIDI (sinds v1.0.3; verkend op branch `verken/midi-roland`)
 
 - 🧑 Videomixer is een **Roland V-1HD** (bevestigd 10 nov 2026). 🧑 **De fader wordt nooit gebruikt** (staat vast aan één kant). 🧑 **Op de mixer zijn alle ingangsknoppen groen; de gekozen ingang wordt rood = live** (groen ≠ preview). 🧑 Mixer heeft **2 rijen (A/B) van 4 knoppen**; beide rijen kiezen uit dezelfde 4 HDMI-ingangen.
 - ✅ Uit de Remote Control Guide: USB-MIDI + DIN (wat de mixer zelf maakt gaat altijd naar USB); bij een ingangsknop CC0/CC32 + program change (bank 0 = A, 1 = B, 50H = memory), fader CC17; SysEx RQ1 (model-ID `00 00 00 20`, device-ID standaard 10H) voor fader/video sel (`71 00 00/08/09`) en knoplampjes (`73 02 00–18`). Details: `docs/midi-roland-v1hd.md`.
