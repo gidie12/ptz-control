@@ -38,6 +38,8 @@ import backup as _backup  # noqa: E402
 import youtube as _youtube  # noqa: E402
 import updater as _updater  # noqa: E402
 import midi as _midi  # noqa: E402
+import actlog as _actlog  # noqa: E402
+from urllib.parse import unquote  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FROZEN = bool(getattr(sys, "frozen", False))   # losse app (PyInstaller): .exe / .app
@@ -184,6 +186,177 @@ def broadcast(event):
     with SUB_LOCK:
         for q in list(SUBSCRIBERS):
             q.put(event)
+    if event.get("type") in OBSERVED:
+        try:
+            _observe(event)
+        except Exception as e:  # noqa: BLE001  (loggen mag nooit de bediening breken)
+            print(f"Activiteitenlog: {e}")
+
+
+# ---------------------------------------------------------------- activiteitenlog
+# 🧑 Wie deed wat, vanaf welk apparaat, plus fouten van camera's en de videomixer. Eén log voor de hele server
+# (alle workspaces), in DATA_DIR/activiteit.log. Verzoeken worden gelogd in Handler.do_POST (met apparaat);
+# systeemgebeurtenissen (camera weg/terug, mixer, YouTube, taken, updates) via _observe() op de SSE-events.
+ACTLOG = _actlog.Log(os.path.join(DATA_DIR, "activiteit.log"), lambda e: broadcast({"type": "log", "entry": e}))
+OBSERVED = {"camstatus", "midi", "youtube", "job", "update"}
+_OBS = {"cam": {}, "midi": None, "yt": None, "job": False, "upd": None}
+JOB_LABEL = {"capture": "Uitlezen van camera's", "apply": "Terugzetten naar camera's",
+             "load": "Presets laden van camera", "captest": "Presetaantal testen"}
+
+
+def _cam_name(cid):
+    for c in load_config().get("cameras", []):
+        if c.get("id") == cid:
+            return c.get("name") or cid
+    return cid or ""
+
+
+def syslog(msg, kind="systeem", cam=""):
+    ACTLOG.add(msg, kind, who="systeem", cam=cam)
+
+
+def _observe(ev):
+    t = ev["type"]
+    if t == "camstatus":
+        for cid, st in (ev.get("cams") or {}).items():
+            was = _OBS["cam"].get(cid)
+            _OBS["cam"][cid] = st["ok"]
+            if was is None and st["ok"]:
+                continue                      # eerste meting en in orde: niets te melden
+            if was != st["ok"]:
+                if st["ok"]:
+                    syslog("Camera weer bereikbaar", "systeem", _cam_name(cid))
+                else:
+                    syslog(f"Camera niet bereikbaar: {st.get('error') or 'geen verbinding'}", "fout", _cam_name(cid))
+    elif t == "midi":
+        prev = _OBS["midi"] or {}
+        cur = {"connected": ev.get("connected"), "live": tuple(ev.get("live_cams") or ()), "error": ev.get("error") or ""}
+        _OBS["midi"] = cur
+        if not prev:
+            if cur["connected"]:
+                syslog(f"Videomixer verbonden ({ev.get('port') or 'MIDI'})")
+            return
+        if cur["connected"] != prev.get("connected"):
+            if cur["connected"]:
+                syslog(f"Videomixer verbonden ({ev.get('port') or 'MIDI'})")
+            elif ev.get("enabled"):
+                syslog("Videomixer niet meer verbonden" + (f": {cur['error']}" if cur["error"] else ""), "fout")
+        if cur["connected"] and cur["live"] != prev.get("live"):
+            names = ", ".join(_cam_name(c) for c in cur["live"])
+            syslog(f"Mixer: {names} in beeld" if names else "Mixer: geen gekoppelde camera in beeld")
+    elif t == "youtube":
+        key = ev.get("video_id") if ev.get("live") else None
+        if key != _OBS["yt"]:
+            if key:
+                syslog(f"YouTube-stream live: {ev.get('title') or key}")
+            elif _OBS["yt"]:
+                syslog("YouTube-stream afgelopen")
+            _OBS["yt"] = key
+    elif t == "job":
+        running = bool(ev.get("running"))
+        if _OBS["job"] and not running and ev.get("kind"):
+            errs = sum(len(c.get("errors") or []) for c in (ev.get("cams") or {}).values())
+            label = JOB_LABEL.get(ev["kind"], ev["kind"])
+            if errs:
+                syslog(f"Klaar met fouten: {label} ({errs} melding{'en' if errs != 1 else ''})", "fout")
+            else:
+                syslog(f"Klaar: {label}")
+        _OBS["job"] = running
+    elif t == "update":
+        if ev.get("available") and ev.get("latest") and ev.get("latest") != _OBS["upd"]:
+            _OBS["upd"] = ev["latest"]
+            syslog(f"Nieuwe versie beschikbaar: {ev['latest']}")
+
+
+def _preset_label(cam, n):
+    name = (cam.get("presets") or {}).get(str(n))
+    if isinstance(name, dict):
+        name = name.get("name")
+    return f"Preset {n}" + (f" ({name})" if name else "")
+
+
+CMD_LABEL = {"move": "Handbediening", "stop": "Handbediening", "zoom": "Handbediening", "focus": "Handbediening",
+             "home": "Naar home", "onepush_af": "One-push autofocus"}
+
+
+def describe_request(path, body, code, resp):
+    """Tekst voor het log bij een POST, of None als het niet gelogd hoeft te worden. → (msg, kind, cam)"""
+    ok = code < 400
+    err = (resp or {}).get("error") if isinstance(resp, dict) else None
+    cam = None
+    if isinstance(body, dict) and body.get("cam") is not None:
+        try:
+            cam = find_camera(body.get("cam"))
+        except (KeyError, ValueError, TypeError):
+            cam = None
+    cname = (cam or {}).get("name", "") if cam else ""
+    if code == 403 and isinstance(resp, dict) and resp.get("need_pin"):
+        return "Bediening geweigerd: geen pincode ingevoerd", "fout", cname
+    msg = None
+    if path == "/api/cmd":
+        a, args = body.get("action"), body.get("args") or {}
+        if a == "preset_call":
+            msg = _preset_label(cam or {}, args.get("n")) + " opgeroepen"
+        elif a == "preset_set":
+            msg = _preset_label(cam or {}, args.get("n")) + " opgeslagen"
+        elif a == "autofocus":
+            msg = "Autofocus " + ("aan" if args.get("on") else "uit")
+        else:
+            msg = CMD_LABEL.get(a, f"Commando {a}")
+    elif path == "/api/preset/undo":
+        msg = _preset_label(cam or {}, body.get("n")) + ": overschrijven ongedaan gemaakt"
+    elif path == "/api/track":
+        msg = "Persoon volgen " + ("aan" if (resp or {}).get("on") else "uit") if ok else "Persoon volgen"
+    elif path == "/api/thumb":
+        msg = f"Foto van preset {body.get('n')} " + ("verwijderd" if body.get("delete") else "vernieuwd")
+    elif path == "/api/config":
+        msg = "Instellingen opgeslagen"
+    elif path == "/api/workspaces":
+        act = {"select": "Workspace gewisseld", "create": "Workspace gemaakt", "rename": "Workspace hernoemd",
+               "delete": "Workspace verwijderd"}.get(body.get("action"), "Workspaces gewijzigd")
+        target = body.get("name") or (_ws_name(body["id"]) if body.get("id") and body.get("action") != "delete" else body.get("id"))
+        msg = act + (f": {target}" if target else "")
+    elif path == "/api/quit":
+        msg = "PTZ Control afgesloten"
+    elif path == "/api/update/check":
+        msg = "Op updates gecontroleerd"
+    elif path == "/api/update/install":
+        msg = "Bijwerken gestart"
+    elif path == "/api/midi/config":
+        msg = "Videomixer-instellingen gewijzigd"
+    elif path == "/api/midi/record":
+        msg = "Verkenning videomixer " + ("gestart" if body.get("on") else "gestopt")
+    elif path == "/api/backup/restore":
+        msg = "Back-up teruggezet"
+    elif path in ("/api/backup/capture", "/api/backup/apply", "/api/presets/load", "/api/presets/captest"):
+        kind = {"capture": "capture", "apply": "apply", "load": "load", "captest": "captest"}[path.rsplit("/", 1)[1]]
+        n = len(body.get("cams") or [])
+        msg = f"Gestart: {JOB_LABEL[kind]} ({n} camera{'' if n == 1 else 's'})"
+    elif path == "/api/backup/forget":
+        msg = "Uitgelezen posities en beeld vergeten"
+    elif path == "/api/access/unlock":
+        if code == 429:
+            return "Te veel foute pincodes", "fout", ""
+        msg = "Ontgrendeld met pincode" if ok else None
+        if not ok:
+            return "Foute pincode ingevoerd", "fout", ""
+    elif path == "/api/access/lock":
+        msg = "Vergrendeld (alleen kijken)"
+    elif path == "/api/access/set":
+        msg = "Pincode ingesteld" if body.get("pin") else "Pincode verwijderd"
+    elif path == "/api/access/logout_all":
+        msg = "Alle apparaten uitgelogd"
+    elif path == "/api/autobackup/now":
+        msg = "Back-up gemaakt (handmatig)"
+    elif path == "/api/scan":
+        msg = "Netwerk doorzocht naar camera's"
+    elif path == "/api/log/clear":
+        msg = "Activiteitenlog gewist"
+    if msg is None:
+        return None
+    if not ok:
+        return f"{msg} mislukt" + (f": {err}" if err else ""), "fout", cname
+    return msg, "actie", cname
 
 
 # ---------------------------------------------------------------- YouTube (alleen kijken)
@@ -946,6 +1119,8 @@ def autobackup(reason="handmatig"):
             except OSError:
                 pass
     broadcast({"type": "autobackup"})
+    if reason != "handmatig":
+        syslog(f"Automatische back-up gemaakt ({reason})")
     return name
 
 
@@ -1275,6 +1450,7 @@ class Handler(BaseHTTPRequestHandler):
             super().log_message(fmt, *args)
 
     def _send(self, code, body, ctype="application/json", headers=None):
+        self._code, self._resp = code, body
         if isinstance(body, (dict, list)):
             body = json.dumps(body, ensure_ascii=False).encode()
         elif isinstance(body, str):
@@ -1298,6 +1474,13 @@ class Handler(BaseHTTPRequestHandler):
     def _authorized(self):
         """Mag dit apparaat bedienen? Zonder pincode altijd; anders deze computer zelf of een geldige sessie."""
         return not pin_set() or is_local(self.client_address[0]) or token_ok(self._token())
+
+    def _who(self):
+        """Naam voor het activiteitenlog: de apparaatnaam die de UI meestuurt (X-PTZ-Device) + IP-adres."""
+        ip = self.client_address[0]
+        name = re.sub(r"[\x00-\x1f<>]", "", unquote(self.headers.get("X-PTZ-Device") or "")).strip()[:40]
+        where = "deze computer" if is_local(ip) else ip
+        return (f"{name} ({where})" if name else where), ip
 
     def _deny(self):
         return self._send(403, {"ok": False, "need_pin": True,
@@ -1351,6 +1534,8 @@ class Handler(BaseHTTPRequestHandler):
                 data = make_backup(pw)
                 label = re.sub(r"[^a-z0-9]+", "-", _ws_name(WS["active"]).lower()).strip("-") or "workspace"
             body = json.dumps(data, ensure_ascii=False, indent=1).encode()
+            who, ip = self._who()
+            ACTLOG.add("Back-up gedownload" + (" (met wachtwoorden)" if pw else ""), who=who, ip=ip)
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Disposition",
@@ -1367,6 +1552,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, YT.snapshot())
         if u.path == "/api/update":
             return self._send(200, UPD.snapshot())
+        if u.path == "/api/log":
+            try:
+                since = int(parse_qs(u.query).get("since", ["0"])[0])
+            except ValueError:
+                since = 0
+            return self._send(200, {"entries": ACTLOG.since(since, 2000)})
+        if u.path == "/api/log.txt":
+            name = f"ptz-control-activiteit-{datetime.date.today().isoformat()}.txt"
+            return self._send(200, ACTLOG.text(), "text/plain; charset=utf-8",
+                              {"Content-Disposition": f'attachment; filename="{name}"'})
         if u.path == "/api/camstatus":
             with CAMSTATUS_LOCK:
                 return self._send(200, {"type": "camstatus", "cams": dict(CAMSTATUS)})
@@ -1460,11 +1655,28 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        self._code, self._resp, self._req = None, None, {}
+        try:
+            return self._do_post()
+        finally:
+            path = urlparse(self.path).path
+            if path == "/api/log/clear" and self._code == 200:
+                ACTLOG.clear()
+            try:
+                d = describe_request(path, self._req if isinstance(self._req, dict) else {}, self._code or 500, self._resp)
+                if d:
+                    who, ip = self._who()
+                    ACTLOG.add(d[0], d[1], who=who, ip=ip, cam=d[2])
+            except Exception as e:  # noqa: BLE001
+                print(f"Activiteitenlog: {e}")
+
+    def _do_post(self):
         u = urlparse(self.path)
         try:
             body = self._body()
         except json.JSONDecodeError:
             return self._send(400, {"error": "ongeldige JSON"})
+        self._req = body
         if u.path not in OPEN_POSTS and not self._authorized():
             return self._deny()
 
@@ -1573,6 +1785,8 @@ class Handler(BaseHTTPRequestHandler):
             except RuntimeError as e:
                 return self._send(400, {"error": str(e)})
             return self._send(200, {"ok": True})
+        if u.path == "/api/log/clear":
+            return self._send(200, {"ok": True})          # wissen zelf gebeurt in do_POST (daarna één regel "gewist")
         if u.path == "/api/youtube/check":
             YT.refresh()
             return self._send(200, {"ok": True})
@@ -1798,6 +2012,7 @@ def main():
     lan_url = f"http://{local_ip()}:{args.port}"
     STATE["server"] = f"{local_ip()}:{args.port}"
     STATE["app"] = {"frozen": FROZEN, "data_dir": DATA_DIR}
+    syslog(f"PTZ Control gestart (versie {UPD.snapshot().get('current') or 'onbekend'}, workspace {_ws_name(WS['active'])})")
     YT.start()
     UPD.start()
     MIDI.start()

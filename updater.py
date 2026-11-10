@@ -190,7 +190,7 @@ class Updater:
             base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
         return os.path.join(base, "PTZ Control")
 
-    MIGRATE = ("cameras.json", "workspaces.json", "github_token.txt", "thumbs", "workspaces")
+    MIGRATE = ("cameras.json", "workspaces.json", "github_token.txt", "thumbs", "workspaces", "backups", "toegang.json", "activiteit.log")
 
     def _migrate_data(self):
         """Modus bron: instellingen + foto's kopiëren naar de vaste plek buiten de app. Wat daar al stond,

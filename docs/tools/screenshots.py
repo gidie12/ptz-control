@@ -5,6 +5,24 @@ YT = "ytUpdate({type:'youtube', channel:'@kerkzwolle', live:true, upcoming:false
 LIVE = ("lastPreset={links:1, midden:2, rechts:4}; "
         "camst={links:{ok:true,checked:'09:58:00'},midden:{ok:true,checked:'09:58:00'},rechts:{ok:true,checked:'09:58:00'}}; "
         "moving={rechts:{n:4}}; renderTabs(); renderPresets(); renderSide();")
+# nagemaakt activiteitenlog (demodata, geen echte dienst)
+LOG = """(() => { const d = new Date(); d.setHours(9, 41, 0, 0); const t0 = d.getTime() / 1000; const r = [
+ [0, 'systeem', 'systeem', '', 'PTZ Control gestart (versie v1.0.6, workspace Standaard)'],
+ [12, 'systeem', 'systeem', '', 'Videomixer verbonden (V-1HD)'],
+ [300, 'actie', 'Mac regie (deze computer)', 'Links', 'Preset 1 (Totaal) opgeroepen'],
+ [420, 'actie', 'iPad Jan (192.168.100.23)', 'Midden', 'Preset 2 (Spreker close) opgeroepen'],
+ [455, 'systeem', 'systeem', '', 'Mixer: Midden in beeld'],
+ [610, 'actie', 'Mac regie (deze computer)', 'Rechts', 'Handbediening', 4],
+ [640, 'actie', 'Mac regie (deze computer)', 'Rechts', 'Preset 4 (Band breed) opgeslagen'],
+ [700, 'fout', 'systeem', 'Rechts', 'Camera niet bereikbaar: geen verbinding'],
+ [735, 'systeem', 'systeem', 'Rechts', 'Camera weer bereikbaar'],
+ [900, 'systeem', 'systeem', '', 'YouTube-stream live: Kerkdienst zondag 10:00'],
+ [1130, 'actie', 'iPad Jan (192.168.100.23)', 'Links', 'Preset 2 (Preekstoel) opgeroepen'],
+ [1160, 'systeem', 'systeem', '', 'Mixer: Links in beeld'],
+ [1300, 'fout', 'Telefoon (192.168.100.40)', '', 'Bediening geweigerd: geen pincode ingevoerd', 2],
+ [1500, 'actie', 'Mac regie (deze computer)', 'Midden', 'Persoon volgen aan'],
+]; logEntries = new Map(r.map((x, i) => [i + 1, { id: i + 1, t: t0 + x[0], kind: x[1], who: x[2], cam: x[3], msg: x[4], n: x[5] || 1, last: t0 + x[0] + 40 }]));
+$('#logDevName').value = 'Mac regie'; logCams(); logRender(); })()"""
 def page(b, theme="dark", w=1440, h=900):
     ctx = b.new_context(viewport={"width": w, "height": h}, device_scale_factor=1)
     ctx.add_init_script(f"localStorage.setItem('theme','{theme}'); localStorage.setItem('tourDone','1'); localStorage.setItem('ytAuto','0');")
@@ -24,6 +42,8 @@ with sync_playwright() as p:
     pg.screenshot(path=f"{OUT}/ongedaan-maken.png", clip={"x": 420, "y": 760, "width": 600, "height": 140}); pg.evaluate("$('#undoNote').hidden = true")
     pg.click("#btnPad"); pg.click("#btnMidi"); pg.wait_for_timeout(1500); pg.screenshot(path=f"{OUT}/videomixer.png"); pg.click("#midiClose")
     pg.click("#btnPad"); pg.click("#btnAccess"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/toegang.png"); pg.click("#acClose")
+    pg.click("#btnPad"); pg.click("#btnLog"); pg.wait_for_timeout(400); pg.evaluate(LOG); pg.wait_for_timeout(200)
+    pg.screenshot(path=f"{OUT}/activiteitenlog.png"); pg.click("#logClose")
     pg.click("#btnPad"); pg.click("#btnBackup"); pg.wait_for_timeout(600); pg.locator("#dlgBackup").evaluate("d => d.scrollTop = 99999"); pg.wait_for_timeout(200)
     pg.screenshot(path=f"{OUT}/automatische-back-up.png"); pg.click("#bkClose")
     pg.click("#btnPad"); pg.click("#btnKeys"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/sneltoetsen.png"); pg.click("#keysCancel")
