@@ -22,6 +22,7 @@
     --img: #0b0c0f; --imgtxt: #3a404c; --onaccent: #1a1200;
     --okbg: #12301c; --oktxt: #7ee2a0; --warnbg: #3a2a10; --warntxt: #f5d49a; --errbg: #2b1416; --errline: #5a2a2c;
     --shadow: rgba(0,0,0,.45); --backdrop: rgba(0,0,0,.65);
+    --editbg: rgba(17,19,23,.72); --editfg: #e8eaed; --editline: rgba(255,255,255,.14);
   }
   :root[data-theme=light] {
     color-scheme: light;
@@ -30,6 +31,7 @@
     --img: #dde1e7; --imgtxt: #a3abb8; --onaccent: #1a1200;
     --okbg: #dcf3e2; --oktxt: #17692f; --warnbg: #fff1d6; --warntxt: #7a4a00; --errbg: #fde6e6; --errline: #efb4b6;
     --shadow: rgba(20,24,32,.18); --backdrop: rgba(20,24,32,.45);
+    --editbg: rgba(255,255,255,.88); --editfg: #2b303a; --editline: rgba(20,24,32,.14);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
@@ -72,8 +74,14 @@
     color: var(--accent); flex: none; }
   .tile .name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
   .tile .name.empty { color: var(--muted); font-style: italic; font-size: 13px; }
-  .tile .edit { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.65); border: 0; border-radius: 6px;
-    width: 30px; height: 30px; cursor: pointer; font-size: 14px; color: #fff; opacity: .85; }
+  /* bewerk-knop: lichte "glas"-knop die met het thema meekleurt, zichtbaar op foto én lege tegel */
+  .tile .edit { position: absolute; top: 6px; right: 6px; display: grid; place-items: center;
+    width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+    background: var(--editbg); color: var(--editfg); border: 1px solid var(--editline);
+    box-shadow: 0 1px 4px var(--shadow); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    transition: background .12s, color .12s, transform .12s; }
+  .tile .edit svg { width: 15px; height: 15px; pointer-events: none; }
+  .tile .edit:hover, .tile .edit:active { background: var(--accent); color: var(--onaccent); border-color: var(--accent); transform: scale(1.06); }
   .tile.live { border-color: var(--live); }
   .tile.live::after { content: "LIVE"; position: absolute; top: 6px; left: 6px; background: var(--live); color: #fff;
     font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .05em; }
@@ -95,7 +103,8 @@
   .col .grid { --tile: var(--ctile, 115px); gap: 8px; }
   .col .tile .meta { padding: 5px 7px; }
   .col .tile .name { font-size: 13px; }
-  .col .tile .edit { width: 26px; height: 26px; font-size: 12px; }
+  .col .tile .edit { width: 26px; height: 26px; border-radius: 7px; }
+  .col .tile .edit svg { width: 13px; height: 13px; }
   .trk { margin-left: 6px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2);
     font-size: 12px; cursor: pointer; white-space: nowrap; }
   .trk.on { background: var(--okbg); border-color: var(--ok); color: var(--oktxt); }
@@ -267,6 +276,7 @@
   .ytmsg button { justify-self: center; }
   #ytWin.dragging .ytbody iframe { pointer-events: none; }
   body.wall.ytres main { padding-right: calc(var(--ytres) + 20px); }
+  body.wall.ytrestop main { padding-top: calc(var(--ytrestop) + 20px); }
   .ytgrip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; z-index: 2;
     background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%,
       transparent 70%, var(--muted) 70%, var(--muted) 78%, transparent 78%); opacity: .8; }
@@ -552,6 +562,7 @@
     <div class="small" id="ytPrefStatus" style="margin-top:6px"></div>
     <div class="small" style="margin-top:10px"><b>Venster</b> <span class="muted">· dit apparaat</span></div>
     <label class="chk"><input type="checkbox" id="ytAuto"> Venster automatisch openen als het kanaal live gaat</label>
+    <label class="chk"><input type="checkbox" id="ytWallTop"> Bij volledig scherm boven de camera's <span class="muted">(de tegels schuiven omlaag)</span></label>
     <label class="chk"><input type="checkbox" id="ytSound"> Met geluid starten <span class="muted">(standaard zonder, de browser kan geluid blokkeren)</span></label>
     <div class="row" style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">
       <span class="small">Grootte</span>
@@ -698,9 +709,9 @@ function tile(c, n) {
   b.innerHTML = `
     <div class="img" style="${hasThumb(c, n) ? `background-image:url('${thumbUrl(c.id, n)}')` : ""}">${hasThumb(c, n) ? "" : n}</div>
     <div class="meta"><span class="num">${n}</span><span class="name ${name || hasThumb(c, n) ? "" : "empty"}">${esc(name || (hasThumb(c, n) ? `Preset ${n}` : "Leeg"))}</span></div>
-    <span class="edit" title="Bewerken">✎</span>${(c.track_presets || []).includes(n) ? '<span class="tb">🎯 volgt</span>' : ""}`;
+    <span class="edit" title="Bewerken" aria-label="Preset bewerken"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></span>${(c.track_presets || []).includes(n) ? '<span class="tb">🎯 volgt</span>' : ""}`;
   b.onclick = (e) => {
-    if (e.target.classList.contains("edit")) return openPreset(c.id, n);
+    if (e.target.closest(".edit")) return openPreset(c.id, n);
     if (b._long) { b._long = false; return; }
     presetClick(c.id, n, b);
   };
@@ -1027,6 +1038,7 @@ function setWall(on) {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     if (wallPrevView !== null && wallPrevView !== view && (wallPrevView === ALL || camById(wallPrevView))) setView(wallPrevView);
   }
+  ytReplace();   // YouTube-venster naar de plek die bij deze weergave hoort
 }
 $("#btnWall").onclick = () => setWall(true);
 $("#btnWallExit").onclick = () => setWall(false);
@@ -1481,6 +1493,7 @@ const ytWin = $("#ytWin");
 const ytOpt = {
   get auto() { return store.get("ytAuto") !== "0"; },
   get sound() { return store.get("ytSound") === "1"; },
+  get wallTop() { return store.get("ytWallTop") === "1"; },   // volledig scherm: venster bovenaan, tegels eronder
 };
 let ytShownVid = null;      // video in de iframe
 let ytUserClosed = false;   // zelf gesloten tijdens deze livestream: niet steeds opnieuw openen
@@ -1525,6 +1538,16 @@ function ytPlace(g = ytGeom()) {
   let { x, y, w } = g;
   ytWin.classList.toggle("auto", g.auto);
   const wall = document.body.classList.contains("wall");
+  if (g.auto && wall && ytOpt.wallTop && !ytWin.hidden) {
+    // boven de camera's: gecentreerd bovenaan, hooguit 45% van de schermhoogte; de tegels schuiven omlaag
+    w = Math.floor(Math.max(220, Math.min(g.w, innerWidth - 20, (innerHeight * 0.45 - 31) * 16 / 9)));
+    ytReserve(0); ytResKey = null; ytReserveTop(ytH(w));
+    ytWin.style.width = w + "px"; ytWin.style.left = Math.round((innerWidth - w) / 2) + "px"; ytWin.style.top = "10px";
+    $$("#ytSizeSeg button").forEach(b => b.classList.toggle("on", Math.abs(+b.dataset.w - g.w) < 2));
+    $("#ytAutoBtn").hidden = true;
+    return;
+  }
+  ytReserveTop(0);
   // sleutel van de indeling: alleen als die verandert, opnieuw kijken of de strook nog nodig is (anders gaat hij heen en weer)
   const key = [wall, cfg.preset_count, cfg.tile_size, view, cfg.cameras.length, innerWidth, innerHeight, g.w].join("|");
   const strip = () => { w = Math.min(g.w, Math.round(innerWidth * 0.35)); ytReserve(w); ytResKey = key; x = innerWidth - w - 10; y = 10; };
@@ -1546,6 +1569,11 @@ function ytSaveGeom(kind) {
     : { ...old, w: Math.round(r.width), ...(old.auto === false ? { x: Math.round(r.left), y: Math.round(r.top) } : {}) };
   store.set("ytGeom", JSON.stringify(g));
   ytPlace();
+}
+function ytReserveTop(h) {
+  const on = !!h && !ytWin.hidden;
+  document.body.classList.toggle("ytrestop", on);
+  if (on) document.body.style.setProperty("--ytrestop", Math.round(h) + "px");
 }
 let ytResKey = null;
 function ytReserve(w) {
@@ -1609,7 +1637,7 @@ function ytRender() {
 }
 function ytShow(on) {
   ytWin.hidden = !on;
-  if (!on) ytReserve(0);
+  if (!on) { ytReserve(0); ytReserveTop(0); }
   if (on) ytPlace();
   ytRender();
 }
@@ -1641,6 +1669,7 @@ function ytMenuRender() {
     <button class="mi" data-y="auto" role="menuitem" title="Zelf een vrije plek naast of onder de tegels zoeken">⌖ Automatisch plaatsen ${chk(g.auto)}</button>
     <div class="ysize"><span class="lbl">↔ Grootte</span>${[["260", "Klein"], ["360", "Middel"], ["520", "Groot"]]
       .map(([w, t]) => `<button data-w="${w}" class="${Math.abs(g.w - w) < 2 ? "on" : ""}">${t}</button>`).join("")}</div>
+    <button class="mi" data-y="walltop" role="menuitem" title="Bij volledig scherm staat het venster bovenaan en schuiven de tegels omlaag">⬆ Boven de camera's bij volledig scherm ${chk(ytOpt.wallTop)}</button>
     <button class="mi" data-y="sound" role="menuitem">🔊 Met geluid starten ${chk(ytOpt.sound)}</button>
     <button class="mi" data-y="autoopen" role="menuitem">⚡ Automatisch openen bij live ${chk(ytOpt.auto)}</button>
     <div class="msep"></div>
@@ -1665,6 +1694,7 @@ $("#ytMenu").addEventListener("click", (e) => {
   }
   const a = e.target.closest("button[data-y]:not([disabled])")?.dataset.y; if (!a) return;
   if (a === "auto") { const g = ytGeomRaw(); store.set("ytGeom", JSON.stringify(g.auto === false ? { w: ytGeom().w } : { ...g, ...(() => { const r = ytWin.getBoundingClientRect(); return ytWin.hidden ? {} : { x: Math.round(r.left), y: Math.round(r.top) }; })(), auto: false })); if (!ytWin.hidden) ytPlace(); return ytMenuRender(); }
+  if (a === "walltop") { ytSetWallTop(!ytOpt.wallTop); return ytMenuRender(); }
   if (a === "sound") { store.set("ytSound", ytOpt.sound ? "0" : "1"); ytShownVid = "_"; ytRender(); return ytMenuRender(); }
   if (a === "autoopen") { store.set("ytAuto", ytOpt.auto ? "0" : "1"); return ytMenuRender(); }
   ytMenuOpen(false);
@@ -1728,6 +1758,7 @@ function openPrefs() {
   $("#ytLockNote").hidden = !yt.live;
   $("#ytAuto").checked = ytOpt.auto;
   $("#ytSound").checked = ytOpt.sound;
+  $("#ytWallTop").checked = ytOpt.wallTop;
   $("#ytPrefStatus").textContent = !yt.channel ? "" : yt.error ? yt.error
     : (yt.live ? "● Nu live: " + (yt.title || "") : yt.upcoming ? "Gepland: " + (yt.title || "") : "Niet live")
       + (yt.checked ? " · gecontroleerd " + yt.checked : "");
@@ -1736,6 +1767,13 @@ function openPrefs() {
 }
 $("#btnPrefs").onclick = openPrefs;
 $("#prefsCancel").onclick = () => $("#dlgPrefs").close();
+// aanzetten = ook automatisch plaatsen weer aan (anders blijft een versleept venster op zijn plek staan)
+function ytSetWallTop(on) {
+  store.set("ytWallTop", on ? "1" : "0");
+  if (on && ytGeomRaw().auto === false) store.set("ytGeom", JSON.stringify({ w: ytGeom().w }));
+  if (!ytWin.hidden) ytPlace();
+}
+$("#ytWallTop").onchange = () => ytSetWallTop($("#ytWallTop").checked);
 $("#ytAuto").onchange = () => store.set("ytAuto", $("#ytAuto").checked ? "1" : "0");
 $("#ytSound").onchange = () => { store.set("ytSound", $("#ytSound").checked ? "1" : "0"); ytShownVid = "_"; ytRender(); };
 $$("#ytSizeSeg button").forEach(b => b.onclick = () => {
