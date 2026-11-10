@@ -45,6 +45,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Live-sync tussen schermen via **Server-Sent Events** (`/api/events`): `select`, `preset`, `thumb`, `config`, `track`, `job`, `state`, `youtube`.
 - Per-apparaat-instellingen (snelheden, Xbox-opties, thema, YouTube-venster) staan in **localStorage**, niet op de server. Tegelgrootte en aantal tegels staan in `cameras.json` (gedeeld).
 - 🧑 **Thema** licht/donker via `html[data-theme]` en CSS-variabelen (`:root` = donker, `:root[data-theme=light]` = licht). Geen losse kleurcodes meer in de CSS gebruiken: voeg een variabele toe aan beide blokken. `localStorage.theme` = `auto`/`dark`/`light` (auto volgt `prefers-color-scheme`); een klein script in `<head>` zet het thema vóór het tekenen. Wisselen alleen via het menu (`#btnTheme`, licht ↔ donker); 🧑 het thema staat op verzoek **niet** in ⚙ Instellingen. Staat er nog `auto`, dan blijft dat gelden tot iemand wisselt.
+- 🧑 **Bewerk-knop op presettegels**: SVG-potlood op een knop met themakleuren (`--editbg/--editfg/--editline`); was in het lichte thema te donker. Klikdetectie via `closest(".edit")`.
 - 🧑 **Menu** heeft ook **⚙ Instellingen** (`#btnPrefs`, dialoog `#dlgPrefs`: alleen YouTube). De camera-dialoog heet in het menu nu 📷 Camera's (id `btnSettings` ongewijzigd).
 - Standaardweergave is **"Alle camera's"** (kolommen) zodra er >1 camera is.
 - 🧑 **Menuknop "🎮 Menu ▾"** (`#btnPad`) toont de controllerstatus visueel, zonder tekst: grijs icoon + grijs bolletje = geen controller; gekleurd icoon + groen bolletje + groene rand (`.on`) = verbonden; bolletje pulseert tijdens bewegen (`.act`). Tooltip noemt de status.
@@ -139,6 +140,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - Iframe (`youtube-nocookie.com/embed/<id>`) bestaat **alleen** als het venster open is én er live is; anders verwijderd (geen afspelen/dataverkeer op de Mac mini).
 - Zelf gesloten tijdens een livestream → niet steeds opnieuw automatisch openen (`ytUserClosed`, reset bij een nieuwe stream).
 - ⚠️ Klik in de speler pakt de focus; na 0,4 s geeft de pagina die terug (`blur`-handler), zodat sneltoetsen en de Xbox-controller blijven werken. Toetsenbordbediening ín de speler werkt daardoor niet (bewust).
+- 🧑 **Boven de camera's bij volledig scherm** (optie per apparaat, `localStorage.ytWallTop`, in `#ytMenu` en `#dlgPrefs`): alleen bij automatisch plaatsen; venster gecentreerd bovenaan, max. 45% schermhoogte; `body.ytrestop` + `--ytrestop` schuift de tegels omlaag. Aanzetten (`ytSetWallTop`) zet automatisch plaatsen weer aan. `setWall()` roept `ytReplace()` aan. ✅ Getest met Playwright.
 - ⚠️ Kanalen kunnen insluiten (embedding) uitzetten; dan toont de speler een melding. ↗ opent de stream op YouTube.
 
 ## 8. Bewust níet in de software
@@ -162,7 +164,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 - **Controles na wijzigingen:**
   ```bash
   python3 -m py_compile ptz_control.py tracker.py backup.py youtube.py
-  python3 -c "import re;s=open('index.html').read();open('/tmp/a.js','w').write(re.findall(r'<script>(.*?)</script>',s,re.S)[-1])" && node --check /tmp/a.js
+  python3 -c "import re;[open(f'/tmp/a{i}.js','w').write(m) for i,m in enumerate(re.findall(r'<script[^>]*>(.*?)</script>',open('index.html').read(),re.S))]" && for f in /tmp/a[0-9]*.js; do node --check "$f"; done
   bash -n "Start PTZ Control.command" && bash -n "PTZ Control.app/Contents/MacOS/PTZ Control"
   ```
 - **Testen zonder hardware:** gebruik nep-camera's (kleine `ThreadingHTTPServer` die `ptzctrl.cgi`-aanroepen logt en een JPEG op `/snapshot.jpg` geeft), voor back-ups een nep-VISCA-TCP-camera met toestand (posities, presets, beeld, geleidelijke beweging), en voor volgen een `SimGrabber` + `FakeDetector` die `tracker.FrameGrabber` / `_DETECTOR` vervangen. Xbox testen door `navigator.getGamepads` te vervangen in Playwright.
