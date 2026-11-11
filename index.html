@@ -367,27 +367,60 @@
   /* ---- zijbalk ---- */
   aside { display: grid; gap: 16px; position: sticky; top: 70px; }
   /* inklapbare camerabediening */
-  .fold { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; width: 30px; height: 26px;
-    cursor: pointer; font-size: 13px; line-height: 1; transition: transform .15s; }
-  .fold:hover { color: var(--text); }
-  #ctrlCard .bar { cursor: pointer; }
-  #ctrlCard.collapsed #ctrlBody { display: none; }
-  #ctrlCard.collapsed .fold { transform: rotate(-90deg); }
+  /* inklapbare kaarten (camerabediening, Xbox-controller): hele kop is klikbaar, chevron draait mee */
+  .foldbar { cursor: pointer; user-select: none; margin: -6px -8px 0 !important; padding: 6px 8px; border-radius: 9px;
+    transition: background .12s; }
+  .foldbar:hover { background: var(--panel2); }
+  .foldbar h2 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fold { background: var(--panel2); border: 1px solid var(--line); color: var(--muted); border-radius: 50%; width: 28px; height: 28px;
+    flex: none; display: grid; place-items: center; padding: 0; cursor: pointer; transition: transform .18s, color .12s, border-color .12s; }
+  .fold svg { width: 14px; height: 14px; }
+  .foldbar:hover .fold { color: var(--text); border-color: var(--accent); }
+  .foldcard.collapsed .foldbody { display: none; }
+  .foldcard.collapsed .fold { transform: rotate(-90deg); }
+  .foldcard.collapsed { padding-top: 10px; padding-bottom: 10px; }
   /* volledig scherm: alleen de presets van alle camera's */
-  body.wall header, body.wall aside { display: none; }
+  body.wall header { display: none; }
   body.wall main { grid-template-columns: 1fr; padding: 10px; }
   body.wall #presetCard { border: 0; background: none; padding: 0; }
   /* knoppen staan in de presetbalk (niet zwevend rechtsonder), zodat ze nooit over een presettegel vallen */
   #wallBtns { display: none; gap: 8px; }
   body.wall #wallBtns { display: flex; }
   #wallBtns .chip { white-space: nowrap; }
-  #btnWallSide.on { background: var(--panel2); color: var(--text); border-color: var(--accent); }   /* niet rood: rood = LIVE */
-  body.viewonly #btnWallSide { display: none; }
-  /* volledig scherm + uitgeklapte bediening: zijbalk als kolom rechts, onder het YouTube-venster (als dat automatisch geplaatst is) */
-  body.wall.wallside aside { display: grid; position: fixed !important; right: 10px; top: var(--sidetop, 10px); bottom: 10px;
-    width: var(--sidew, 340px); grid-template-columns: minmax(0, 1fr) !important; align-content: start; gap: 10px;
-    overflow-y: auto; overscroll-behavior: contain; z-index: 19; }
-  body.wall.wallside main { padding-right: calc(var(--sidew, 340px) + 20px); }
+  /* volledig scherm: bediening, Xbox, YouTube en liederen zijn vensters; los (zwevend) of vastgezet in de balk bovenaan (dockLayout) */
+  body.wall aside { display: block; position: fixed !important; inset: 0; z-index: 26; pointer-events: none; overflow: visible; }
+  body.wall #keyHints { display: none; }
+  .wbadge, .wclose, .wgrip, .dock { display: none; }
+  body.wall aside .foldcard { position: fixed; left: var(--fx, 10px); top: var(--fy, 10px); width: var(--fw, 340px); height: var(--fh, auto);
+    max-height: calc(100vh - 20px); overflow: hidden auto; overscroll-behavior: contain; pointer-events: auto; margin: 0;
+    padding: 0; border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); border-color: var(--line); }
+  body.wall aside .foldcard.whide { display: none; }
+  body.wall aside .foldcard.docked:not(.collapsed) { overflow: hidden; }
+  body.wall aside .foldbar { margin: 0 !important; padding: 5px 6px 5px 10px; border-radius: 0; gap: 6px; font-size: 12px; cursor: grab;
+    border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 1; background: var(--panel); }
+  body.wall aside .foldbar:hover { background: var(--panel); }
+  body.wall aside .foldbar h2 { font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); margin: 0; }
+  body.wall aside .foldbar .lblpre { display: none; }
+  body.wall aside .wbadge { display: inline-block; background: var(--muted); color: #fff; font-size: 10px; font-weight: 700;
+    padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; flex: none; }
+  body.wall aside .wclose, body.wall aside .dock { display: grid; }
+  body.wall aside .fold { background: none; border: 0; border-radius: 5px; width: auto; height: auto; padding: 2px 6px;
+    color: var(--muted); font-size: 13px; line-height: 1.2; }
+  body.wall aside .fold svg { width: 13px; height: 13px; }
+  body.wall aside .foldbar:hover .fold { color: var(--muted); }
+  body.wall aside .foldbar .fold:hover { background: var(--panel2); color: var(--text); }
+  body.wall aside .foldbody { padding: 10px 12px 12px; }
+  body.wall aside .foldcard.collapsed { padding: 0; }
+  body.wall aside .foldcard.collapsed .foldbar { border-bottom: 0; }
+  body.wall aside .padbadge { font-size: 10px; padding: 0 7px; }
+  body.wall aside .foldcard:not(.docked):not(.collapsed) .wgrip { display: block; }
+  body.wall aside .foldcard.dragging { opacity: .92; user-select: none; }
+  body.wall aside .foldcard.dragging .foldbar { cursor: grabbing; }
+  /* 📌 vastzetten bovenaan (bediening, Xbox, YouTube, liederen): vol = vastgezet, vaag = los venster */
+  .pin { display: none !important; }
+  body.wall .pin { display: inline-block !important; }
+  body.wall aside .pin { display: grid !important; }
+  .pin:not(.on) { opacity: .4; filter: grayscale(1); }
   /* volledig scherm = bedienen: geen presets laden of opslaan */
   body.wall #btnLoad, body.wall #btnStore, body.wall #storeHint { display: none !important; }
   .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 12px; }
@@ -650,7 +683,6 @@
         <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset">📥 Laden van camera</button>
         <button class="chip" id="btnStore">＋ Preset opslaan</button>
         <span id="wallBtns">
-          <button class="chip" id="btnWallSide" title="Camerabediening en Xbox-controller rechts tonen (toets B)">◂ Bediening</button>
           <button class="chip" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
         </span>
       </div>
@@ -661,12 +693,16 @@
 
   <!-- ZIJBALK: beeld + handbediening -->
   <aside>
-    <div class="card" id="ctrlCard">
-      <div class="bar" style="margin:0" id="ctrlBar" title="Klik om de bediening in of uit te klappen">
+    <div class="card foldcard" id="ctrlCard">
+      <div class="bar foldbar" id="ctrlBar" title="Klik om de bediening in of uit te klappen">
+        <span class="ytbadge wbadge">BEDIENING</span>
         <h2 id="camLabel">Camera</h2>
-        <button class="fold" id="btnFold" aria-label="Bediening in- of uitklappen">▾</button>
+        <button class="fold dock pin" title="Vastzetten bovenaan" aria-label="Bediening vastzetten">📌</button>
+        <button class="fold" id="btnFold" aria-label="Bediening in- of uitklappen"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
+        <button class="fold wclose" title="Venster sluiten" aria-label="Venster sluiten">✕</button>
       </div>
-      <div id="ctrlBody">
+      <div class="ytgrip wgrip" title="Breedte aanpassen"></div>
+      <div id="ctrlBody" class="foldbody">
 
       <div class="dpad" id="dpad">
         <button class="btn" data-dir="leftup">↖</button>
@@ -692,7 +728,7 @@
       </div>
       <button class="btn trackbtn" id="btnTrack" title="Persoon volgen: alleen pan, tilt en zoom blijven staan">🎯 Volgen (pan)</button>
       <div class="small" id="trackInfo" style="margin-top:4px"></div>
-      <details>
+      <details ontoggle="fitDocked()">
         <summary>Snelheden</summary>
         <label class="sl">Pan <input type="range" id="spPan" min="1" max="24" value="8"><span id="vPan"></span></label>
         <label class="sl">Tilt <input type="range" id="spTilt" min="1" max="20" value="7"><span id="vTilt"></span></label>
@@ -701,11 +737,17 @@
       </details>
       </div>
     </div>
-    <div class="card" id="padCard">
-      <div class="bar" style="margin:0">
-        <h2>🎮 Xbox-controller</h2>
+    <div class="card foldcard" id="padCard">
+      <div class="bar foldbar" id="padBar" title="Klik om de Xbox-controller in of uit te klappen">
+        <span class="ytbadge wbadge">XBOX</span>
+        <h2><span class="lblpre">🎮 </span>Xbox-controller</h2>
         <span class="padbadge" id="padBadge" hidden>● Verbonden</span>
+        <button class="fold dock pin" title="Vastzetten bovenaan" aria-label="Xbox-controller vastzetten">📌</button>
+        <button class="fold" id="btnPadFold" aria-label="Xbox-controller in- of uitklappen"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
+        <button class="fold wclose" title="Venster sluiten" aria-label="Venster sluiten">✕</button>
       </div>
+      <div class="ytgrip wgrip" title="Breedte aanpassen"></div>
+      <div id="padBody" class="foldbody">
       <p class="small" id="padInfo" style="margin:8px 0 0">Verbind de controller via Bluetooth of USB en druk op een knop.</p>
       <div class="small" id="padLive" style="margin-top:4px"></div>
       <div class="padset">
@@ -715,6 +757,7 @@
       </div>
       <label class="small padprofcard">Knoppenprofiel <select class="padprof" id="padProfCard" title="Welke knoppenindeling deze controller op dit scherm gebruikt"></select></label>
       <button class="icon" id="btnMap2" style="margin-top:6px">🎮 Knoppenindeling instellen…</button>
+      </div>
     </div>
     <div class="small" style="padding:0 4px" id="keyHints"></div>
   </aside>
@@ -918,6 +961,7 @@
   <div class="ythead" id="songHead">
     <span class="ytbadge" id="songBadge">LIEDEREN</span>
     <span class="yttitle" id="songTitle">Liederen</span>
+    <button id="songPin" class="pin" title="Vastzetten bovenaan">📌</button>
     <button id="songSrcBtn" title="Wisselen tussen ProPresenter en de Voordienst app" hidden>⇄</button>
     <button id="songSet" title="Instellingen (Menu → 🎵 Liederen)">⚙</button>
     <button id="songClose" title="Venster sluiten (L)">✕</button>
@@ -933,6 +977,7 @@
   <div class="ythead" id="ytHead">
     <span class="ytbadge" id="ytBadge">OFFLINE</span>
     <span class="yttitle" id="ytTitle">YouTube</span>
+    <button id="ytPin" class="pin" title="Vastzetten bovenaan">📌</button>
     <button id="ytAutoBtn" title="Weer automatisch plaatsen (naast/onder de tegels)" hidden>⌖</button>
     <button id="ytOpen" title="Openen op YouTube">↗</button>
     <button id="ytClose" title="Venster sluiten (Y)">✕</button>
@@ -1319,7 +1364,7 @@ function renderPresets() {
 
 function renderSide() {
   const c = ctrl();
-  $("#camLabel").textContent = c ? `Bediening · ${c.name}` : "Bediening";
+  $("#camLabel").innerHTML = c ? `<span class="lblpre">Bediening · </span>${esc(c.name)}` : "Bediening";
   const t = c ? track[c.id] || {} : {};
   const b = $("#btnTrack");
   b.classList.toggle("on", !!t.on);
@@ -1491,7 +1536,8 @@ const KEY_ACTIONS = {
   stop: ["Stop", "Space", "Overig"], home: ["Home", "KeyH", "Overig"], track: ["Volgen (pan) aan/uit", "KeyT", "Overig"],
   wall: ["Volledig scherm", "KeyF", "Overig"], youtube: ["YouTube-venster tonen/verbergen", "KeyY", "Overig"],
   songs: ["Liederenvenster tonen/verbergen", "KeyL", "Overig"],
-  side: ["Bediening rechts (volledig scherm)", "KeyB", "Overig"],
+  ctrl: ["Camerabediening tonen/verbergen (volledig scherm) of in-/uitklappen", "KeyC", "Overig"],
+  pad: ["Xbox-controller-instellingen tonen/verbergen (volledig scherm) of in-/uitklappen", "KeyX", "Overig"],
   ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ["preset_" + n, ["Preset " + n, "Digit" + n, "Presets op de gekozen camera"]])),
 };
 const keyOf = (a) => { const v = (cfg.keymap || {})[a]; return v === "none" ? "" : (v || KEY_ACTIONS[a][1]); };
@@ -1584,7 +1630,8 @@ document.addEventListener("keydown", (e) => {
   else if (a === "wall") setWall(!document.body.classList.contains("wall"));
   else if (a === "youtube") ytToggle();
   else if (a === "songs") songWinToggle();
-  else if (a === "side") { if (document.body.classList.contains("wall")) setWallSide(store.get("wallSide") !== "1"); }
+  else if (a === "ctrl") toggleCard("ctrlCard");
+  else if (a === "pad") toggleCard("padCard");
   else if (a === "stop") { cmd("stop"); cmd("zoom", { dir: "stop" }); }
   else if (a.startsWith("preset_")) { if (ctrlCam) presetClick(ctrlCam, +a.slice(7)); }
 });
@@ -1609,7 +1656,158 @@ function setFold(on) {
   store.set("ctrlFolded", on ? "1" : "0");
 }
 setFold(store.get("ctrlFolded") === "1");
-$("#ctrlBar").onclick = () => setFold(!$("#ctrlCard").classList.contains("collapsed"));
+$("#ctrlBar").onclick = (e) => { if (cardBtn(e)) return; setFold(!$("#ctrlCard").classList.contains("collapsed")); dockLayout(); };
+function setPadFold(on) {
+  $("#padCard").classList.toggle("collapsed", on);
+  $("#btnPadFold").title = on ? "Xbox-controller uitklappen" : "Xbox-controller inklappen";
+  store.set("padFolded", on ? "1" : "0");
+}
+setPadFold(store.get("padFolded") === "1");
+$("#padBar").onclick = (e) => { if (cardBtn(e)) return; setPadFold(!$("#padCard").classList.contains("collapsed")); dockLayout(); };
+/* Volledig scherm: camerabediening en Xbox-instellingen zijn vensters, net als YouTube en liederen.
+   Tonen/verbergen met C / X (localStorage wallCtrl / wallPad), ✕ sluit. 📌 = vastgezet in de balk bovenaan (dockLayout),
+   anders los/zwevend op een eigen plek (ctrlFloat / padFloat = {x, y, w}); aan de titel slepen maakt een venster los. */
+const FLOAT = { ctrlCard: "ctrlFloat", padCard: "padFloat" };
+const WSHOW = { ctrlCard: "wallCtrl", padCard: "wallPad" };
+if (store.get("wallSide") === "1" && store.get("wallCtrl") == null) { store.set("wallCtrl", "1"); store.set("wallPad", "1"); }   // oude knop Bediening
+let floatJustDragged = false;
+const isWall = () => document.body.classList.contains("wall");
+function floatGet(id) { try { const g = JSON.parse(store.get(FLOAT[id]) || "null"); return g && isFinite(g.x) && isFinite(g.y) ? g : null; } catch { return null; } }
+const cardShown = (id) => isWall() && !viewOnly() && store.get(WSHOW[id]) === "1";
+function setCardShown(id, on) { store.set(WSHOW[id], on ? "1" : "0"); dockLayout(); }
+function toggleCard(id) {   // toets C / X: op volledig scherm tonen/verbergen, anders in-/uitklappen
+  if (isWall()) setCardShown(id, !cardShown(id));
+  else { (id === "ctrlCard" ? setFold : setPadFold)(!document.getElementById(id).classList.contains("collapsed")); }
+}
+function floatApply(id) {
+  const card = document.getElementById(id), g = floatGet(id); if (!g) return;
+  const w = Math.max(280, Math.min(g.w || 340, 420, innerWidth - 20));
+  const x = Math.max(0, Math.min(g.x, innerWidth - w)), y = Math.max(0, Math.min(g.y, innerHeight - 40));
+  card.style.setProperty("--fx", x + "px"); card.style.setProperty("--fy", y + "px"); card.style.setProperty("--fw", w + "px");
+  card.style.removeProperty("--fh");
+}
+function cardBtn(e) {   // klik na slepen, ✕ of 📌 klapt de kaart niet in/uit
+  if (floatJustDragged) { floatJustDragged = false; return true; }
+  const card = e.target.closest(".foldcard");
+  if (e.target.closest(".wclose")) { setCardShown(card.id, false); return true; }
+  if (e.target.closest(".dock")) {
+    if (floatGet(card.id)) store.set(FLOAT[card.id], "");   // vastzetten bovenaan
+    else { const r = card.getBoundingClientRect();           // losmaken: zwevend iets onder de balk
+      store.set(FLOAT[card.id], JSON.stringify({ x: Math.round(r.left + 20), y: Math.round(r.top + 60), w: Math.round(Math.min(r.width, 420)) })); }
+    dockLayout(); return true;
+  }
+  return false;
+}
+Object.keys(FLOAT).forEach(id => {
+  const card = document.getElementById(id), bar = card.querySelector(".foldbar");
+  bar.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || !isWall() || e.target.closest(".dock, .wclose, .wgrip")) return;
+    const r = card.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+    let moved = false;
+    const mv = (ev) => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (!moved && Math.hypot(dx, dy) < 5) return;
+      const first = !moved;
+      if (first) { moved = true; card.classList.add("dragging"); }
+      store.set(FLOAT[id], JSON.stringify({ x: Math.round(r.left + dx), y: Math.round(r.top + dy), w: Math.round(Math.min(r.width, 420)) }));
+      if (first) dockLayout(); else floatApply(id);
+    };
+    const up = () => {
+      removeEventListener("pointermove", mv); removeEventListener("pointerup", up);
+      if (moved) { card.classList.remove("dragging"); floatJustDragged = true; setTimeout(() => floatJustDragged = false, 300); dockLayout(); }
+    };
+    addEventListener("pointermove", mv); addEventListener("pointerup", up);
+  });
+});
+// schaalgreep rechtsonder (alleen zwevend), net als bij YouTube en liederen: alleen de breedte
+document.querySelectorAll(".foldcard .wgrip").forEach(grip => grip.addEventListener("pointerdown", (e) => {
+  e.preventDefault(); e.stopPropagation();
+  const card = grip.closest(".foldcard"), id = card.id, g = floatGet(id); if (!g) return;
+  const sx = e.clientX, w0 = card.getBoundingClientRect().width;
+  const mv = (ev) => { store.set(FLOAT[id], JSON.stringify({ ...g, w: Math.round(Math.max(280, Math.min(420, w0 + ev.clientX - sx))) })); floatApply(id); };
+  const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); };
+  addEventListener("pointermove", mv); addEventListener("pointerup", up);
+}));
+
+/* Balk bovenaan (alleen volledig scherm): vastgezette vensters naast elkaar, bovenkant gelijk met de bovenkant van het scherm,
+   allemaal even hoog als het hoogste (opengeklapte) venster, maar nooit zo hoog dat de camera's uit beeld raken.
+   De camera's staan zo ver mogelijk onderaan; de ruimte erboven is voor de balk. Te breed → alles naar verhouding smaller. */
+function dockLayout() {
+  try {
+    const wall = isWall();
+    const cards = ["ctrlCard", "padCard"].map(id => document.getElementById(id));
+    for (const c of cards) {
+      const shown = cardShown(c.id), docked = shown && !floatGet(c.id), pin = c.querySelector(".dock");
+      c.classList.toggle("whide", wall && !shown);
+      c.classList.toggle("docked", wall && docked);
+      pin.classList.toggle("on", docked); pin.title = docked ? "Losmaken (zwevend venster)" : "Vastzetten bovenaan";
+      const body = c.querySelector(".foldbody");
+      if (!wall || !docked) { if (body.style.zoom) body.style.zoom = ""; c.style.removeProperty("--fh"); }
+      if (!wall) ["--fx", "--fy", "--fw"].forEach(v => c.style.removeProperty(v));
+      else if (shown && !docked) floatApply(c.id);
+    }
+    const ytPinned = ytGeom().auto && ytOpt.wallTop, songPinned = store.get("songDock") !== "0";
+    $("#ytPin").classList.toggle("on", ytPinned); $("#ytPin").title = ytPinned ? "Losmaken (zwevend venster)" : "Vastzetten bovenaan";
+    $("#songPin").classList.toggle("on", songPinned); $("#songPin").title = songPinned ? "Losmaken (zwevend venster)" : "Vastzetten bovenaan";
+    if (!wall) { ytReserveTop(0); return; }
+    const items = cards.filter(c => c.classList.contains("docked")).map(el => ({ el, kind: "card" }));
+    if (!ytWin.hidden && ytPinned) items.push({ el: ytWin, kind: "yt" });
+    if (!songWin.hidden && songPinned) items.push({ el: songWin, kind: "song" });
+    if (!items.length) { ytReserveTop(0); return; }
+    const tilesH = $("#presetCard").getBoundingClientRect().height;
+    const topMax = Math.max(160, Math.floor(innerHeight - tilesH - 30));
+    for (const it of items) {   // natuurlijke maat per venster
+      if (it.kind === "card") {
+        it.collapsed = it.el.classList.contains("collapsed");
+        it.w = 340; it.el.style.setProperty("--fw", it.w + "px"); it.el.style.removeProperty("--fh");
+        it.el.querySelector(".foldbody").style.zoom = "";
+        it.h = it.el.scrollHeight + 2;
+      } else if (it.kind === "yt") { it.w = ytGeom().w; it.h = ytH(it.w); }
+      else { const g = songGeom(); it.w = g.w || 300; it.h = g.h || 320; }
+    }
+    const open = items.filter(i => !i.collapsed);
+    const H = open.length ? Math.min(topMax, Math.max(...open.map(i => i.h))) : 0;
+    for (const it of items) if (it.kind === "yt" && H) it.w = Math.max(220, Math.floor((H - 31) * 16 / 9));   // speler vult de hoogte
+    const gap = 10, avail = innerWidth - 20 - gap * (items.length - 1);
+    let sum = items.reduce((t, i) => t + i.w, 0);
+    if (sum > avail) { const f = avail / sum; items.forEach(i => i.w = Math.floor(i.w * f)); sum = items.reduce((t, i) => t + i.w, 0); }
+    let x = 10 + Math.max(0, Math.round((avail - sum) / 2));
+    for (const it of items) {
+      if (it.kind === "card") {
+        it.el.style.setProperty("--fx", x + "px"); it.el.style.setProperty("--fy", "10px"); it.el.style.setProperty("--fw", it.w + "px");
+        if (it.collapsed) it.el.style.removeProperty("--fh"); else it.el.style.setProperty("--fh", H + "px");
+      } else if (it.kind === "yt") {
+        ytReserve(0); ytResKey = null;
+        ytWin.style.left = x + "px"; ytWin.style.top = "10px"; ytWin.style.width = it.w + "px";
+      } else {
+        songWin.style.right = songWin.style.bottom = "";
+        songWin.style.left = x + "px"; songWin.style.top = "10px"; songWin.style.width = it.w + "px"; songWin.style.height = (H || 320) + "px";
+      }
+      x += it.w + gap;
+    }
+    // camera's zo ver mogelijk omlaag als er een open venster in de balk staat; alleen ingeklapte koppen → alleen die hoogte
+    ytReserveTop(open.length ? topMax : Math.max(...items.map(i => i.el.offsetHeight)));
+    fitDocked();
+  } catch (e) { if (!(e instanceof ReferenceError)) throw e; }   // tijdens het laden: nog niet alles bestaat
+}
+/* Vastgezette kaarten: inhoud schalen (CSS zoom 0,5–1,3) zodat hij de hoogte precies vult zonder scrollen */
+function fitDocked() {
+  for (const card of document.querySelectorAll("aside .foldcard.docked:not(.collapsed)")) {
+    const body = card.querySelector(".foldbody");
+    const avail = card.clientHeight - card.querySelector(".foldbar").offsetHeight;
+    let z = parseFloat(body.style.zoom) || 1;
+    for (let i = 0; i < 8; i++) {
+      const h = body.getBoundingClientRect().height;
+      if (!h || avail <= 0) break;
+      const nz = Math.max(0.5, Math.min(1.3, z * avail / h));
+      if (Math.abs(nz - z) < 0.005) break;
+      z = nz; body.style.zoom = z.toFixed(3);
+    }
+    while (card.scrollHeight > card.clientHeight + 1 && z > 0.5) { z = Math.max(0.5, z * 0.97); body.style.zoom = z.toFixed(3); }
+  }
+}
+// inhoud kan veranderen (Snelheden open, controller verbonden, volgstatus): af en toe opnieuw passend maken
+setInterval(() => { if (isWall()) fitDocked(); }, 1000);
 
 let wallPrevView = null;
 function setWall(on) {
@@ -1626,40 +1824,10 @@ function setWall(on) {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     if (wallPrevView !== null && wallPrevView !== view && (wallPrevView === ALL || camById(wallPrevView))) setView(wallPrevView);
   }
-  wallSideLayout();
-  ytReplace();   // YouTube-venster naar de plek die bij deze weergave hoort
+  dockLayout();
+  if (!ytWin.hidden) ytPlace();   // YouTube-venster naar de plek die bij deze weergave hoort
+  if (!songWin.hidden) songPlace();
 }
-/* Volledig scherm: camerabediening + Xbox-kaart rechts uitklappen (per apparaat, localStorage.wallSide).
-   Staat het YouTube-venster automatisch geplaatst open, dan komt het bovenaan in dezelfde kolom en de bediening eronder. */
-const wallSideOn = () => document.body.classList.contains("wall") && store.get("wallSide") === "1" && !viewOnly();
-function wallSideW() {
-  const g = ytGeom();
-  let w = 340;
-  if (!ytWin.hidden && g.auto && !ytOpt.wallTop) w = Math.max(w, g.w);
-  return Math.round(Math.max(300, Math.min(w, innerWidth * 0.4)));
-}
-function wallSideLayout() {
-  const on = wallSideOn();
-  document.body.classList.toggle("wallside", on);
-  wallSideBtn();
-  if (!on) return;
-  document.body.style.setProperty("--sidew", wallSideW() + "px");
-  const top = !ytWin.hidden && ytGeom().auto ? Math.round(ytWin.getBoundingClientRect().bottom + 10) : 10;
-  document.body.style.setProperty("--sidetop", Math.min(top, innerHeight - 200) + "px");
-}
-function wallSideBtn() {
-  const on = store.get("wallSide") === "1", b = $("#btnWallSide"); if (!b) return;
-  b.textContent = on ? "Bediening ▸" : "◂ Bediening";
-  b.classList.toggle("on", on);
-  b.title = (on ? "Camerabediening en Xbox-controller verbergen" : "Camerabediening en Xbox-controller rechts tonen")
-    + (keyOf("side") ? ` (toets ${keyLabel(keyOf("side"))})` : "");
-}
-function setWallSide(on) {
-  store.set("wallSide", on ? "1" : "0");
-  wallSideLayout();
-  if (!ytWin.hidden) ytPlace();
-}
-$("#btnWallSide").onclick = () => setWallSide(store.get("wallSide") !== "1");
 $("#btnWall").onclick = () => setWall(true);
 $("#btnWallExit").onclick = () => setWall(false);
 // Esc in de browser verlaat fullscreen; dan ook de weergave terugzetten
@@ -1720,12 +1888,11 @@ function renderKeyHints() {
   const presets = p1 === "Digit1" && p9 === "Digit9" ? "<kbd>1</kbd>–<kbd>9</kbd>" : `${k("preset_1")}…${k("preset_9")}`;
   $("#keyHints").innerHTML = `${presets} preset · ${cfg.cameras.slice(0, 3).map((c, i) => `<kbd>${esc(keyLabel(camHotkey(c, i)))}</kbd>`).join(" ")} camera ·
     ${k("left")}${k("up")}${k("right")}${k("down")} bewegen · ${k("zoom_in")}/${k("zoom_out")} zoom · ${k("focus_far")}/${k("focus_near")} focus ·
-    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("side")} bediening (volledig scherm) · ${k("stop")} stop ·
+    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("ctrl")} camerabediening · ${k("pad")} Xbox-instellingen · ${k("stop")} stop ·
     <a href="#" id="keyHintsEdit">aanpassen</a> · rechtsklik of lang drukken op een preset = bewerken`;
   $("#keyHintsEdit").onclick = (e) => { e.preventDefault(); $("#btnKeys").click(); };
   const wk = $("#btnWall kbd"); if (wk) wk.textContent = keyLabel(keyOf("wall"));
   $("#btnWall").title = `Alle camera's op het volledige scherm (toets ${keyLabel(keyOf("wall"))})`;
-  wallSideBtn();
 }
 
 $("#btnSettings").onclick = () => {
@@ -2301,7 +2468,7 @@ const ytWin = $("#ytWin");
 const ytOpt = {
   get auto() { return store.get("ytAuto") !== "0"; },
   get sound() { return store.get("ytSound") === "1"; },
-  get wallTop() { return store.get("ytWallTop") === "1"; },   // volledig scherm: venster bovenaan, tegels eronder
+  get wallTop() { return store.get("ytWallTop") !== "0"; },   // volledig scherm: vastgezet in de balk bovenaan (standaard aan)
 };
 let ytShownVid = null;      // video in de iframe
 let ytUserClosed = false;   // zelf gesloten tijdens deze livestream: niet steeds opnieuw openen
@@ -2347,21 +2514,9 @@ function ytPlace(g = ytGeom()) {
   ytWin.classList.toggle("auto", g.auto);
   const wall = document.body.classList.contains("wall");
   if (g.auto && wall && ytOpt.wallTop && !ytWin.hidden) {
-    // boven de camera's: gecentreerd bovenaan, hooguit 45% van de schermhoogte; de tegels schuiven omlaag
-    w = Math.floor(Math.max(220, Math.min(g.w, innerWidth - 20, (innerHeight * 0.45 - 31) * 16 / 9)));
-    ytReserve(0); ytResKey = null; ytReserveTop(ytH(w));
-    ytWin.style.width = w + "px"; ytWin.style.left = Math.round((innerWidth - w) / 2) + "px"; ytWin.style.top = "10px";
+    // vastgezet bovenaan: plek en maat bepaalt de balk (dockLayout), samen met de andere vastgezette vensters
     $("#ytAutoBtn").hidden = true;
-    wallSideLayout();
-    return;
-  }
-  ytReserveTop(0);
-  if (g.auto && wall && wallSideOn() && !ytWin.hidden) {
-    // bediening rechts uitgeklapt: speler bovenaan in dezelfde kolom, bediening eronder (wallSideLayout)
-    w = wallSideW(); ytReserve(0); ytResKey = null;
-    ytWin.style.width = w + "px"; ytWin.style.left = (innerWidth - w - 10) + "px"; ytWin.style.top = "10px";
-    $("#ytAutoBtn").hidden = true;
-    wallSideLayout();
+    dockLayout();
     return;
   }
   // sleutel van de indeling: alleen als die verandert, opnieuw kijken of de strook nog nodig is (anders gaat hij heen en weer)
@@ -2377,7 +2532,7 @@ function ytPlace(g = ytGeom()) {
   } else ytReserve(0);
   ytWin.style.width = w + "px"; ytWin.style.left = x + "px"; ytWin.style.top = y + "px";
   $("#ytAutoBtn").hidden = g.auto;
-  wallSideLayout();
+  dockLayout();
 }
 function ytSaveGeom(kind) {
   const r = ytWin.getBoundingClientRect(), old = ytGeomRaw();
@@ -2386,8 +2541,8 @@ function ytSaveGeom(kind) {
   store.set("ytGeom", JSON.stringify(g));
   ytPlace();
 }
-function ytReserveTop(h) {
-  const on = !!h && !ytWin.hidden;
+function ytReserveTop(h) {   // ruimte bovenaan voor de vastgezette vensters (dockLayout)
+  const on = !!h;
   document.body.classList.toggle("ytrestop", on);
   if (on) document.body.style.setProperty("--ytrestop", Math.round(h) + "px");
 }
@@ -2452,7 +2607,7 @@ function ytRender() {
 }
 function ytShow(on) {
   ytWin.hidden = !on;
-  if (!on) { ytReserve(0); ytReserveTop(0); wallSideLayout(); }
+  if (!on) { ytReserve(0); dockLayout(); }
   if (on) ytPlace();
   ytRender();
 }
@@ -2484,7 +2639,7 @@ function ytMenuRender() {
     <button class="mi" data-y="auto" role="menuitem" title="Zelf een vrije plek naast of onder de tegels zoeken">⌖ Automatisch plaatsen ${chk(g.auto)}</button>
     <div class="ysize"><span class="lbl">↔ Grootte</span>${[["260", "Klein"], ["360", "Middel"], ["520", "Groot"]]
       .map(([w, t]) => `<button data-w="${w}" class="${Math.abs(g.w - w) < 2 ? "on" : ""}">${t}</button>`).join("")}</div>
-    <button class="mi" data-y="walltop" role="menuitem" title="Bij volledig scherm staat het venster bovenaan en schuiven de tegels omlaag">⬆ Boven de camera's bij volledig scherm ${chk(ytOpt.wallTop)}</button>
+    <button class="mi" data-y="walltop" role="menuitem" title="Bij volledig scherm staat het venster vastgezet in de balk bovenaan; de camera's staan eronder">📌 Vastgezet bovenaan bij volledig scherm ${chk(ytOpt.wallTop)}</button>
     <button class="mi" data-y="sound" role="menuitem">🔊 Met geluid starten ${chk(ytOpt.sound)}</button>
     <button class="mi" data-y="autoopen" role="menuitem">⚡ Automatisch openen bij live ${chk(ytOpt.auto)}</button>
     <div class="msep"></div>
@@ -2555,7 +2710,7 @@ ytDrag($("#ytHead"), (r, dx, dy) => {
 ytDrag($("#ytGrip"), (r, dx) => {
   ytWin.style.width = Math.max(220, Math.min(r.width + dx, innerWidth - r.left)) + "px";
 });
-addEventListener("resize", () => { if (!ytWin.hidden) ytPlace(); else wallSideLayout(); });
+addEventListener("resize", () => { if (!ytWin.hidden) ytPlace(); else dockLayout(); });
 addEventListener("scroll", ytReplace, { passive: true });
 new ResizeObserver(ytReplace).observe($("#presetArea"));
 new MutationObserver(ytReplace).observe($("#presetArea"), { childList: true, subtree: true });
@@ -2866,7 +3021,7 @@ async function accessLoad() {
 }
 function accessApply() {
   document.body.classList.toggle("viewonly", viewOnly());
-  wallSideLayout();
+  dockLayout();
   const b = $("#btnLock");
   b.hidden = !access.pin_set;
   b.classList.toggle("locked", viewOnly());
@@ -3444,6 +3599,7 @@ function songWinRender() {
 }
 function songGeom() { try { return JSON.parse(store.get("songGeom") || "{}"); } catch { return {}; } }
 function songPlace() {
+  if (isWall() && store.get("songDock") !== "0") { dockLayout(); return; }   // vastgezet bovenaan
   const g = songGeom();
   if (g.w) songWin.style.width = Math.min(g.w, innerWidth - 8) + "px";
   if (g.h) songWin.style.height = Math.min(g.h, innerHeight - 8) + "px";
@@ -3457,6 +3613,7 @@ function songWinShow(on) {
   songWin.hidden = !on;
   try { on ? store.set("songOpen", "1") : store.set("songOpen", "0"); } catch { /* geen opslag */ }
   if (on) { songPlace(); songWinRender(); const n = $("#songWinList li.now"); if (n) n.scrollIntoView({ block: "center" }); }
+  else dockLayout();
 }
 function songWinToggle() {
   if (!(songs?.pp?.enabled || songs?.voordienst?.enabled)) { $("#btnSongs").click(); return; }   // nog niets ingesteld
@@ -3474,6 +3631,7 @@ function songDrag(el, onMove) {
       el.removeEventListener("pointermove", move);
       const b = songWin.getBoundingClientRect();
       store.set("songGeom", JSON.stringify({ x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height) }));
+      if (isWall()) dockLayout();
     };
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up, { once: true });
@@ -3481,6 +3639,7 @@ function songDrag(el, onMove) {
   });
 }
 songDrag($("#songHead"), (r, dx, dy) => {
+  if (isWall() && store.get("songDock") !== "0" && Math.hypot(dx, dy) > 4) store.set("songDock", "0");   // slepen = losmaken
   songWin.style.left = Math.max(0, Math.min(r.left + dx, innerWidth - r.width)) + "px";
   songWin.style.top = Math.max(0, Math.min(r.top + dy, innerHeight - r.height)) + "px";
 });
@@ -3491,6 +3650,18 @@ songDrag($("#songGrip"), (r, dx, dy) => {
 addEventListener("resize", () => { if (!songWin.hidden) songPlace(); });
 $("#btnSongBar").onclick = () => songWinToggle();
 $("#songClose").onclick = () => songWinShow(false);
+$("#songPin").onclick = () => {
+  const pinned = store.get("songDock") !== "0";
+  if (pinned) { const r = songWin.getBoundingClientRect();   // losmaken: zwevend iets onder de balk
+    store.set("songGeom", JSON.stringify({ x: Math.round(r.left + 20), y: Math.round(r.top + 60), w: Math.round(r.width), h: Math.round(Math.min(r.height, 360)) })); }
+  store.set("songDock", pinned ? "0" : "1");
+  songPlace(); dockLayout();
+};
+$("#ytPin").onclick = () => {
+  if (ytGeom().auto && ytOpt.wallTop) { const r = ytWin.getBoundingClientRect();
+    store.set("ytGeom", JSON.stringify({ x: Math.round(r.left + 20), y: Math.round(r.top + 60), w: Math.round(Math.min(r.width, 640)), auto: false })); ytPlace(); }
+  else ytSetWallTop(true);
+};
 $("#songSet").onclick = () => $("#btnSongs").click();
 $("#songSrcBtn").onclick = () => {
   const keys = Object.keys(songLists()), cur = keys.includes(store.get("songSrc")) ? store.get("songSrc") : keys[0];
@@ -3523,8 +3694,8 @@ const TOUR_STEPS = [
   { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>📥 Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
   { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
-  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Hier bedien je de gekozen camera met de hand: <b>pijlen</b> (vasthouden = bewegen), <b>HOME</b>, <b>zoom</b>, <b>focus</b> en de autofocus-modus (<i>AF auto</i>, <i>AF hand</i>, <i>One-push</i>).</p>
-      <p>Onder <b>Snelheden</b> stel je de snelheid van pan, tilt, zoom en focus in. Klik op de titel om dit blok in of uit te klappen.</p>` },
+  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>HOME</b>, <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
+      <p>Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
   { target: ["#btnTrack"], title: "🎯 Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker). Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
       <p>Handbediening, HOME, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
   { target: ["#padCard"], title: "🎮 Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
@@ -3545,7 +3716,8 @@ const TOUR_STEPS = [
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. We lopen ze kort langs.</p>` },
   { target: ["#btnKeys"], menu: "main", title: "⌨ Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
   { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
-    <p>Met <b>◂ Bediening</b> rechtsonder (toets <kbd>${esc(keyLabel(keyOf("side")) || "B")}</kbd>) klap je rechts de camerabediening en de Xbox-controller uit. Staat het YouTube-venster open, dan komt de bediening er direct onder, in dezelfde kolom.</p>` },
+    <p>Op volledig scherm zijn de <b>camerabediening</b> (toets <kbd>${esc(keyLabel(keyOf("ctrl")) || "C")}</kbd>), de <b>Xbox-instellingen</b> (<kbd>${esc(keyLabel(keyOf("pad")) || "X")}</kbd>), <b>YouTube</b> (<kbd>${esc(keyLabel(keyOf("youtube")) || "Y")}</kbd>) en de <b>liederen</b> (<kbd>${esc(keyLabel(keyOf("songs")) || "L")}</kbd>) vensters.
+      Met <b>📌</b> zet je een venster <b>vast in de balk bovenaan</b>: daar staan ze naast elkaar, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. Sleep je een venster aan de titel weg, dan zweeft het los; 📌 zet het weer vast.</p>` },
   { target: ["#btnBackup"], menu: "main", title: "💾 Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
@@ -3626,6 +3798,7 @@ function tourShow(i) {
 function tourStart() {
   if (anyDialog()) $$("dialog").forEach(d => d.open && d.close());
   if (document.body.classList.contains("wall")) setWall(false);
+  setFold(false); setPadFold(false);   // ingeklapte kaarten open, zodat de stappen erin iets kunnen aanwijzen
   $("#tour").hidden = false;
   tourShow(0);
 }
