@@ -16,6 +16,7 @@ Twee manieren, afhankelijk van hoe de app draait:
 Alleen stdlib.
 """
 import json
+import ntpath
 import os
 import re
 import shutil
@@ -424,9 +425,15 @@ fi
         pids = list(pids or [os.getpid()])
         log = log or os.path.join(work, "bijwerken.log")
         rename = ('move /y "' + moved + '" "' + moved + '.overgezet" >nul') if moved else "rem"
-        # exacte PID-match in de CSV-uitvoer ("1106" mag niet op "11068" matchen)
-        checks = "\n".join(f'tasklist /fi "PID eq {p}" /fo csv /nh 2>nul | find """{p}""" >nul && set "BEZIG={p}"'
+        # Geen `find """<pid>"""`: aanhalingstekens in een pipe worden door cmd opnieuw geparsed en gaven op
+        # Windows een find-fout ("find 4377"), waarna het script dacht dat het proces al weg was. Nu de
+        # tabeluitvoer met de PID tussen spaties (exact: "1106" matcht niet op "11068"), zonder aanhalingstekens
+        # in het zoekpatroon.
+        checks = "\n".join(f'tasklist /fi "PID eq {p}" /nh 2>nul | findstr /c:" {p} " >nul && set "BEZIG={p}"'
                            for p in pids)
+        # Daarnaast: zolang wélk proces dan ook de .exe nog draait (ook een tweede gestarte kopie), kan het
+        # bestand niet om te schrijven geopend worden. Taalonafhankelijk, dus ook een vangnet voor tasklist.
+        checks += '\nif not defined BEZIG if exist "%EXE%" (call ) 2>nul 1>>"%EXE%" || set "BEZIG=bestand in gebruik"'
         kills = "\n".join(f"taskkill /f /pid {p} >nul 2>&1" for p in pids)
         with open(path, "w", encoding="utf-8") as f:
             f.write(f"""@echo off
@@ -447,6 +454,7 @@ goto wacht
 :forceer
 echo [%date% %time%] proces %BEZIG% stopt niet; geforceerd stoppen >>"%LOG%"
 {kills}
+taskkill /f /im "{ntpath.basename(exe)}" >nul 2>&1
 ping -n 3 127.0.0.1 >nul
 :vrij
 del /f /q "%EXE%.oud" >nul 2>&1

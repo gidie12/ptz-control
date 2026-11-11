@@ -294,6 +294,8 @@ De instellingen gelden voor alle schermen en worden per workspace en in de back-
 ## Licht of donker
 Menu → **☀ Lichte modus / 🌙 Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
 
+De vormgeving volgt de huisstijl van de Voordienst app: lichtgrijze achtergrond met witte kaarten, één hoofdkleur (indigo) voor selectie en knoppen, een donkere kopbalk en het lettertype Inter (zonder internet valt de app terug op het systeemlettertype). Rood = LIVE/fout, groen = in orde, amber = let op, oranje = onderweg/oefenstand.
+
 ![Lichte modus](docs/screenshots/hoofdscherm-licht.png)
 
 Op een telefoon of smalle tablet staan de onderdelen onder elkaar:
