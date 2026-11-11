@@ -61,12 +61,15 @@ Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke c
 Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
 
 **⛶ Volledig scherm** (in het menu onder 🎮 rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel).
-Met **◂ Bediening** rechtsboven in de presetbalk (of toets **B**) klap je op volledig scherm rechts de **camerabediening en de Xbox-controller** uit. Staat het YouTube-venster open, dan staat de speler bovenaan in die kolom en de bediening er direct onder; de tegels schuiven op, er wordt niets afgedekt. Nog een keer klikken (**Bediening ▸**) klapt hem weer in. Elk scherm onthoudt of hij open stond.
-De **camerabediening** in de zijbalk klap je in en uit door op de titel te klikken; dat wordt per apparaat onthouden.
+Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **Xbox-controller** (toets **X**), **YouTube** (toets **Y**) en **liederen** (toets **L**). Elke toets toont of verbergt zijn venster; **✕** in de titelbalk verbergt het ook. Alle vier zien er hetzelfde uit: titelbalk met badge, knoppen en (los) een greep om de grootte aan te passen. Met **📌** in de titelbalk zet je een venster **vast bovenaan**: alle vastgezette vensters staan naast elkaar tegen de bovenrand, worden even hoog als het hoogste venster en de camera's schuiven eronder (zo ver omlaag als nodig, maar nooit uit beeld; de inhoud van de bediening- en Xbox-kaart wordt zo nodig kleiner of groter geschaald). Klik nog eens op 📌, of sleep een venster aan zijn titel, om het **los** te laten zweven op een eigen plek (elk scherm onthoudt de plek). Ingeklapt (pijltje) blijft van een vastgezet venster alleen de titelbalk over. Buiten volledig scherm staan de bediening en de Xbox-controller gewoon in de zijbalk; daar klap je ze in en uit door op de titel te klikken, of met **C** en **X**. Elk scherm onthoudt welke vensters open zijn. Alle toetsen zijn aan te passen in **⌨ Sneltoetsen**.
 
 ![Volledig scherm](docs/screenshots/volledig-scherm.png)
 
-![Volledig scherm met bediening naast YouTube](docs/screenshots/volledig-scherm-bediening.png)
+![Volledig scherm: bediening, Xbox-controller en YouTube vastgezet bovenaan](docs/screenshots/volledig-scherm-bediening.png)
+
+![Volledig scherm: alle vier vensters vastgezet, even hoog](docs/screenshots/volledig-scherm-bediening-boven.png)
+
+![Volledig scherm: Xbox-controller los zwevend](docs/screenshots/volledig-scherm-zwevend.png)
 
 <img src="docs/screenshots/menu.png" width="440" alt="Menu">
 
@@ -306,7 +309,7 @@ Klik op **📍 Standaard ▾** naast de titel. Een workspace is een aparte set c
 - Direct in een bepaalde workspace starten: `python3 ptz_control.py --workspace "Kerk Zwolle"` (ook als extra argument achter `Start PTZ Control`).
 
 ## Sneltoetsen
-Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · B = bediening rechts (volledig scherm) · Y = YouTube-venster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
+Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · C = camerabediening · X = Xbox-instellingen · Y = YouTube-venster · L = liederenvenster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
 **Alle toetsen zijn aan te passen** via Menu → ⌨ Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
 
 ![Sneltoetsen](docs/screenshots/sneltoetsen.png)
