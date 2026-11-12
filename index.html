@@ -340,7 +340,6 @@
   .osdpad button:disabled, .osdside button:disabled { opacity: .35; }
   .osdside { display: flex; flex-direction: column; gap: 8px; min-width: 150px; }
   .osdpad button.hit { outline: 3px solid var(--accent); }
-  #osdImg { display: block; width: 100%; border-radius: 8px; margin-top: 12px; border: 1px solid var(--line); }
   .bsec { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
   .bsec h4 { margin: 0 0 4px; font-size: 14px; }
   .bsec .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
@@ -1129,10 +1128,8 @@
     <div class="osdside">
       <button class="primary" id="osdToggle">Menu openen</button>
       <button class="icon" data-k="back" id="osdBack">↩ Terug</button>
-      <button class="icon" id="osdSnap" title="Eén foto van de camera, om te zien waar je in het menu bent (geen live beeld)">📷 Beeld bekijken</button>
     </div>
   </div>
-  <img id="osdImg" alt="Beeld van de camera" hidden>
   <p class="small muted" id="osdHelp" style="margin-top:12px">Toetsenbord: pijltjes, <kbd>Enter</kbd> = OK, <kbd>Backspace</kbd> = terug.
     Xbox-controller: D-pad of linker stick, <b>A</b> = OK, <b>B</b> = terug. Meestal: ▲▼ kiezen, ▶ of OK openen, ◀▶ waarde wijzigen.
     Sluit je dit venster, dan gaat het menu op de camera ook dicht.</p>
@@ -2385,7 +2382,6 @@ async function osdKey(k) {
   const b = $(`#osdPad [data-k="${k}"]`) || (k === "back" ? $("#osdBack") : null);
   if (b) { b.classList.add("hit"); setTimeout(() => b.classList.remove("hit"), 150); }
   const j = await cmd("osd", { key: k }, osdCamId);
-  if (j?.ok && k !== "close" && !$("#osdImg").hidden) setTimeout(osdSnap, 400);
   return j;
 }
 async function osdToggle() {
@@ -2396,26 +2392,17 @@ async function osdToggle() {
   const j = await osdKey("open");
   if (j?.ok) { osdOpen[c.id] = true; osdRender(); }
 }
-async function osdSnap() {
-  if (!osdCamId) return;
-  const img = $("#osdImg");
-  img.hidden = false;
-  img.src = `/api/snapshot?cam=${encodeURIComponent(osdCamId)}&t=${Date.now()}`;
-}
-$("#osdImg").onerror = () => { $("#osdImg").hidden = true; toast("Geen beeld van de camera"); };
 async function osdCloseCam(id) { if (id && osdOpen[id]) await cmd("osd", { key: "close" }, id); }
 $("#btnOsd").onclick = () => {
   osdCamId = ctrlCam || cfg.cameras[0]?.id || null;
-  $("#osdImg").hidden = true; $("#osdImg").removeAttribute("src");
   osdRender(); $("#dlgOsd").showModal(); $("#osdToggle").focus();
 };
 $("#osdCam").onchange = async (e) => {
   const prev = osdCamId;
   await osdCloseCam(prev);                    // nooit twee menu's tegelijk open laten staan
-  osdCamId = e.target.value; $("#osdImg").hidden = true; osdRender();
+  osdCamId = e.target.value; osdRender();
 };
 $("#osdToggle").onclick = osdToggle;
-$("#osdSnap").onclick = osdSnap;
 $$("#osdPad button, #osdBack").forEach(b => b.onclick = () => osdKey(b.dataset.k));
 $("#osdDone").onclick = () => $("#dlgOsd").close();
 $("#dlgOsd").addEventListener("close", () => { osdCloseCam(osdCamId); });   // ook bij Esc: menu op de camera dicht
@@ -3730,7 +3717,7 @@ const TOUR_STEPS = [
   { target: ["#btnAccess"], menu: "main", title: "🔒 Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>🔒 Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
   { target: ["#btnTablet"], menu: "main", title: "📱 Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },
   { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
-  { target: ["#btnOsd"], menu: "main", title: "🖥 OSD-menu camera", text: () => `<p>Bedien het <b>menu van de camera zelf</b> (belichting, kleur, beeld…) met pijltjes, <b>OK</b> en <b>Terug</b>, met het toetsenbord of de Xbox-controller (D-pad, A, B). <i>📷 Beeld bekijken</i> haalt één foto op zodat je ziet waar je bent.</p><p><b>Het menu staat ook in de livestream</b>: zet eerst een andere camera in beeld. Staat de camera IN BEELD, dan vraagt de app eerst of je het zeker weet. Zolang het menu open is staat er <b>OSD-MENU</b> bij de camera en reageert hij niet op presets of volgen. Venster dicht = menu dicht.</p>` },
+  { target: ["#btnOsd"], menu: "main", title: "🖥 OSD-menu camera", text: () => `<p>Bedien het <b>menu van de camera zelf</b> (belichting, kleur, beeld…) met pijltjes, <b>OK</b> en <b>Terug</b>, met het toetsenbord of de Xbox-controller (D-pad, A, B). Kijk op de monitor van de videomixer waar je in het menu bent.</p><p><b>Het menu staat ook in de livestream</b>: zet eerst een andere camera in beeld. Staat de camera IN BEELD, dan vraagt de app eerst of je het zeker weet. Zolang het menu open is staat er <b>OSD-MENU</b> bij de camera en reageert hij niet op presets of volgen. Venster dicht = menu dicht.</p>` },
   { target: ["#btnTheme"], menu: "main", title: "☀ / 🌙 Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
   { target: ["#btnTour"], menu: "main", title: "🎓 Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
   { target: ["#btnUpd"], menu: "main", title: "🔄 Op updates controleren", text: () => `<p>Kijkt meteen of er een nieuwe versie van PTZ Control is. De app doet dit ook zelf, elke 6 uur.</p>` },

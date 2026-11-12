@@ -107,7 +107,7 @@ weer gewist. Het resultaat (bijv. "max. preset 254 · 244 bruikbaar") blijft bew
 Menu → **🖥 OSD-menu camera** bedient het menu van de camera zelf (belichting, kleur, beeld, enzovoort), net als met de
 afstandsbediening. Kies de camera, klik **Menu openen** en navigeer met **▲▼◀▶**, **OK** en **↩ Terug**. Dat kan ook met het
 toetsenbord (pijltjes, Enter = OK, Backspace = terug) of de Xbox-controller (D-pad of linker stick, A = OK, B = terug).
-**📷 Beeld bekijken** haalt één foto van de camera op, zodat je ziet waar je in het menu bent (geen live beeld).
+Waar je in het menu bent, zie je op de monitor van de videomixer (de app toont geen beeld van het menu).
 
 - ⚠ **Het menu staat ook in de livestream.** Zet eerst op de videomixer een andere camera in beeld. Staat de camera
   *IN BEELD*, dan vraagt de app eerst of je het zeker weet.

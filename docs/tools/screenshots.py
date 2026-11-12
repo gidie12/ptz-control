@@ -1,6 +1,4 @@
-import base64, os, sys, urllib.request
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
-import oefen  # noqa: E402  (nagebootste camera tekent het OSD-menu)
+import os, sys, urllib.request
 from playwright.sync_api import sync_playwright
 OUT = sys.argv[1]; URL = "http://127.0.0.1:8080/?notour"
 YT = "ytUpdate({type:'youtube', channel:'@kerkzwolle', live:true, upcoming:false, video_id:null, title:'Kerkdienst zondag 10:00', checked:'09:58:12', error:null});"
@@ -29,12 +27,6 @@ LOG = """(() => { const d = new Date(); d.setHours(9, 41, 0, 0); const t0 = d.ge
  [1500, 'actie', 'Mac regie (deze computer)', 'Midden', 'Persoon volgen aan'],
 ]; logEntries = new Map(r.map((x, i) => [i + 1, { id: i + 1, t: t0 + x[0], kind: x[1], who: x[2], cam: x[3], msg: x[4], n: x[5] || 1, last: t0 + x[0] + 40 }]));
 $('#logDevName').value = 'Mac regie'; logCams(); logRender(); })()"""
-def osd_jpeg():     # beeld van een nagebootste camera met het OSD-menu open (verzonnen, geen echte camera)
-    c = oefen.Cam("Links", "DEMO"); c.osd_set(True)
-    for k in ("down", "down", "enter", "down"):
-        c.osd_key(k)
-    c._stop.set()
-    return "data:image/jpeg;base64," + base64.b64encode(c.jpeg()).decode()
 def practice(on):   # oefenstand aan/uit (alle schermen herladen)
     import json, urllib.request
     urllib.request.urlopen(urllib.request.Request(URL.split("/?")[0] + "/api/practice", json.dumps({"on": on}).encode(),
@@ -63,7 +55,7 @@ with sync_playwright() as p:
     pg.locator("#dlgSongs").evaluate("d => d.scrollTop = 99999"); pg.wait_for_timeout(200); pg.screenshot(path=f"{OUT}/voordienst-app.png"); pg.click("#songsClose")
     pg.click("#btnPad"); pg.click("#btnAccess"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/toegang.png"); pg.click("#acClose")
     pg.click("#btnPad"); pg.click("#btnOsd"); pg.wait_for_timeout(300)   # 🖥 OSD-menu (status nagebootst: demo-camera's bestaan niet)
-    pg.evaluate("osdOpen = {[osdCamId]: true}; osdRender(); renderTabs(); renderPresets(); const i = $('#osdImg'); i.hidden = false; i.src = '%s'" % osd_jpeg())
+    pg.evaluate("osdOpen = {[osdCamId]: true}; osdRender(); renderTabs(); renderPresets()")
     pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/osd-menu.png")
     pg.evaluate("osdOpen = {}; osdRender(); renderTabs(); renderPresets()"); pg.click("#osdDone")
     pg.click("#btnPad"); pg.click("#btnLog"); pg.wait_for_timeout(400); pg.evaluate(LOG); pg.wait_for_timeout(200)
