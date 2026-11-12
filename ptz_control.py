@@ -2248,8 +2248,12 @@ def open_bediening(url):
 def _win_install_wanted(args):
     """Losse app op Windows die niet vanaf de vaste plek draait (bv. uit Downloads): moeten we aanbieden om hem te
     installeren? Niet bij draagbaar gebruik (cameras.json naast de .exe), niet na een eerder 'nee', niet na een
-    update (dan draait hij al waar hij hoort) en niet met PTZ_INSTALL=0."""
+    update (dan draait hij al waar hij hoort), niet bij --no-open of PTZ_DATA (script/test) en niet met PTZ_INSTALL=0."""
     if not (FROZEN and sys.platform == "win32") or args.wacht_poort:
+        return False
+    # Alleen bij een gewone dubbelklik: gestart door een script/test (--no-open, eigen PTZ_DATA) = nooit een
+    # venster dat op antwoord wacht (de rooktest in de bouw bleef daarop hangen).
+    if args.no_open or os.environ.get("PTZ_DATA"):
         return False
     if os.environ.get("PTZ_INSTALL", "").lower() in ("0", "uit", "off", "no"):
         return False
