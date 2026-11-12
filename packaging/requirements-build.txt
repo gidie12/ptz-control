@@ -1,5 +1,5 @@
 # Alleen voor het bouwen van de losse app (zie packaging/ptz_control.spec)
-pyinstaller>=6.6
+pyinstaller>=6.10   # PYINSTALLER_RESET_ENVIRONMENT (nieuwe versie starten na bijwerken)
 certifi
 pystray>=0.19
 pillow>=10
