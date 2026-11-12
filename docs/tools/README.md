@@ -26,3 +26,7 @@ Met dezelfde server (demodata) draaien: `python docs/tools/rondleiding_test.py`.
 ## Nep-Voordienst app
 
 `python docs/tools/nep_voordienst.py 50020 [--token <token>]` geeft op `/api/liederen` verzonnen liederen, alleen met `Authorization: Bearer test-token-123` (anders 401). Testbediening: `/test/huidig?n=<k>`, `/test/token?t=<nieuw>` (oude token werkt dan niet meer), `/test/stats`.
+
+## Volgen simuleren
+
+`python docs/tools/volg_sim.py /tmp/ptz-volg` (met opencv-python + numpy) start PTZ Control op poort 8080 (`PTZ_PORT`) met één nagebootste camera *Sim* die echt draait op de pan-commando's van de tracker. Op een getekend podium loopt *rood* heen en weer, kruist *blauw* er voor langs en staat *groen* stil. Uiterlijk (kleding), volgkader en pan-regelaar zijn de echte code van `tracker.py`; alleen de detector is vervangen (vindt de getekende hoofden). Toestand: `http://127.0.0.1:8091/state` (`PTZ_SIM_PORT`) met per persoon de plek in beeld (0–1), `/reset` zet de camera terug, `/pan?x=0.3` zet hem op een plek. De panpositie (voor de grenzen) komt via een nagebootste VISCA-poort 8092 (`PTZ_SIM_VISCA`). Open *🖼 Kader en persoon kiezen…* om te klikken en het kader te verslepen.
