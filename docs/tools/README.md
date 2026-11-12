@@ -11,6 +11,8 @@ PTZ_DATA=/tmp/ptz-demo PTZ_YT_BASE=http://127.0.0.1:9 PTZ_MIDI_FAKE=1 PTZ_UPDATE
 python docs/tools/screenshots.py docs/screenshots             # alle screenshots (1440×900, licht, donker, telefoon)
 ```
 
+Draait de server op een andere poort (bijv. omdat de echte PTZ Control al op 8080 draait), zet dan `PTZ_URL=http://127.0.0.1:<poort>` voor `screenshots.py` en `rondleiding_test.py`.
+
 ## Rondleiding testen
 
 Met dezelfde server (demodata) draaien: `python docs/tools/rondleiding_test.py`. Doorloopt alle stappen op drie schermformaten en meldt stappen zonder zichtbaar doel, kaarten buiten beeld en camera-commando's tijdens de rondleiding.
