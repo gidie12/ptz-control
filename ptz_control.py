@@ -41,6 +41,7 @@ import midi as _midi  # noqa: E402
 import liederen as _liederen  # noqa: E402
 import actlog as _actlog  # noqa: E402
 import oefen as _oefen  # noqa: E402
+import wininstall as _wininstall  # noqa: E402
 from urllib.parse import unquote  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -2244,6 +2245,51 @@ def open_bediening(url):
     webbrowser.open(url)
 
 
+def _win_install_wanted(args):
+    """Losse app op Windows die niet vanaf de vaste plek draait (bv. uit Downloads): moeten we aanbieden om hem te
+    installeren? Niet bij draagbaar gebruik (cameras.json naast de .exe), niet na een eerder 'nee', niet na een
+    update (dan draait hij al waar hij hoort) en niet met PTZ_INSTALL=0."""
+    if not (FROZEN and sys.platform == "win32") or args.wacht_poort:
+        return False
+    if os.environ.get("PTZ_INSTALL", "").lower() in ("0", "uit", "off", "no"):
+        return False
+    exe = os.path.abspath(sys.executable)
+    if _wininstall.is_installed(exe) or os.path.isfile(os.path.join(os.path.dirname(exe), "cameras.json")):
+        return False
+    return not os.path.exists(os.path.join(DATA_DIR, "installeren-nee"))
+
+
+def win_install(ask=True):
+    """🧑 Losse app naar %LOCALAPPDATA%\\Programs\\PTZ Control kopiëren, snelkoppelingen maken en de geïnstalleerde
+    versie starten. Geeft True als die gestart is (dan moet dit proces stoppen). Bij 'nee' wordt dat onthouden;
+    installeren kan later via het icoon in het systeemvak."""
+    exe = os.path.abspath(sys.executable)
+    target = _wininstall.target_exe()
+    if ask and not _wininstall.ask_yes_no(
+            "PTZ Control installeren op deze computer?\n\n"
+            f"De app komt in {_wininstall.install_dir()}, met een snelkoppeling in het Startmenu en op het "
+            "bureaublad. Daar kan hij zichzelf bijwerken. Je instellingen blijven waar ze zijn.\n\n"
+            "Nee = vanaf hier draaien (later alsnog via het icoon in het systeemvak)."):
+        try:
+            with open(os.path.join(DATA_DIR, "installeren-nee"), "w", encoding="utf-8") as f:
+                f.write(exe + "\n")
+        except OSError:
+            pass
+        return False
+    try:
+        _wininstall.swap_exe(exe, target)
+    except RuntimeError as e:
+        _melding(f"Installeren mislukt: {e}. PTZ Control draait vanaf de huidige plek.")
+        return False
+    _wininstall.make_shortcuts(target)
+    _wininstall.start_exe(target, [a for a in sys.argv[1:] if a != "--wacht-poort"] + ["--wacht-poort"])
+    print(f"Geïnstalleerd in {target}; die versie wordt gestart.")
+    _wininstall.info(f"PTZ Control is geïnstalleerd in {_wininstall.install_dir()}.\n\n"
+                     "Start hem voortaan via het Startmenu of het bureaublad. Het gedownloade bestand "
+                     f"({os.path.basename(exe)}) mag je weggooien.")
+    return True
+
+
 def _tray(url, lan_url):
     """Icoon in de menubalk (Mac) / het systeemvak (Windows): openen, map, afsluiten. Blokkeert.
 
@@ -2267,14 +2313,20 @@ def _tray(url, lan_url):
         os._exit(0)
 
     img = Image.open(os.path.join(RES_DIR, "icon.png"))
-    menu = pystray.Menu(
+    def installeren(icon, _item=None):
+        if win_install(ask=False):   # geïnstalleerde versie wacht op de poort; dit proces stopt
+            icon.stop()
+            os._exit(0)
+
+    items = [
         pystray.MenuItem("Bediening openen", lambda *_: open_bediening(url), default=True),
         pystray.MenuItem(f"Andere schermen: {lan_url}", lambda *_: webbrowser.open(lan_url)),
         pystray.MenuItem("Map met instellingen openen", lambda *_: open_map()),
-        pystray.Menu.SEPARATOR,
-        pystray.MenuItem("PTZ Control afsluiten", stoppen),
-    )
-    pystray.Icon("PTZ Control", img, "PTZ Control", menu).run()
+    ]
+    if sys.platform == "win32" and not _wininstall.is_installed(os.path.abspath(sys.executable)):
+        items.append(pystray.MenuItem("Installeren op deze computer…", installeren))
+    items += [pystray.Menu.SEPARATOR, pystray.MenuItem("PTZ Control afsluiten", stoppen)]
+    pystray.Icon("PTZ Control", img, "PTZ Control", pystray.Menu(*items)).run()
     return True
 
 
@@ -2287,6 +2339,8 @@ def main():
     ap.add_argument("--tab", action="store_true", help="bediening in een gewoon browsertabblad openen i.p.v. een app-venster")
     ap.add_argument("--no-tray", action="store_true", help="losse app: geen icoon in menubalk/systeemvak")
     ap.add_argument("--workspace", help="starten in deze workspace (naam of id)")
+    ap.add_argument("--wacht-poort", action="store_true",
+                    help="intern (na bijwerken/installeren): eerst wachten tot de vorige versie de poort vrijgeeft")
     args = ap.parse_args()
     _log_naar_bestand()
     if args.tab:
@@ -2294,8 +2348,17 @@ def main():
     if FROZEN and not args.no_open:
         args.open = True   # dubbelklik op de app = bediening openen
     url = f"http://localhost:{args.port}"
+    srv = None
+    if args.wacht_poort:   # vorige versie stopt net; poort is zo vrij (max. ~20 s)
+        for _ in range(40):
+            try:
+                srv = ThreadingHTTPServer((args.bind, args.port), Handler)
+                break
+            except OSError:
+                time.sleep(0.5)
     try:
-        srv = ThreadingHTTPServer((args.bind, args.port), Handler)
+        if srv is None:
+            srv = ThreadingHTTPServer((args.bind, args.port), Handler)
     except OSError:
         # poort bezet: draait PTZ Control al? Dan alleen de bediening openen.
         try:
@@ -2307,6 +2370,11 @@ def main():
         except Exception:  # noqa: BLE001
             _melding(f"Poort {args.port} is bezet door een ander programma. PTZ Control kan niet starten.")
             raise SystemExit(1)
+    if _win_install_wanted(args):
+        srv.server_close()
+        if win_install():
+            return
+        srv = ThreadingHTTPServer((args.bind, args.port), Handler)
     if args.workspace:
         want = args.workspace.strip().lower()
         w = next((w for w in WS["list"] if w["id"] == want or w["name"].lower() == want), None)
