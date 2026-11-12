@@ -342,8 +342,7 @@
   .osdpad button:disabled, .osdside button:disabled { opacity: .35; }
   .osdside { display: flex; flex-direction: column; gap: 8px; min-width: 150px; }
   .osdpad button.hit { outline: 3px solid var(--accent); }
-  #osdImg { display: block; width: 100%; border-radius: 8px; margin-top: 12px; border: 1px solid var(--line); }
-  /* 🎯 Volgen instellen: kader + persoon aanklikken (één beeld, geen live preview) */
+  /* Volgen instellen: kader + persoon aanklikken (één beeld, geen live preview) */
   #dlgTrack { width: min(860px, 96vw); }
   .trkrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
   .trkrow select { width: auto !important; min-width: 160px; }
@@ -366,7 +365,7 @@
   .pbox { position: absolute; border: 2px solid var(--trkbox); border-radius: 6px; cursor: pointer; z-index: 2; background: transparent;
     padding: 0; }
   .pbox:hover, .pbox:focus-visible { border-width: 3px; outline: none; background: rgba(255,255,255,.08); }
-  .pbox span { position: absolute; left: 0; top: 0; background: var(--trkbox); color: var(--trktxt); font-size: 11px; font-weight: 700;
+  .pbox span { position: absolute; left: 0; top: 0; background: var(--trkbox); color: var(--trktxt); font-size: 11px; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;
     border-radius: 3px 0 6px 0; padding: 2px 7px; white-space: nowrap; }
   .pbox.target { border-color: var(--trkhit); border-width: 3px; }
   .pbox.target span { background: var(--trkhit); }
@@ -428,10 +427,11 @@
   #wallBtns { display: none; gap: 8px; }
   body.wall #wallBtns { display: flex; }
   #wallBtns .chip { white-space: nowrap; }
-  /* volledig scherm: bediening, Xbox, YouTube en liederen zijn vensters; los (zwevend) of vastgezet in de balk bovenaan (dockLayout) */
+  /* volledig scherm: bediening, Xbox, YouTube en liederen zijn vensters, altijd naast elkaar in de balk bovenaan (dockLayout);
+     niet los te maken; aan de titelbalk slepen = van plek wisselen (dockOrder) */
   body.wall aside { display: block; position: fixed !important; inset: 0; z-index: 26; pointer-events: none; overflow: visible; }
   body.wall #keyHints { display: none; }
-  .wbadge, .wclose, .wgrip, .dock { display: none; }
+  .wbadge, .wclose, .wgrip { display: none; }
   body.wall aside .foldcard { position: fixed; left: var(--fx, 10px); top: var(--fy, 10px); width: var(--fw, 340px); height: var(--fh, auto);
     max-height: calc(100vh - 20px); overflow: hidden auto; overscroll-behavior: contain; pointer-events: auto; margin: 0;
     padding: 0; border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); border-color: var(--line); }
@@ -444,7 +444,7 @@
   body.wall aside .foldbar .lblpre { display: none; }
   body.wall aside .wbadge { display: inline-block; background: var(--muted); color: #fff; font-size: 10px; font-weight: 700;
     padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; flex: none; }
-  body.wall aside .wclose, body.wall aside .dock { display: grid; }
+  body.wall aside .wclose { display: grid; }
   body.wall aside .fold { background: none; border: 0; border-radius: 5px; width: auto; height: auto; padding: 2px 6px;
     color: var(--muted); font-size: 13px; line-height: 1.2; }
   body.wall aside .fold svg { width: 13px; height: 13px; }
@@ -454,14 +454,12 @@
   body.wall aside .foldcard.collapsed { padding: 0; }
   body.wall aside .foldcard.collapsed .foldbar { border-bottom: 0; }
   body.wall aside .padbadge { font-size: 10px; padding: 0 7px; }
-  body.wall aside .foldcard:not(.docked):not(.collapsed) .wgrip { display: block; }
-  body.wall aside .foldcard.dragging { opacity: .92; user-select: none; }
-  body.wall aside .foldcard.dragging .foldbar { cursor: grabbing; }
-  /* 📌 vastzetten bovenaan (bediening, Xbox, YouTube, liederen): vol = vastgezet, vaag = los venster */
-  .pin { display: none !important; }
-  body.wall .pin { display: inline-block !important; }
-  body.wall aside .pin { display: grid !important; }
-  .pin:not(.on) { opacity: .4; filter: grayscale(1); }
+  /* van plek wisselen: venster volgt de muis, het doelvenster krijgt een stippelrand */
+  body.wall .wmove { z-index: 40 !important; opacity: .92; transition: none !important; user-select: none; box-shadow: 0 18px 44px var(--shadow); }
+  body.wall .wmove, body.wall .wmove * { cursor: grabbing !important; }
+  body.wall .wdrop { outline: 2px dashed var(--accent); outline-offset: 3px; }
+  body.wall #ytHead, body.wall #songHead { cursor: grab; }
+  body.wall #ytGrip, body.wall #songGrip, body.wall #ytAutoBtn { display: none !important; }
   /* volledig scherm = bedienen: geen presets laden of opslaan */
   body.wall #btnLoad, body.wall #btnStore, body.wall #storeHint { display: none !important; }
   .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 12px; }
@@ -650,14 +648,120 @@
   dialog { border: 0; border-radius: 16px; padding: 22px; box-shadow: var(--modalshadow); }
   dialog h3 { font-size: 19px; }
   #toast, #undoNote { border-radius: 9px; box-shadow: var(--cardshadow); }
+
+  /* iconen (eigen SVG-set, sprite bovenaan <body>): lijnstijl, kleur volgt de tekst */
+  [hidden] { display: none !important; }
+  .ic { width: 1.15em; height: 1.15em; flex: none; vertical-align: -.2em; fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .ic.sm { width: .95em; height: .95em; }
+  .ic.xl { width: 44px; height: 44px; stroke-width: 1.6; margin-bottom: 6px; }
+  .ic.caret { width: 14px; height: 14px; opacity: .7; vertical-align: -.15em; }
+  .ic.spin { animation: icspin 1s linear infinite; }
+  @keyframes icspin { to { transform: rotate(360deg); } }
+  .icon, .chip, .btn, .trk, .tile .tb, .ux, #undoNote button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .stackbtn .icon { justify-content: flex-start; gap: 9px; }
+  .stackbtn .icon .ic { opacity: .7; }
+  .mi { justify-content: flex-start; }
+  .mi > kbd, .mi > .chk, .mi > .logcount { margin-left: auto; }
+  .mi .chk .ic { width: 15px; height: 15px; stroke-width: 2.6; }
+  /* 🧑 iconstijl D (op verzoek): wit icoon op een gekleurde tegel, kleur per functie (--tile), in menu's, dialoogkoppen en rondleiding.
+     Knoppen houden een klein lijnicoon. Kleur komt uit data-i (= naam van het icoon). */
+  .mi > .ic:first-child, dialog h3 > .ic:first-child, #tourTitle > .ic:first-child, .card h2 > .ic:first-child, .card h2 > .lblpre > .ic:first-child {
+    width: 26px; height: 26px; padding: 5px; border-radius: 7px; background: var(--tile, #64748b); color: #fff; stroke-width: 2.3;
+    opacity: 1; vertical-align: middle; box-sizing: border-box; }
+  .mi { padding-top: 6px; padding-bottom: 6px; gap: 11px; }
+  dialog h3, #tourTitle { display: flex; align-items: center; gap: 10px; }
+  dialog h3 > .ic:first-child, #tourTitle > .ic:first-child { width: 30px; height: 30px; padding: 6px; border-radius: 8px; }
+  .card h2 > .ic:first-child, .card h2 > .lblpre > .ic:first-child { width: 22px; height: 22px; padding: 4px; border-radius: 6px; margin-right: 4px; }
+  .ic:is([data-i="keyboard"], [data-i="gamepad"], [data-i="settings"], [data-i="plus"], [data-i="external"], [data-i="x"]) { --tile: #64748b; }
+  .ic:is([data-i="maximize"], [data-i="tablet"], [data-i="osd"], [data-i="locate"], [data-i="panel-top"]) { --tile: #2563eb; }
+  .ic:is([data-i="save"], [data-i="download"], [data-i="upload"]) { --tile: #0891b2; }
+  .ic:is([data-i="video"], [data-i="camera"], [data-i="wand"], [data-i="pin"]) { --tile: #4f46e5; }
+  .ic:is([data-i="sliders"], [data-i="music"]) { --tile: #db2777; }
+  .ic:is([data-i="flask"], [data-i="cone"], [data-i="stop"]) { --tile: #ea580c; }
+  .ic:is([data-i="list"], [data-i="zap"], [data-i="sun"], [data-i="thumbtack"]) { --tile: #d97706; }
+  .ic:is([data-i="lock"], [data-i="unlock"], [data-i="volume"]) { --tile: #059669; }
+  .ic:is([data-i="cap"], [data-i="moon"]) { --tile: #7c3aed; }
+  .ic:is([data-i="refresh"]) { --tile: #0d9488; }
+  .ic:is([data-i="power"], [data-i="tv"], [data-i="alert"]) { --tile: #dc2626; }
+  .warnbox > .ic:first-child, .lm .ic.warn { color: var(--warn); }
+  #btnHome .ic { width: 24px; height: 24px; }
+  .dpad .btn .ic { width: 22px; height: 22px; stroke-width: 2.4; }
+  .osdpad .icon .ic { width: 20px; height: 20px; stroke-width: 2.4; }
+  .tilectl > .ic { opacity: .7; }
+  #presetSearch { padding-left: 30px; background-repeat: no-repeat; background-position: 9px 50%; background-size: 15px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a7' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E"); }
 </style>
 </head>
 <body>
+<!-- Iconen (eigen set, lijnstijl 24×24, kleur = currentColor) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M8 16h8"/></symbol>
+  <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-minimize" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><path d="m16 13 5.2 3.5a.5.5 0 0 0 .8-.4V7.9a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 16h4"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.5L4.6 18.6A1.6 1.6 0 0 0 6 21h12a1.6 1.6 0 0 0 1.4-2.4L14 9.5V3"/><path d="M7.5 15h9"/></symbol>
+  <symbol id="i-osd" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4M6 7.5h5M6 10.5h7M6 13.5h4"/></symbol>
+  <symbol id="i-cone" viewBox="0 0 24 24"><path d="M10.2 3.6 5.5 18h13L13.8 3.6a1.9 1.9 0 0 0-3.6 0z"/><path d="M8.2 10h7.6M6.9 14h10.2M3 21h18"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></symbol>
+  <symbol id="i-tablet" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></symbol>
+  <symbol id="i-cap" viewBox="0 0 24 24"><path d="M21.4 10.9a1 1 0 0 0 0-1.8l-8.6-3.9a2 2 0 0 0-1.6 0L2.6 9.1a1 1 0 0 0 0 1.8l8.6 3.9a2 2 0 0 0 1.6 0z"/><path d="M22 10v6M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m9 14-5-5 5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></symbol>
+  <symbol id="i-circle-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-track" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="9.5" r="2.5"/><path d="M7.5 17.5a4.5 4.5 0 0 1 9 0"/></symbol>
+  <symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6C2.6 9.4 2 14.5 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.4-1.4A2 2 0 0 1 9.8 16h4.4a2 2 0 0 1 1.4.6L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.5-.6-6.6-.7-7.4A4 4 0 0 0 17.3 5z"/></symbol>
+  <symbol id="i-wand" viewBox="0 0 24 24"><path d="m21.6 3.6-1.2-1.2a1.2 1.2 0 0 0-1.7 0L2.4 18.6a1.2 1.2 0 0 0 0 1.7l1.2 1.3a1.2 1.2 0 0 0 1.8 0L21.6 5.4a1.2 1.2 0 0 0 0-1.8zM14 7l3 3M5 6v4M19 14v4M10 2v2M7 8H3M21 16h-4M11 3H9"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6a1.4 1.4 0 0 1-1 .4H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6M19.4 18.4a9 9 0 0 0 0-12.8"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-locate" viewBox="0 0 24 24"><path d="M2 12h3M19 12h3M12 2v3M12 19v3"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-width" viewBox="0 0 24 24"><path d="m18 8 4 4-4 4M6 8l-4 4 4 4M2 12h20"/></symbol>
+  <symbol id="i-panel-top" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></symbol>
+  <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></symbol>
+  <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M8 11h6"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+  <symbol id="i-thumbtack" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></symbol>
+</defs></svg>
 <header>
   <h1>PTZ Control</h1>
   <div class="menuwrap" id="wsWrap">
     <button class="icon" id="btnWs" aria-haspopup="true" aria-expanded="false" title="Workspace: een aparte set camera's, presets en instellingen (bijv. per locatie)">
-      <span aria-hidden="true">📍</span> <span id="wsLbl">Standaard</span> <span class="caret">▾</span></button>
+      <svg class="ic" data-i="pin" aria-hidden="true"><use href="#i-pin"/></svg> <span id="wsLbl">Standaard</span> <svg class="ic caret" data-i="chevron-down" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
     <div class="menu" id="wsMenu" hidden role="menu"></div>
   </div>
   <div class="tabs" id="tabs"></div>
@@ -666,41 +770,41 @@
     <span id="liveDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
     <input type="checkbox" id="chkFollow" checked> Volg selectie
   </label>
-  <button class="icon" id="btnLock" hidden title="Pincode / alleen kijken">🔒</button>
-  <button class="icon" id="btnSongBar" hidden title="Liederenvenster tonen/verbergen (L)"><span>🎵</span><span class="sbl" id="songBarLbl">Liederen</span></button>
+  <button class="icon" id="btnLock" hidden title="Pincode / alleen kijken"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg></button>
+  <button class="icon" id="btnSongBar" hidden title="Liederenvenster tonen/verbergen (L)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg><span class="sbl" id="songBarLbl">Liederen</span></button>
   <div class="menuwrap" id="ytWrap">
-    <button class="icon" id="btnYt" aria-haspopup="true" aria-expanded="false"><span class="ytdot"></span><span id="ytLbl">YouTube</span> <span class="caret">▾</span></button>
+    <button class="icon" id="btnYt" aria-haspopup="true" aria-expanded="false"><span class="ytdot"></span><span id="ytLbl">YouTube</span> <svg class="ic caret" data-i="chevron-down" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
     <div class="menu" id="ytMenu" hidden role="menu"></div>
   </div>
   <div class="menuwrap">
-    <button class="icon" id="btnPad" title="Menu" aria-haspopup="true" aria-expanded="false">Menu <span class="caret">▾</span></button>
+    <button class="icon" id="btnPad" title="Menu" aria-haspopup="true" aria-expanded="false">Menu <svg class="ic caret" data-i="chevron-down" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
     <div class="menu" id="mainMenu" hidden role="menu">
-      <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen">⌨ Sneltoetsen</button>
+      <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen"><svg class="ic" data-i="keyboard" aria-hidden="true"><use href="#i-keyboard"/></svg> Sneltoetsen</button>
       <div class="msep"></div>
-      <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)">⛶ Volledig scherm <kbd>F</kbd></button>
-      <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten">💾 Back-up</button>
-      <button class="mi" id="btnSettings" role="menuitem">📷 Camera's</button>
-      <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld">🎛 Videomixer (MIDI)</button>
-      <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)">🎵 Liederen (ProPresenter)</button>
-      <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan">🧪 Presetaantal testen</button>
-      <button class="mi" id="btnOsd" role="menuitem" title="Het menu van de camera zelf bedienen (belichting, kleur, beeld). Staat ook in de livestream!">🖥 OSD-menu camera</button>
+      <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)"><svg class="ic" data-i="maximize" aria-hidden="true"><use href="#i-maximize"/></svg> Volledig scherm <kbd>F</kbd></button>
+      <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten"><svg class="ic" data-i="save" aria-hidden="true"><use href="#i-save"/></svg> Back-up</button>
+      <button class="mi" id="btnSettings" role="menuitem"><svg class="ic" data-i="video" aria-hidden="true"><use href="#i-video"/></svg> Camera's</button>
+      <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld"><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Videomixer (MIDI)</button>
+      <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg> Liederen (ProPresenter)</button>
+      <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan"><svg class="ic" data-i="flask" aria-hidden="true"><use href="#i-flask"/></svg> Presetaantal testen</button>
+      <button class="mi" id="btnOsd" role="menuitem" title="Het menu van de camera zelf bedienen (belichting, kleur, beeld). Staat ook in de livestream!"><svg class="ic" data-i="osd" aria-hidden="true"><use href="#i-osd"/></svg> OSD-menu camera</button>
       <div class="msep"></div>
-      <button class="mi" id="btnPractice" role="menuitem" title="Oefenen met nagebootste camera's: de camera's in de kerk bewegen niet">🚧 Oefenstand</button>
-      <button class="mi" id="btnLog" role="menuitem" title="Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer">📋 Activiteitenlog<span class="logcount" id="logCount" hidden></span></button>
-      <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken">🔒 Toegang (pincode)</button>
-      <button class="mi" id="btnTablet" role="menuitem" title="Grote tegels en camerakeuze onderin, voor een tablet">📱 Tabletweergave</button>
-      <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)">☀ Lichte modus</button>
-      <button class="mi" id="btnTour" role="menuitem" title="Alle functies stap voor stap uitgelegd">🎓 Rondleiding</button>
-      <button class="mi" id="btnUpd" role="menuitem" title="Kijken of er een nieuwe versie van PTZ Control is">🔄 Op updates controleren</button>
+      <button class="mi" id="btnPractice" role="menuitem" title="Oefenen met nagebootste camera's: de camera's in de kerk bewegen niet"><svg class="ic" data-i="cone" aria-hidden="true"><use href="#i-cone"/></svg> Oefenstand</button>
+      <button class="mi" id="btnLog" role="menuitem" title="Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer"><svg class="ic" data-i="list" aria-hidden="true"><use href="#i-list"/></svg> Activiteitenlog<span class="logcount" id="logCount" hidden></span></button>
+      <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Toegang (pincode)</button>
+      <button class="mi" id="btnTablet" role="menuitem" title="Grote tegels en camerakeuze onderin, voor een tablet"><svg class="ic" data-i="tablet" aria-hidden="true"><use href="#i-tablet"/></svg> Tabletweergave</button>
+      <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)"><svg class="ic" data-i="sun" aria-hidden="true"><use href="#i-sun"/></svg> Lichte modus</button>
+      <button class="mi" id="btnTour" role="menuitem" title="Alle functies stap voor stap uitgelegd"><svg class="ic" data-i="cap" aria-hidden="true"><use href="#i-cap"/></svg> Rondleiding</button>
+      <button class="mi" id="btnUpd" role="menuitem" title="Kijken of er een nieuwe versie van PTZ Control is"><svg class="ic" data-i="refresh" aria-hidden="true"><use href="#i-refresh"/></svg> Op updates controleren</button>
       <div class="msep"></div>
-      <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)">⏻ PTZ Control afsluiten</button>
+      <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)"><svg class="ic" data-i="power" aria-hidden="true"><use href="#i-power"/></svg> PTZ Control afsluiten</button>
     </div>
   </div>
 </header>
-<div id="practiceBar" role="status">🚧 OEFENSTAND: de echte camera's bewegen niet en de videomixer is losgekoppeld. Wijzigingen worden niet bewaard.
+<div id="practiceBar" role="status"><svg class="ic" data-i="cone" aria-hidden="true"><use href="#i-cone"/></svg> OEFENSTAND: de echte camera's bewegen niet en de videomixer is losgekoppeld. Wijzigingen worden niet bewaard.
   <button id="practiceStop">Oefenstand stoppen</button></div>
 <div id="alertBar" role="alert"><span id="alertText"></span><button id="alertLog">Bekijk log</button><button id="alertHide">Verbergen</button></div>
-<div id="viewBanner">👁 Alleen kijken: bediening is vergrendeld. <a href="#" id="viewUnlock">Pincode invoeren</a></div>
+<div id="viewBanner"><svg class="ic" data-i="eye" aria-hidden="true"><use href="#i-eye"/></svg> Alleen kijken: bediening is vergrendeld. <a href="#" id="viewUnlock">Pincode invoeren</a></div>
 
 <main>
   <!-- PRESETS (hoofdonderdeel) -->
@@ -716,15 +820,15 @@
           <button class="icon tbtn" id="tilePlus" aria-label="Meer tegels">+</button>
         </div>
         <label class="tilectl" title="Tegelgrootte (wordt automatisch opgeslagen)">
-          <span>Grootte</span> ▫<input type="range" id="tileSize" min="100" max="320" value="170" style="width:90px">◻
+          <span>Grootte</span> <svg class="ic sm" data-i="image" aria-hidden="true"><use href="#i-image"/></svg><input type="range" id="tileSize" min="100" max="320" value="170" style="width:90px"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg>
         </label>
-        <input type="text" id="presetSearch" placeholder="🔍 Zoek preset" aria-label="Presets zoeken op naam of nummer" autocomplete="off">
-        <button class="icon" id="btnOrderReset" style="white-space:nowrap;padding:5px 10px;font-size:13px" hidden title="Eigen volgorde van de tegels weghalen (terug naar 1, 2, 3 …)">↺ Volgorde</button>
+        <input type="text" id="presetSearch" placeholder="Zoek preset" aria-label="Presets zoeken op naam of nummer" autocomplete="off">
+        <button class="icon" id="btnOrderReset" style="white-space:nowrap;padding:5px 10px;font-size:13px" hidden title="Eigen volgorde van de tegels weghalen (terug naar 1, 2, 3 …)"><svg class="ic" data-i="reset" aria-hidden="true"><use href="#i-reset"/></svg> Volgorde</button>
         </div>
-        <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset">📥 Laden van camera</button>
-        <button class="chip" id="btnStore">＋ Preset opslaan</button>
+        <button class="chip" id="btnLoad" title="Presets die al in de camera's staan ophalen, met een foto per preset"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Laden van camera</button>
+        <button class="chip" id="btnStore"><svg class="ic" data-i="plus" aria-hidden="true"><use href="#i-plus"/></svg> Preset opslaan</button>
         <span id="wallBtns">
-          <button class="chip" id="btnWallExit" title="Volledig scherm verlaten (Esc)">✕ Volledig scherm sluiten</button>
+          <button class="chip" id="btnWallExit" title="Volledig scherm verlaten (Esc)"><svg class="ic" data-i="minimize" aria-hidden="true"><use href="#i-minimize"/></svg> Volledig scherm sluiten</button>
         </span>
       </div>
     </div>
@@ -738,27 +842,26 @@
       <div class="bar foldbar" id="ctrlBar" title="Klik om de bediening in of uit te klappen">
         <span class="ytbadge wbadge">BEDIENING</span>
         <h2 id="camLabel">Camera</h2>
-        <button class="fold dock pin" title="Vastzetten bovenaan" aria-label="Bediening vastzetten">📌</button>
         <button class="fold" id="btnFold" aria-label="Bediening in- of uitklappen"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
-        <button class="fold wclose" title="Venster sluiten" aria-label="Venster sluiten">✕</button>
+        <button class="fold wclose" title="Venster sluiten" aria-label="Venster sluiten"><svg class="ic" data-i="x" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="ytgrip wgrip" title="Breedte aanpassen"></div>
       <div id="ctrlBody" class="foldbody">
 
       <div class="dpad" id="dpad">
-        <button class="btn" data-dir="leftup">↖</button>
-        <button class="btn" data-dir="up">↑</button>
-        <button class="btn" data-dir="rightup">↗</button>
-        <button class="btn" data-dir="left">←</button>
-        <button class="btn sm" id="btnHome">HOME</button>
-        <button class="btn" data-dir="right">→</button>
-        <button class="btn" data-dir="leftdown">↙</button>
-        <button class="btn" data-dir="down">↓</button>
-        <button class="btn" data-dir="rightdown">↘</button>
+        <button class="btn" data-dir="leftup" aria-label="Linksboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-45deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="up" aria-label="Omhoog"><svg class="ic" data-i="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="rightup" aria-label="Rechtsboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(45deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="left" aria-label="Links"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-90deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn sm" id="btnHome" title="Home: naar de beginpositie" aria-label="Home"><svg class="ic" data-i="home" aria-hidden="true"><use href="#i-home"/></svg></button>
+        <button class="btn" data-dir="right" aria-label="Rechts"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(90deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="leftdown" aria-label="Linksonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-135deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="down" aria-label="Omlaag"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="rightdown" aria-label="Rechtsonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(135deg)"><use href="#i-arrow"/></svg></button>
       </div>
       <div class="pair">
-        <button class="btn sm" data-zoom="in">Zoom ＋</button>
-        <button class="btn sm" data-zoom="out">Zoom －</button>
+        <button class="btn sm" data-zoom="in"><svg class="ic" data-i="zoom-in" aria-hidden="true"><use href="#i-zoom-in"/></svg> Zoom +</button>
+        <button class="btn sm" data-zoom="out"><svg class="ic" data-i="zoom-out" aria-hidden="true"><use href="#i-zoom-out"/></svg> Zoom −</button>
         <button class="btn sm" data-focus="far">Focus ver</button>
         <button class="btn sm" data-focus="near">Focus dichtbij</button>
       </div>
@@ -767,8 +870,8 @@
         <button class="btn sm" id="afOff">AF hand</button>
         <button class="btn sm" id="afPush">One-push</button>
       </div>
-      <div class="trkline"><button class="btn trackbtn" id="btnTrack" title="Persoon volgen: alleen pan, tilt en zoom blijven staan">🎯 Volgen (pan)</button>
-        <button class="btn" id="btnTrackSet" title="Kader en persoon kiezen: instellen waar de persoon in beeld moet blijven en aanklikken wie gevolgd wordt">🖼 Kader…</button></div>
+      <div class="trkline"><button class="btn trackbtn" id="btnTrack" title="Persoon volgen: alleen pan, tilt en zoom blijven staan"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Volgen (pan)</button>
+        <button class="btn" id="btnTrackSet" title="Kader en persoon kiezen: instellen waar de persoon in beeld moet blijven en aanklikken wie gevolgd wordt"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg> Kader…</button></div>
       <div class="small" id="trackInfo" style="margin-top:4px"></div>
       <details ontoggle="fitDocked()">
         <summary>Snelheden</summary>
@@ -782,11 +885,10 @@
     <div class="card foldcard" id="padCard">
       <div class="bar foldbar" id="padBar" title="Klik om de Xbox-controller in of uit te klappen">
         <span class="ytbadge wbadge">XBOX</span>
-        <h2><span class="lblpre">🎮 </span>Xbox-controller</h2>
+        <h2><span class="lblpre"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> </span>Xbox-controller</h2>
         <span class="padbadge" id="padBadge" hidden>● Verbonden</span>
-        <button class="fold dock pin" title="Vastzetten bovenaan" aria-label="Xbox-controller vastzetten">📌</button>
         <button class="fold" id="btnPadFold" aria-label="Xbox-controller in- of uitklappen"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
-        <button class="fold wclose" title="Venster sluiten" aria-label="Venster sluiten">✕</button>
+        <button class="fold wclose" title="Venster sluiten" aria-label="Venster sluiten"><svg class="ic" data-i="x" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="ytgrip wgrip" title="Breedte aanpassen"></div>
       <div id="padBody" class="foldbody">
@@ -798,7 +900,7 @@
         <label>Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
       </div>
       <label class="small padprofcard">Knoppenprofiel <select class="padprof" id="padProfCard" title="Welke knoppenindeling deze controller op dit scherm gebruikt"></select></label>
-      <button class="icon" id="btnMap2" style="margin-top:6px">🎮 Knoppenindeling instellen…</button>
+      <button class="icon" id="btnMap2" style="margin-top:6px"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling instellen…</button>
       </div>
     </div>
     <div class="small" style="padding:0 4px" id="keyHints"></div>
@@ -810,14 +912,14 @@
   <h3 id="pTitle">Preset</h3>
   <div class="img" id="pImg">Geen thumbnail</div>
   <label class="small">Naam<input type="text" id="pName" placeholder="Bijv. Preekstoel, Totaal, Band" maxlength="40"></label>
-  <div class="pcolors small" id="pColors">Kleur <button data-col="" title="Geen kleur">✕</button></div>
+  <div class="pcolors small" id="pColors">Kleur <button data-col="" title="Geen kleur"><svg class="ic" data-i="x" aria-hidden="true"><use href="#i-x"/></svg></button></div>
   <label class="small" style="display:flex;gap:8px;align-items:center;margin-top:10px">
-    <input type="checkbox" id="pTrack"> 🎯 Na oproepen automatisch volgen (alleen pan)</label>
+    <input type="checkbox" id="pTrack"> <svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Na oproepen automatisch volgen (alleen pan)</label>
   <div class="stackbtn">
-    <button class="icon" id="pRecall">▶ Oproepen</button>
-    <button class="icon" id="pStore">⦿ Huidige camerapositie hier opslaan</button>
-    <button class="icon" id="pThumb">📷 Thumbnail vernieuwen (van huidig beeld)</button>
-    <button class="icon danger" id="pClear">✕ Naam en thumbnail wissen</button>
+    <button class="icon" id="pRecall"><svg class="ic" data-i="play" aria-hidden="true"><use href="#i-play"/></svg> Oproepen</button>
+    <button class="icon" id="pStore"><svg class="ic" data-i="target" aria-hidden="true"><use href="#i-target"/></svg> Huidige camerapositie hier opslaan</button>
+    <button class="icon" id="pThumb"><svg class="ic" data-i="camera" aria-hidden="true"><use href="#i-camera"/></svg> Thumbnail vernieuwen (van huidig beeld)</button>
+    <button class="icon danger" id="pClear"><svg class="ic" data-i="trash" aria-hidden="true"><use href="#i-trash"/></svg> Naam en thumbnail wissen</button>
   </div>
   <div class="actions"><span></span>
     <span style="display:flex;gap:8px"><button class="icon" id="pCancel">Sluiten</button>
@@ -831,7 +933,7 @@
   <div class="camrow camhead"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span>VISCA-poort</span><span>Gebruiker</span><span>Wachtwoord</span><span></span></div>
   <div id="camList"></div>
   <button class="icon" id="btnAddCam" style="margin-top:6px">+ Camera toevoegen</button>
-  <button class="icon" id="btnWizard" style="margin-top:6px" title="Stap voor stap camera's zoeken, testen en presets laden">🧭 Hulp bij instellen…</button>
+  <button class="icon" id="btnWizard" style="margin-top:6px" title="Stap voor stap camera's zoeken, testen en presets laden"><svg class="ic" data-i="wand" aria-hidden="true"><use href="#i-wand"/></svg> Hulp bij instellen…</button>
   <p class="small">Protocol <b>HTTP-CGI</b> werkt op vrijwel alle PTZOptics-camera's (en geeft thumbnails). Kies <b>VISCA (TCP)</b> als HTTP niet reageert.
     Gebruiker/wachtwoord alleen invullen als de camera om inloggen vraagt.</p>
   <div class="actions">
@@ -845,7 +947,7 @@
 
 
 <dialog id="dlgKeys">
-  <h3>⌨ Sneltoetsen</h3>
+  <h3><svg class="ic" data-i="keyboard" aria-hidden="true"><use href="#i-keyboard"/></svg> Sneltoetsen</h3>
   <p class="small" style="margin:0 0 10px">Klik in een veld en druk de toets of combinatie (bijv. <kbd>F1</kbd>, <kbd>Num 5</kbd>, <kbd>Shift</kbd>+<kbd>Z</kbd>).
     <kbd>Backspace</kbd> = standaard, <kbd>Delete</kbd> = uit. Rood = toets al in gebruik. Geldt voor alle schermen.
     <kbd>Esc</kbd> is vast (volledig scherm / opslaan-modus verlaten).</p>
@@ -859,12 +961,12 @@
 </dialog>
 
 <dialog id="dlgMap">
-  <h3>🎮 Knoppenindeling Xbox-controller</h3>
+  <h3><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling Xbox-controller</h3>
   <div class="padprofrow">
     <label class="small">Profiel <select class="padprof" id="padProfMap"></select></label>
     <button class="icon" id="padProfNew" title="Nieuw profiel maken (kopie van het huidige)">＋ Nieuw profiel</button>
     <button class="icon" id="padProfRen">Hernoemen</button>
-    <button class="icon danger" id="padProfDel" title="Dit profiel verwijderen">🗑</button>
+    <button class="icon danger" id="padProfDel" title="Dit profiel verwijderen" aria-label="Profiel verwijderen"><svg class="ic" data-i="trash" aria-hidden="true"><use href="#i-trash"/></svg></button>
   </div>
   <p class="small" style="margin:6px 0 10px">Elk profiel heeft een eigen knoppenindeling, bijvoorbeeld per persoon. Welk profiel actief is,
     onthoudt elk scherm zelf; de profielen zelf zijn op alle schermen beschikbaar.</p>
@@ -885,18 +987,18 @@
 </dialog>
 
 <dialog id="dlgBackup">
-  <h3>💾 Back-up van presets en camera-instellingen</h3>
+  <h3><svg class="ic" data-i="save" aria-hidden="true"><use href="#i-save"/></svg> Back-up van presets en camera-instellingen</h3>
 
   <div class="bsec">
     <h4>1. Back-upbestand</h4>
     <div class="small">Cameralijst, presetnamen, volg-instellingen, sneltoetsen, knoppenindeling, YouTube-kanaal, thumbnails en (als uitgelezen)
       presetposities en beeldinstellingen, in één bestand. Van workspace <b id="bkWsName">Standaard</b>, of van alle workspaces samen.</div>
     <div class="row">
-      <button class="primary" id="bkDownload">⬇ Back-up downloaden</button>
+      <button class="primary" id="bkDownload"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Back-up downloaden</button>
       <label class="small"><input type="checkbox" id="bkPw"> camerawachtwoorden meenemen</label>
       <label class="small" id="bkAllLbl"><input type="checkbox" id="bkAll"> alle workspaces</label>
       <span style="flex:1"></span>
-      <button class="icon" id="bkRestoreBtn">⬆ Back-up terugzetten…</button>
+      <button class="icon" id="bkRestoreBtn"><svg class="ic" data-i="upload" aria-hidden="true"><use href="#i-upload"/></svg> Back-up terugzetten…</button>
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
     </div>
   </div>
@@ -904,7 +1006,7 @@
   <div class="bsec">
     <h4>2. Uit de camera's lezen</h4>
     <div class="small">Leest per preset pan/tilt/zoom/focus en de beeldinstellingen (belichting, witbalans, kleur, scherpte, flip/mirror) uit de camera's zelf, zodat je ze na een reset of op een vervangende camera kunt terugzetten.</div>
-    <div class="warnbox">⚠ Bij presetposities <b>rijdt elke camera langs al zijn presets</b>. Niet doen tijdens een dienst of livestream.</div>
+    <div class="warnbox"><svg class="ic" data-i="alert" aria-hidden="true"><use href="#i-alert"/></svg> Bij presetposities <b>rijdt elke camera langs al zijn presets</b>. Niet doen tijdens een dienst of livestream.</div>
     <table class="bcams" id="bkTable"></table>
     <div class="row">
       <label class="small"><input type="checkbox" id="bkPos" checked> presetposities</label>
@@ -940,11 +1042,11 @@
 </dialog>
 
 <dialog id="dlgLoad">
-  <h3>📥 Presets laden van de camera</h3>
+  <h3><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Presets laden van de camera</h3>
   <p class="small">De camera's hebben geen lijst van hun presets. Daarom roept de app elke preset in het bereik op, wacht tot de camera
     stilstaat en maakt een foto voor de tegel. Presets waarbij de camera niet beweegt, worden als <b>leeg</b> overgeslagen.
     De positie wordt meteen bewaard voor de back-up. Bestaande presetnamen blijven staan.</p>
-  <div class="warnbox">⚠ De camera's <b>rijden langs al hun presets</b>. Niet doen tijdens een dienst of livestream.
+  <div class="warnbox"><svg class="ic" data-i="alert" aria-hidden="true"><use href="#i-alert"/></svg> De camera's <b>rijden langs al hun presets</b>. Niet doen tijdens een dienst of livestream.
     Daarna gaat elke camera terug naar de preset die LIVE stond.</div>
   <table class="bcams" id="ldTable"></table>
   <div class="row" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px">
@@ -958,7 +1060,7 @@
 </dialog>
 
 <dialog id="dlgRestore">
-  <h3>⬆ Back-up terugzetten</h3>
+  <h3><svg class="ic" data-i="upload" aria-hidden="true"><use href="#i-upload"/></svg> Back-up terugzetten</h3>
   <div id="rsInfo" class="small" style="white-space:pre-line"></div>
   <p class="small" style="margin-top:10px">De camera's zelf veranderen pas als je daarna <i>Naar camera's terugzetten</i> kiest.</p>
   <div class="actions" style="flex-wrap:wrap;gap:8px"><button class="icon" id="rsCancel">Annuleren</button>
@@ -969,7 +1071,7 @@
 </dialog>
 
 <dialog id="dlgWs">
-  <h3>📍 Workspaces</h3>
+  <h3><svg class="ic" data-i="pin" aria-hidden="true"><use href="#i-pin"/></svg> Workspaces</h3>
   <p class="small" style="margin:0 0 10px">Elke workspace heeft eigen camera's, presets, foto's, sneltoetsen, knoppenindeling en YouTube-kanaal,
     alsof het een aparte installatie is. Handig per locatie. Wisselen geldt voor alle schermen die met deze computer verbonden zijn.</p>
   <h4 style="margin:0 0 6px">Nieuwe workspace</h4>
@@ -984,7 +1086,7 @@
 </dialog>
 
 <dialog id="dlgPrefs">
-  <h3>▶ YouTube-kanaal</h3>
+  <h3><svg class="ic" data-i="tv" aria-hidden="true"><use href="#i-tv"/></svg> YouTube-kanaal</h3>
   <div class="bsec" style="margin-top:0">
     <h4>YouTube-livestream</h4>
     <div class="small">De app kijkt elke minuut of dit kanaal live is en toont de stream in een klein venster. Alleen kijken:
@@ -1003,10 +1105,9 @@
   <div class="ythead" id="songHead">
     <span class="ytbadge" id="songBadge">LIEDEREN</span>
     <span class="yttitle" id="songTitle">Liederen</span>
-    <button id="songPin" class="pin" title="Vastzetten bovenaan">📌</button>
-    <button id="songSrcBtn" title="Wisselen tussen ProPresenter en de Voordienst app" hidden>⇄</button>
-    <button id="songSet" title="Instellingen (Menu → 🎵 Liederen)">⚙</button>
-    <button id="songClose" title="Venster sluiten (L)">✕</button>
+    <button id="songSrcBtn" title="Wisselen tussen ProPresenter en de Voordienst app" hidden aria-label="Bron wisselen"><svg class="ic" data-i="swap" aria-hidden="true"><use href="#i-swap"/></svg></button>
+    <button id="songSet" title="Instellingen (Menu → Liederen)" aria-label="Instellingen"><svg class="ic" data-i="settings" aria-hidden="true"><use href="#i-settings"/></svg></button>
+    <button id="songClose" title="Venster sluiten (L)" aria-label="Sluiten"><svg class="ic" data-i="x" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="songnowbox"><div class="snow" id="songNow"></div><div class="snext" id="songNext"></div></div>
   <ol class="songlist" id="songWinList"></ol>
@@ -1019,17 +1120,16 @@
   <div class="ythead" id="ytHead">
     <span class="ytbadge" id="ytBadge">OFFLINE</span>
     <span class="yttitle" id="ytTitle">YouTube</span>
-    <button id="ytPin" class="pin" title="Vastzetten bovenaan">📌</button>
-    <button id="ytAutoBtn" title="Weer automatisch plaatsen (naast/onder de tegels)" hidden>⌖</button>
-    <button id="ytOpen" title="Openen op YouTube">↗</button>
-    <button id="ytClose" title="Venster sluiten (Y)">✕</button>
+    <button id="ytAutoBtn" title="Weer automatisch plaatsen (naast/onder de tegels)" hidden aria-label="Automatisch plaatsen"><svg class="ic" data-i="locate" aria-hidden="true"><use href="#i-locate"/></svg></button>
+    <button id="ytOpen" title="Openen op YouTube" aria-label="Openen op YouTube"><svg class="ic" data-i="external" aria-hidden="true"><use href="#i-external"/></svg></button>
+    <button id="ytClose" title="Venster sluiten (Y)" aria-label="Sluiten"><svg class="ic" data-i="x" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="ytbody" id="ytBody"><div class="ytmsg" id="ytMsg"></div></div>
   <div class="ytgrip" id="ytGrip" title="Sleep om de grootte te wijzigen"></div>
 </div>
 
 <dialog id="dlgMidi">
-  <h3>🎛 Videomixer (Roland V-1HD)</h3>
+  <h3><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Videomixer (Roland V-1HD)</h3>
   <p class="small">Via een USB-kabel van de V-1HD naar deze computer ziet PTZ Control welke ingang op de mixer gekozen is (rode knop).
     De camera die daarbij hoort, krijgt in de app een rode rand met <b>IN BEELD</b>.</p>
   <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="midiOn"> Koppeling met de videomixer aan</label>
@@ -1053,17 +1153,17 @@
     <h4>Verkenning</h4>
     <div class="small">Legt alles vast wat de mixer via MIDI stuurt, om de koppeling te controleren of te verbeteren.
       Start, druk op de mixer op de knoppen van beide rijen en kies een memory, en download dan de log.</div>
-    <div class="row"><button class="icon" id="midiRec">▶ Verkenning starten</button>
-      <a class="icon" id="midiDl" href="/api/midi/log.txt" download style="text-decoration:none">⬇ Log downloaden</a>
+    <div class="row"><button class="icon" id="midiRec"><svg class="ic" data-i="play" aria-hidden="true"><use href="#i-play"/></svg> Verkenning starten</button>
+      <a class="icon" id="midiDl" href="/api/midi/log.txt" download style="text-decoration:none"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Log downloaden</a>
       <span class="small muted" id="midiRecInfo"></span></div>
     <pre id="midiLog"></pre>
   </div>
   <div class="actions"><span></span><button class="primary" id="midiClose">Sluiten</button></div>
 </dialog>
 <dialog id="dlgSongs">
-  <h3>🎵 Liederen</h3>
+  <h3><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg> Liederen</h3>
   <p class="small">PTZ Control leest welke nummers er gezongen worden uit <b>ProPresenter</b> en/of de <b>Voordienst app</b>.
-    Elk nummer komt in het <b>📋 Activiteitenlog</b> (soort <i>Liederen</i>), met de plek in de playlist. De camera's bewegen hierdoor niet.</p>
+    Elk nummer komt in het <b>Activiteitenlog</b> (soort <i>Liederen</i>), met de plek in de playlist. De camera's bewegen hierdoor niet.</p>
   <div class="bsec">
     <h4>ProPresenter</h4>
     <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ppOn"> Koppeling met ProPresenter aan</label>
@@ -1094,16 +1194,16 @@
     <div class="mixstat off" id="dbStat"></div>
     <ol class="songlist" id="dbList" hidden></ol>
   </div>
-  <div class="actions"><span style="display:flex;gap:8px"><button class="icon" id="songsCheck">↻ Nu controleren</button>
-    <button class="icon" id="songsLog">📋 In het log bekijken</button></span>
+  <div class="actions"><span style="display:flex;gap:8px"><button class="icon" id="songsCheck"><svg class="ic" data-i="refresh" aria-hidden="true"><use href="#i-refresh"/></svg> Nu controleren</button>
+    <button class="icon" id="songsLog"><svg class="ic" data-i="list" aria-hidden="true"><use href="#i-list"/></svg> In het log bekijken</button></span>
     <button class="primary" id="songsClose">Sluiten</button></div>
 </dialog>
 <dialog id="dlgCap">
-  <h3>🧪 Presetaantal testen</h3>
+  <h3><svg class="ic" data-i="flask" aria-hidden="true"><use href="#i-flask"/></svg> Presetaantal testen</h3>
   <p class="small">Test per camera hoeveel presets hij echt kan opslaan en oproepen. Voor elk testnummer: preset oproepen,
     camera iets opzij zetten en opslaan, de andere kant op draaien en de preset terugroepen. Komt de camera precies terug,
     dan werkt dat nummer. Eerst grenswaarden (1, 32, 64, 89, 100, 128, 150, 200, 254), daarna wordt het precieze maximum gezocht.</p>
-  <div class="warnbox">⚠ De camera's <b>bewegen</b> tijdens de test (ca. 1 minuut). Niet doen tijdens een dienst of livestream.
+  <div class="warnbox"><svg class="ic" data-i="alert" aria-hidden="true"><use href="#i-alert"/></svg> De camera's <b>bewegen</b> tijdens de test (ca. 1 minuut). Niet doen tijdens een dienst of livestream.
     Bestaande presets worden daarna exact teruggezet; lege nummers worden weer gewist. 90–99 worden nooit gebruikt.</div>
   <table class="bcams" id="capTable"></table>
   <div class="actions"><span class="small" id="capInfo"></span>
@@ -1112,7 +1212,7 @@
 </dialog>
 
 <div id="updNote" hidden role="status" aria-live="polite">
-  <div class="uh"><b id="updTitle">⬆ Nieuwe versie beschikbaar</b><button class="ux" id="updClose" title="Later herinneren" aria-label="Sluiten">✕</button></div>
+  <div class="uh"><b id="updTitle"><svg class="ic" data-i="circle-up" aria-hidden="true"><use href="#i-circle-up"/></svg> Nieuwe versie beschikbaar</b><button class="ux" id="updClose" title="Later herinneren" aria-label="Sluiten"><svg class="ic" data-i="x" aria-hidden="true"><use href="#i-x"/></svg></button></div>
   <div class="small muted" id="updInfo" style="margin-top:4px"></div>
   <ul id="updNotes"></ul>
   <div class="uerr" id="updErr" hidden></div>
@@ -1135,14 +1235,14 @@
 <div id="toast"></div>
 <nav id="tabBar" aria-label="Camera kiezen"></nav>
 <dialog id="dlgPin">
-  <h3>🔒 Pincode</h3>
+  <h3><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Pincode</h3>
   <p class="small">Voer de pincode in om de camera's te bedienen. Dit apparaat blijft daarna ingelogd.</p>
   <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" aria-label="Pincode">
   <div class="small" id="pinErr" style="color:var(--live);min-height:18px;margin-top:6px"></div>
   <div class="actions"><button class="icon" id="pinCancel">Alleen kijken</button><button class="primary" id="pinOk">Ontgrendelen</button></div>
 </dialog>
 <dialog id="dlgAccess">
-  <h3>🔒 Toegang</h3>
+  <h3><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Toegang</h3>
   <p class="small">Met een pincode kan iedereen op het netwerk <b>meekijken</b> (presets, IN BEELD, livestream), maar alleen wie de pincode
     invoert kan <b>bedienen</b>. Op deze computer zelf (waar PTZ Control draait) is nooit een pincode nodig.</p>
   <div class="bsec"><h4 id="acStatus">Geen pincode</h4>
@@ -1151,12 +1251,12 @@
     <div class="row"><button class="primary" id="acSave">Pincode opslaan</button><button class="icon danger" id="acRemove">Pincode weghalen</button></div>
   </div>
   <div class="bsec"><h4>Apparaten</h4>
-    <div class="row"><button class="icon" id="acLock">🔒 Dit apparaat vergrendelen</button><button class="icon" id="acLogoutAll">Alle apparaten uitloggen</button></div>
+    <div class="row"><button class="icon" id="acLock"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Dit apparaat vergrendelen</button><button class="icon" id="acLogoutAll">Alle apparaten uitloggen</button></div>
   </div>
   <div class="actions"><span class="small muted" id="acInfo"></span><button class="primary" id="acClose">Sluiten</button></div>
 </dialog>
 <dialog id="dlgOsd">
-  <h3>🖥 OSD-menu camera</h3>
+  <h3><svg class="ic" data-i="osd" aria-hidden="true"><use href="#i-osd"/></svg> OSD-menu camera</h3>
   <p class="small">Het menu van de camera zelf: belichting, kleur, beeld, enzovoort. <b>Het menu staat ook in de livestream.</b>
     Zet daarom eerst op de videomixer een andere camera in beeld. Zolang het menu open staat, reageert deze camera niet op presets,
     handbediening of volgen.</p>
@@ -1164,24 +1264,22 @@
   <div class="warnbox" id="osdLive" hidden></div>
   <div class="osdwrap">
     <div class="osdpad" id="osdPad">
-      <span></span><button class="icon" data-k="up" aria-label="Omhoog">▲</button><span></span>
-      <button class="icon" data-k="left" aria-label="Links">◀</button><button class="icon ok" data-k="enter" aria-label="OK (enter)">OK</button><button class="icon" data-k="right" aria-label="Rechts">▶</button>
-      <span></span><button class="icon" data-k="down" aria-label="Omlaag">▼</button><span></span>
+      <span></span><button class="icon" data-k="up" aria-label="Omhoog"><svg class="ic" data-i="chevron-up" aria-hidden="true"><use href="#i-chevron-up"/></svg></button><span></span>
+      <button class="icon" data-k="left" aria-label="Links"><svg class="ic" data-i="chevron-left" aria-hidden="true"><use href="#i-chevron-left"/></svg></button><button class="icon ok" data-k="enter" aria-label="OK (enter)">OK</button><button class="icon" data-k="right" aria-label="Rechts"><svg class="ic" data-i="chevron-right" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      <span></span><button class="icon" data-k="down" aria-label="Omlaag"><svg class="ic" data-i="chevron-down" aria-hidden="true"><use href="#i-chevron-down"/></svg></button><span></span>
     </div>
     <div class="osdside">
       <button class="primary" id="osdToggle">Menu openen</button>
-      <button class="icon" data-k="back" id="osdBack">↩ Terug</button>
-      <button class="icon" id="osdSnap" title="Eén foto van de camera, om te zien waar je in het menu bent (geen live beeld)">📷 Beeld bekijken</button>
+      <button class="icon" data-k="back" id="osdBack"><svg class="ic" data-i="back" aria-hidden="true"><use href="#i-back"/></svg> Terug</button>
     </div>
   </div>
-  <img id="osdImg" alt="Beeld van de camera" hidden>
   <p class="small muted" id="osdHelp" style="margin-top:12px">Toetsenbord: pijltjes, <kbd>Enter</kbd> = OK, <kbd>Backspace</kbd> = terug.
     Xbox-controller: D-pad of linker stick, <b>A</b> = OK, <b>B</b> = terug. Meestal: ▲▼ kiezen, ▶ of OK openen, ◀▶ waarde wijzigen.
     Sluit je dit venster, dan gaat het menu op de camera ook dicht.</p>
   <div class="actions"><span></span><button class="icon" id="osdDone">Sluiten</button></div>
 </dialog>
 <dialog id="dlgTrack">
-  <h3>🎯 Volgen instellen</h3>
+  <h3><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Volgen instellen</h3>
   <p class="small">Sleep de <b>oranje lijnen</b> om het kader te zetten: zolang de persoon daarbinnen blijft, staat de camera stil.
     Loopt hij eruit, dan draait de camera tot hij weer op de <b>witte stippellijn</b> staat. <b>Klik op een persoon</b> om precies die te volgen;
     de camera blijft dan bij die persoon (op kleding herkend), ook als iemand anders voorbij loopt. Alleen pan: tilt en zoom blijven staan.</p>
@@ -1189,7 +1287,7 @@
     <span class="trkst" id="trkState">Volgen uit</span></div>
   <div id="trkStage">
     <img id="trkImg" alt="Beeld van de camera met de gevonden personen" hidden>
-    <div id="trkEmpty">Klik op 📷 Nieuw beeld om personen te zoeken.</div>
+    <div id="trkEmpty">Klik op <b>Nieuw beeld</b> om personen te zoeken.</div>
     <div class="trkshade" id="trkShadeL"></div><div class="trkshade" id="trkShadeR"></div>
     <div id="trkBoxes"></div>
     <div class="trkedge" id="trkEdgeL" data-k="l" role="slider" aria-label="Linkergrens van het kader" tabindex="0"><span>kader</span></div>
@@ -1197,23 +1295,23 @@
     <div class="trkaim" id="trkAim" data-k="x" role="slider" aria-label="Doelpositie" tabindex="0"><span>doel</span></div>
   </div>
   <div class="trkrow">
-    <button class="primary" id="trkLook" title="Eén beeld van de camera ophalen en personen zoeken (geen live beeld)">📷 Nieuw beeld</button>
+    <button class="primary" id="trkLook" title="Eén beeld van de camera ophalen en personen zoeken (geen live beeld)"><svg class="ic" data-i="camera" aria-hidden="true"><use href="#i-camera"/></svg> Nieuw beeld</button>
     <button class="icon" id="trkAuto" title="Niet één persoon vasthouden: de grootste persoon in beeld volgen">Automatisch (grootste persoon)</button>
-    <button class="icon" id="trkToggle">🎯 Volgen aan</button>
+    <button class="icon" id="trkToggle"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Volgen aan</button>
     <span style="flex:1"></span>
-    <button class="icon" id="trkReset" title="Kader terug naar de standaard (midden 40%)">↺ Kader standaard</button>
+    <button class="icon" id="trkReset" title="Kader terug naar de standaard (midden 40%)"><svg class="ic" data-i="reset" aria-hidden="true"><use href="#i-reset"/></svg> Kader standaard</button>
   </div>
   <div class="trkhelp" id="trkHelp"></div>
   <div class="trklim" id="trkLim">
-    <h4>↔ Grenzen links en rechts</h4>
-    <div class="trkhelp" style="margin-top:4px">Hoe ver de camera mag draaien tijdens het volgen. Draai met ◀ ▶ (vasthouden) naar het verste punt en klik
+    <h4><svg class="ic" data-i="width" aria-hidden="true"><use href="#i-width"/></svg> Grenzen links en rechts</h4>
+    <div class="trkhelp" style="margin-top:4px">Hoe ver de camera mag draaien tijdens het volgen. Draai met de pijlen (vasthouden) naar het verste punt en klik
       <i>Grens … = hier</i>. Bij een grens stopt de camera en mag de persoon uit beeld lopen. Handbediening en presets blijven vrij.</div>
     <div class="limbar" id="trkLimBar" hidden></div>
     <div class="trkrow">
-      <button class="icon" id="trkPanL" title="Vasthouden: camera naar links (zet volgen uit)">◀</button>
-      <button class="icon" id="trkPanR" title="Vasthouden: camera naar rechts (zet volgen uit)">▶</button>
-      <button class="icon" id="trkLimL">⇤ Grens links = hier</button>
-      <button class="icon" id="trkLimR">Grens rechts = hier ⇥</button>
+      <button class="icon" id="trkPanL" title="Vasthouden: camera naar links (zet volgen uit)" aria-label="Camera naar links"><svg class="ic" data-i="chevron-left" aria-hidden="true"><use href="#i-chevron-left"/></svg></button>
+      <button class="icon" id="trkPanR" title="Vasthouden: camera naar rechts (zet volgen uit)" aria-label="Camera naar rechts"><svg class="ic" data-i="chevron-right" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      <button class="icon" id="trkLimL"><svg class="ic" data-i="pin" aria-hidden="true"><use href="#i-pin"/></svg> Grens links = hier</button>
+      <button class="icon" id="trkLimR"><svg class="ic" data-i="pin" aria-hidden="true"><use href="#i-pin"/></svg> Grens rechts = hier</button>
       <span style="flex:1"></span>
       <button class="icon" id="trkLimClear">Grenzen wissen</button>
     </div>
@@ -1222,7 +1320,7 @@
   <div class="actions"><span></span><button class="icon" id="trkDone">Sluiten</button></div>
 </dialog>
 <dialog id="dlgLog">
-  <h3>📋 Activiteitenlog</h3>
+  <h3><svg class="ic" data-i="list" aria-hidden="true"><use href="#i-list"/></svg> Activiteitenlog</h3>
   <p class="small">Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer, wat er op de mixer in beeld stond en welke liederen er gezongen zijn.
     Handbediening en herhalingen binnen een minuut worden samengevoegd (×2, ×3 …). Geldt voor alle workspaces.</p>
   <div id="logFilter">
@@ -1235,31 +1333,31 @@
     Naam van dit apparaat <input type="text" id="logDevName" maxlength="40" placeholder="bijv. iPad regie" autocomplete="off" style="width:200px">
     <span class="muted">komt in het log bij alles wat je vanaf hier doet</span></div>
   <div class="actions">
-    <a class="icon" href="/api/log.txt" id="logDownload" style="text-decoration:none">⬇ Downloaden</a>
-    <button class="icon danger" id="logClear">🗑 Wissen</button>
+    <a class="icon" href="/api/log.txt" id="logDownload" style="text-decoration:none"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Downloaden</a>
+    <button class="icon danger" id="logClear"><svg class="ic" data-i="trash" aria-hidden="true"><use href="#i-trash"/></svg> Wissen</button>
     <span style="flex:1"></span><button class="primary" id="logClose">Sluiten</button></div>
 </dialog>
-<div id="undoNote" hidden role="status"><span id="undoText"></span><button class="primary" id="undoBtn">↶ Ongedaan maken</button><i class="ubar" id="undoBar"></i></div>
+<div id="undoNote" hidden role="status"><span id="undoText"></span><button class="primary" id="undoBtn"><svg class="ic" data-i="undo" aria-hidden="true"><use href="#i-undo"/></svg> Ongedaan maken</button><i class="ubar" id="undoBar"></i></div>
 <dialog id="dlgWizard">
-  <h3>🧭 PTZ Control instellen</h3>
+  <h3><svg class="ic" data-i="wand" aria-hidden="true"><use href="#i-wand"/></svg> PTZ Control instellen</h3>
   <div class="wzsteps"><span data-s="1">1 · Camera's</span><span data-s="2">2 · Presets</span><span data-s="3">3 · Klaar</span></div>
   <div data-step="1">
     <p class="small">Welkom! Vul per camera een naam en het IP-adres in, of laat PTZ Control ze zoeken in het netwerk.
       Met <b>Testen</b> zie je meteen of de camera reageert en beeld geeft.</p>
     <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <button class="icon" id="wzScan">🔍 Zoeken in netwerk</button><span class="small muted" id="wzScanInfo"></span></div>
+      <button class="icon" id="wzScan"><svg class="ic" data-i="search" aria-hidden="true"><use href="#i-search"/></svg> Zoeken in netwerk</button><span class="small muted" id="wzScanInfo"></span></div>
     <div class="wzrow small muted" style="margin-top:12px"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span></span><span>Resultaat</span><span></span></div>
     <div id="wzList"></div>
     <button class="icon" id="wzAdd" style="margin-top:8px">+ Camera</button>
-    <p class="small muted">Wachtwoord, VISCA-poort en volginstellingen kun je later aanpassen bij Menu → 📷 Camera's.</p>
+    <p class="small muted">Wachtwoord, VISCA-poort en volginstellingen kun je later aanpassen bij Menu → Camera's.</p>
   </div>
   <div data-step="2" hidden>
     <p>Staan er al presets in de camera's (bijvoorbeeld van het PTZOptics-programma)? Dan kan PTZ Control ze ophalen, met een foto per preset.</p>
-    <div class="warnbox">⚠ De camera's <b>bewegen</b> tijdens het ophalen. Niet doen tijdens een dienst.</div>
-    <div class="row" style="margin-top:12px"><button class="primary" id="wzLoad">📥 Presets ophalen van de camera's</button></div>
+    <div class="warnbox"><svg class="ic" data-i="alert" aria-hidden="true"><use href="#i-alert"/></svg> De camera's <b>bewegen</b> tijdens het ophalen. Niet doen tijdens een dienst.</div>
+    <div class="row" style="margin-top:12px"><button class="primary" id="wzLoad"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Presets ophalen van de camera's</button></div>
   </div>
   <div data-step="3" hidden>
-    <p>Klaar! Je camera's staan erin. Hierna volgt een korte rondleiding langs alle functies (later opnieuw via Menu → 🎓 Rondleiding).</p>
+    <p>Klaar! Je camera's staan erin. Hierna volgt een korte rondleiding langs alle functies (later opnieuw via Menu → Rondleiding).</p>
   </div>
   <div class="actions"><button class="icon" id="wzSkip">Overslaan</button>
     <span style="display:flex;gap:8px"><button class="icon" id="wzBack">← Terug</button><button class="primary" id="wzNext">Volgende →</button></span></div>
@@ -1281,6 +1379,7 @@ let track = {};             // camId -> {on, status, fps, detector}
 const camById = (id) => cfg.cameras.find(c => c.id === id);
 const ctrl = () => camById(ctrlCam);
 const sp = (id) => +$(id).value;
+const ic = (n, cls = "") => `<svg class="ic${cls ? " " + cls : ""}" data-i="${n}" aria-hidden="true"><use href="#i-${n}"/></svg>`;   // iconenset (sprite bovenaan <body>)
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 const thumbUrl = (cam, n) => `/api/thumb?cam=${encodeURIComponent(cam)}&n=${n}&v=${thumbVer[cam + "_" + n] || 0}`;
 const hasThumb = (c, n) => (c.thumbs || []).includes(n);
@@ -1354,7 +1453,7 @@ function selectCam(c, origin) {
   if (pressed.size) { pressed.clear(); cmd("stop"); }       // geen beweging laten doorlopen op de vorige camera
   ctrlCam = c.id;
   if (view !== ALL) view = c.id;
-  render(); toast((origin === "pad" ? "🎮 " : "Camera: ") + c.name, true);
+  render(); toast((origin === "pad" ? "Controller: " : "Camera: ") + c.name, true);
   if (!viewOnly()) post("/api/select", { cam: c.id, origin });   // alleen kijken: keuze blijft op dit scherm
 }
 
@@ -1376,7 +1475,7 @@ function tile(c, n) {
     <div class="img" style="${hasThumb(c, n) ? `background-image:url('${thumbUrl(c.id, n)}')` : ""}">${hasThumb(c, n) ? "" : n}</div>
     ${col ? `<i class="cbar" style="background:var(--pc-${col})"></i>` : ""}
     <div class="meta"><span class="num">${n}</span><span class="name ${name || hasThumb(c, n) ? "" : "empty"}">${esc(name || (hasThumb(c, n) ? `Preset ${n}` : "Leeg"))}</span>${hk ? `<kbd class="tkey" title="Sneltoets voor deze preset (bediende camera)">${esc(keyLabel(hk))}</kbd>` : ""}</div>
-    <span class="edit" title="Bewerken" aria-label="Preset bewerken"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></span>${(c.track_presets || []).includes(n) ? '<span class="tb">🎯 volgt</span>' : ""}`;
+    <span class="edit" title="Bewerken" aria-label="Preset bewerken"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></span>${(c.track_presets || []).includes(n) ? `<span class="tb">${ic("track")} volgt</span>` : ""}`;
   b.onclick = (e) => {
     if (e.target.closest(".edit")) return openPreset(c.id, n);
     if (b._long) { b._long = false; return; }
@@ -1410,7 +1509,7 @@ function hiddenHint(c, nums) {
 function renderPresets() {
   const area = $("#presetArea"); area.innerHTML = "";
   $("#presetCard").classList.toggle("storing", storeMode);
-  if (!cfg.cameras.length) { area.innerHTML = `<p class="muted">Nog geen camera's. Klik op ⚙ Camera's.</p>`; return; }
+  if (!cfg.cameras.length) { area.innerHTML = `<p class="muted">Nog geen camera's. Kies Menu → ${ic("video")} Camera's.</p>`; return; }
 
   if (view === ALL) {
     $("#presetTitle").textContent = `Presets · ${cfg.cameras.length} camera's tegelijk`;
@@ -1420,7 +1519,7 @@ function renderPresets() {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "") + (midiOnAir(c.id) ? " onair" : "");
       const ln = lastPreset[c.id];
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
-        ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij ⌨ Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}
+        ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}
         <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
@@ -1451,7 +1550,7 @@ function renderSide() {
   const t = c ? track[c.id] || {} : {};
   const b = $("#btnTrack");
   b.classList.toggle("on", !!t.on);
-  b.textContent = t.on ? `🎯 Volgen aan · ${t.status || ""}` : "🎯 Volgen (pan)";
+  b.innerHTML = ic("track") + (t.on ? ` Volgen aan · ${esc(t.status || "")}` : " Volgen (pan)");
   $("#trackInfo").textContent = cfg.tracking_error ? "Volgen niet beschikbaar: " + cfg.tracking_error
     : t.on && t.fps ? [
         ({yolo: "YOLO", yolox: "YOLOX"})[t.detector] || "OpenCV (alleen hele personen)",
@@ -1489,7 +1588,7 @@ function storedToast(msg, r, camId, n) {
 function setStore(on) {
   storeMode = on;
   $("#btnStore").classList.toggle("on", on);
-  $("#btnStore").textContent = on ? "Annuleren" : "＋ Preset opslaan";
+  $("#btnStore").innerHTML = on ? ic("x") + " Annuleren" : ic("plus") + " Preset opslaan";
   $("#storeHint").hidden = !on;
   renderPresets();
 }
@@ -1748,71 +1847,65 @@ function setPadFold(on) {
 setPadFold(store.get("padFolded") === "1");
 $("#padBar").onclick = (e) => { if (cardBtn(e)) return; setPadFold(!$("#padCard").classList.contains("collapsed")); dockLayout(); };
 /* Volledig scherm: camerabediening en Xbox-instellingen zijn vensters, net als YouTube en liederen.
-   Tonen/verbergen met C / X (localStorage wallCtrl / wallPad), ✕ sluit. 📌 = vastgezet in de balk bovenaan (dockLayout),
-   anders los/zwevend op een eigen plek (ctrlFloat / padFloat = {x, y, w}); aan de titel slepen maakt een venster los. */
-const FLOAT = { ctrlCard: "ctrlFloat", padCard: "padFloat" };
+   Tonen/verbergen met C / X (localStorage wallCtrl / wallPad), ✕ sluit. Altijd in de balk bovenaan (dockLayout), niet los te maken;
+   aan de titelbalk slepen = van plek wisselen met een ander venster (dockOrder). */
 const WSHOW = { ctrlCard: "wallCtrl", padCard: "wallPad" };
 if (store.get("wallSide") === "1" && store.get("wallCtrl") == null) { store.set("wallCtrl", "1"); store.set("wallPad", "1"); }   // oude knop Bediening
 let floatJustDragged = false;
 const isWall = () => document.body.classList.contains("wall");
-function floatGet(id) { try { const g = JSON.parse(store.get(FLOAT[id]) || "null"); return g && isFinite(g.x) && isFinite(g.y) ? g : null; } catch { return null; } }
 const cardShown = (id) => isWall() && !viewOnly() && store.get(WSHOW[id]) === "1";
 function setCardShown(id, on) { store.set(WSHOW[id], on ? "1" : "0"); dockLayout(); }
 function toggleCard(id) {   // toets C / X: op volledig scherm tonen/verbergen, anders in-/uitklappen
   if (isWall()) setCardShown(id, !cardShown(id));
   else { (id === "ctrlCard" ? setFold : setPadFold)(!document.getElementById(id).classList.contains("collapsed")); }
 }
-function floatApply(id) {
-  const card = document.getElementById(id), g = floatGet(id); if (!g) return;
-  const w = Math.max(280, Math.min(g.w || 340, 420, innerWidth - 20));
-  const x = Math.max(0, Math.min(g.x, innerWidth - w)), y = Math.max(0, Math.min(g.y, innerHeight - 40));
-  card.style.setProperty("--fx", x + "px"); card.style.setProperty("--fy", y + "px"); card.style.setProperty("--fw", w + "px");
-  card.style.removeProperty("--fh");
-}
-function cardBtn(e) {   // klik na slepen, ✕ of 📌 klapt de kaart niet in/uit
+function cardBtn(e) {   // klik na slepen of op ✕ klapt de kaart niet in/uit
   if (floatJustDragged) { floatJustDragged = false; return true; }
   const card = e.target.closest(".foldcard");
   if (e.target.closest(".wclose")) { setCardShown(card.id, false); return true; }
-  if (e.target.closest(".dock")) {
-    if (floatGet(card.id)) store.set(FLOAT[card.id], "");   // vastzetten bovenaan
-    else { const r = card.getBoundingClientRect();           // losmaken: zwevend iets onder de balk
-      store.set(FLOAT[card.id], JSON.stringify({ x: Math.round(r.left + 20), y: Math.round(r.top + 60), w: Math.round(Math.min(r.width, 420)) })); }
-    dockLayout(); return true;
-  }
   return false;
 }
-Object.keys(FLOAT).forEach(id => {
-  const card = document.getElementById(id), bar = card.querySelector(".foldbar");
+/* Van plek wisselen (volledig scherm): sleep een venster aan zijn titelbalk op een ander venster; het neemt die plek in
+   en de vensters ertussen schuiven één plek op. Volgorde per scherm in localStorage dockOrder. */
+const DOCK_ALL = ["ctrl", "pad", "yt", "song"];
+function dockOrder() {
+  let o = []; try { o = JSON.parse(store.get("dockOrder") || "[]"); } catch {}
+  o = (Array.isArray(o) ? o : []).filter((k, i, a) => DOCK_ALL.includes(k) && a.indexOf(k) === i);
+  return [...o, ...DOCK_ALL.filter(k => !o.includes(k))];
+}
+let dockEls = [];   // vensters in de balk, in volgorde (gezet door dockLayout)
+function dockMove(from, to) {   // venster "from" naar de plek van "to"; de vensters ertussen schuiven één plek op
+  const a = dockOrder(), ti = a.indexOf(to);
+  a.splice(a.indexOf(from), 1); a.splice(ti, 0, from);
+  store.set("dockOrder", JSON.stringify(a)); dockLayout();
+}
+function dockDrag(el, kind, bar) {
   bar.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || !isWall() || e.target.closest(".dock, .wclose, .wgrip")) return;
-    const r = card.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
-    let moved = false;
+    if (e.button !== 0 || !isWall() || e.target.closest("button, a, input, select")) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY;
+    let moved = false, target = null;
     const mv = (ev) => {
       const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      if (!moved && Math.hypot(dx, dy) < 5) return;
-      const first = !moved;
-      if (first) { moved = true; card.classList.add("dragging"); }
-      store.set(FLOAT[id], JSON.stringify({ x: Math.round(r.left + dx), y: Math.round(r.top + dy), w: Math.round(Math.min(r.width, 420)) }));
-      if (first) dockLayout(); else floatApply(id);
+      if (!moved && Math.hypot(dx, dy) < 6) return;
+      if (!moved) { moved = true; el.classList.add("wmove"); }
+      el.style.translate = `${dx}px ${Math.max(-10, Math.min(dy, 80))}px`;
+      const t = dockEls.find(o => { if (o.el === el) return false; const r = o.el.getBoundingClientRect(); return ev.clientX >= r.left && ev.clientX <= r.right; }) || null;
+      if (t?.el !== target?.el) { target?.el.classList.remove("wdrop"); target = t; target?.el.classList.add("wdrop"); }
     };
     const up = () => {
-      removeEventListener("pointermove", mv); removeEventListener("pointerup", up);
-      if (moved) { card.classList.remove("dragging"); floatJustDragged = true; setTimeout(() => floatJustDragged = false, 300); dockLayout(); }
+      removeEventListener("pointermove", mv); removeEventListener("pointerup", up); removeEventListener("pointercancel", up);
+      if (!moved) return;
+      el.classList.remove("wmove"); el.style.translate = "";
+      target?.el.classList.remove("wdrop");
+      floatJustDragged = true; setTimeout(() => floatJustDragged = false, 300);
+      if (target) dockMove(kind, target.kind); else dockLayout();
     };
-    addEventListener("pointermove", mv); addEventListener("pointerup", up);
+    addEventListener("pointermove", mv); addEventListener("pointerup", up); addEventListener("pointercancel", up);
   });
-});
-// schaalgreep rechtsonder (alleen zwevend), net als bij YouTube en liederen: alleen de breedte
-document.querySelectorAll(".foldcard .wgrip").forEach(grip => grip.addEventListener("pointerdown", (e) => {
-  e.preventDefault(); e.stopPropagation();
-  const card = grip.closest(".foldcard"), id = card.id, g = floatGet(id); if (!g) return;
-  const sx = e.clientX, w0 = card.getBoundingClientRect().width;
-  const mv = (ev) => { store.set(FLOAT[id], JSON.stringify({ ...g, w: Math.round(Math.max(280, Math.min(420, w0 + ev.clientX - sx))) })); floatApply(id); };
-  const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); };
-  addEventListener("pointermove", mv); addEventListener("pointerup", up);
-}));
+}
 
-/* Balk bovenaan (alleen volledig scherm): vastgezette vensters naast elkaar, bovenkant gelijk met de bovenkant van het scherm,
+/* Balk bovenaan (alleen volledig scherm): alle open vensters naast elkaar in de volgorde van dockOrder, bovenkant gelijk met de bovenkant van het scherm,
    allemaal even hoog als het hoogste (opengeklapte) venster, maar nooit zo hoog dat de camera's uit beeld raken.
    De camera's staan zo ver mogelijk onderaan; de ruimte erboven is voor de balk. Te breed → alles naar verhouding smaller. */
 function dockLayout() {
@@ -1820,22 +1913,20 @@ function dockLayout() {
     const wall = isWall();
     const cards = ["ctrlCard", "padCard"].map(id => document.getElementById(id));
     for (const c of cards) {
-      const shown = cardShown(c.id), docked = shown && !floatGet(c.id), pin = c.querySelector(".dock");
+      const shown = cardShown(c.id), docked = shown;
       c.classList.toggle("whide", wall && !shown);
       c.classList.toggle("docked", wall && docked);
-      pin.classList.toggle("on", docked); pin.title = docked ? "Losmaken (zwevend venster)" : "Vastzetten bovenaan";
       const body = c.querySelector(".foldbody");
       if (!wall || !docked) { if (body.style.zoom) body.style.zoom = ""; c.style.removeProperty("--fh"); }
       if (!wall) ["--fx", "--fy", "--fw"].forEach(v => c.style.removeProperty(v));
-      else if (shown && !docked) floatApply(c.id);
     }
-    const ytPinned = ytGeom().auto && ytOpt.wallTop, songPinned = store.get("songDock") !== "0";
-    $("#ytPin").classList.toggle("on", ytPinned); $("#ytPin").title = ytPinned ? "Losmaken (zwevend venster)" : "Vastzetten bovenaan";
-    $("#songPin").classList.toggle("on", songPinned); $("#songPin").title = songPinned ? "Losmaken (zwevend venster)" : "Vastzetten bovenaan";
+    dockEls = [];
     if (!wall) { ytReserveTop(0); return; }
-    const items = cards.filter(c => c.classList.contains("docked")).map(el => ({ el, kind: "card" }));
-    if (!ytWin.hidden && ytPinned) items.push({ el: ytWin, kind: "yt" });
-    if (!songWin.hidden && songPinned) items.push({ el: songWin, kind: "song" });
+    const avail0 = { ctrl: cards[0].classList.contains("docked") && { el: cards[0], kind: "card" },
+      pad: cards[1].classList.contains("docked") && { el: cards[1], kind: "card" },
+      yt: !ytWin.hidden && { el: ytWin, kind: "yt" }, song: !songWin.hidden && { el: songWin, kind: "song" } };
+    const order = dockOrder().filter(k => avail0[k]), items = order.map(k => avail0[k]);
+    dockEls = items.map((it, i) => ({ el: it.el, kind: order[i] }));
     if (!items.length) { ytReserveTop(0); return; }
     const tilesH = $("#presetCard").getBoundingClientRect().height;
     const topMax = Math.max(160, Math.floor(innerHeight - tilesH - 30));
@@ -1928,7 +2019,7 @@ function camRow(c) {
     <input type="text" data-f="user" value="${esc(c.user || "")}" placeholder="optioneel" autocomplete="off">
     <input type="password" data-f="password" value="" placeholder="${c.password_set ? "•••••• (opgeslagen)" : "optioneel"}" autocomplete="new-password"
       title="${c.password_set ? "Leeg laten = opgeslagen wachtwoord houden. Gebruiker leegmaken = wachtwoord weg." : ""}">
-    <button class="icon" title="Verwijderen">✕</button>`;
+    <button class="icon" title="Verwijderen" aria-label="Verwijderen">${ic("x")}</button>`;
   const d2 = document.createElement("div"); d2.className = "camrow2";
   d2.innerHTML = `
     <label>Volg-stream <input type="text" data-f="stream_url" value="${esc(c.stream_url || "")}"
@@ -2008,7 +2099,7 @@ function trackBtnHtml(camId) {
   if (cfg.tracking_error) return "";
   const warn = t.on && /fout|geen beeld|kan stream|onderbroken/i.test(t.status || "");
   const cls = !t.on ? "" : warn ? "warn" : /^volgt/.test(t.status || "") ? "on" : "wait";
-  return `<span class="trk ${cls}" title="Persoon volgen (alleen pan)">🎯 ${t.on ? esc(t.status || "aan") : "volgen"}</span>`;
+  return `<span class="trk ${cls}" title="Persoon volgen (alleen pan)">${ic("track")} ${t.on ? esc(t.status || "aan") : "volgen"}</span>`;
 }
 async function toggleTrack(camId) {
   const r = await post("/api/track", { cam: camId, on: "toggle" });
@@ -2016,8 +2107,8 @@ async function toggleTrack(camId) {
 }
 $("#btnTrack").onclick = () => ctrlCam && toggleTrack(ctrlCam);
 
-/* ---- 🎯 Volgen instellen: kader {l, r, x} (deel van de beeldbreedte) en een persoon aanklikken.
-   Eén beeld per klik op 📷 (van de lopende tracker, anders /snapshot.jpg): bewust geen live preview. */
+/* ---- Volgen instellen: kader {l, r, x} (deel van de beeldbreedte) en een persoon aanklikken.
+   Eén beeld per klik op Nieuw beeld (van de lopende tracker, anders /snapshot.jpg): bewust geen live preview. */
 const TRK_DEFAULT = { l: 0.3, r: 0.7, x: 0.5 };
 let trkCamId = null, trkLookData = null, trkDrag = null, trkDirty = false;   // dirty = gewijzigd, nog niet opgeslagen
 const trkFrame = (c) => ({ ...TRK_DEFAULT, ...((c || camById(trkCamId))?.track_frame || {}) });
@@ -2031,7 +2122,7 @@ function trkRender() {
   const t = track[trkCamId] || {};
   $("#trkState").textContent = t.on ? `● ${t.status || "aan"}` : "Volgen uit";
   $("#trkState").classList.toggle("on", !!t.on && /volgt/.test(t.status || ""));
-  $("#trkToggle").textContent = t.on ? "■ Volgen uit" : "🎯 Volgen aan";
+  $("#trkToggle").innerHTML = t.on ? ic("stop") + " Volgen uit" : ic("track") + " Volgen aan";
   $("#trkAuto").disabled = !t.on || !t.picked;
   const pct = v => (v * 100).toFixed(2) + "%";
   if (!trkDrag && !trkDirty) trkF = trkFrame();
@@ -2042,8 +2133,8 @@ function trkRender() {
   const d = trkLookData, n = d?.people?.length || 0;
   $("#trkBoxes").innerHTML = (d?.people || []).map(p => `<button class="pbox${p.target ? " target" : ""}" data-i="${p.i}"
       style="left:${pct(p.cx - p.w / 2)};top:${pct(p.cy - p.h / 2)};width:${pct(p.w)};height:${pct(p.h)}"
-      aria-label="Persoon ${p.i + 1} volgen"><span>${p.target ? "✓ volgt" : "Volg " + (p.i + 1)}</span></button>`).join("");
-  $("#trkHelp").innerHTML = !d ? (t.on ? "Volgen staat aan. Klik op 📷 Nieuw beeld om te zien wie er gevolgd wordt." : "")
+      aria-label="Persoon ${p.i + 1} volgen"><span>${p.target ? ic("check") + " volgt" : "Volg " + (p.i + 1)}</span></button>`).join("");
+  $("#trkHelp").innerHTML = !d ? (t.on ? "Volgen staat aan. Klik op <b>Nieuw beeld</b> om te zien wie er gevolgd wordt." : "")
     : (n ? `${n} ${n === 1 ? "persoon" : "personen"} gevonden${d.source === "volgbeeld" ? " (beeld van de tracker)" : ""}. Klik op een kader om die persoon te volgen.`
          : "Geen personen gevonden. Zet de camera op het podium en probeer opnieuw.")
     + (t.on && t.picked ? " · Houdt één gekozen persoon vast." : t.on ? " · Volgt automatisch de grootste persoon." : "");
@@ -2067,7 +2158,7 @@ function trkLimRender() {
     if (Number.isInteger(trkLim.pan)) h += `<span class="limnow" style="left:${pos(trkLim.pan)}" title="Camera staat nu hier"></span>`;
     bar.innerHTML = h;
   }
-  $("#trkLimHelp").innerHTML = trkLim.pan_error ? `<span style="color:var(--warn)">⚠ ${esc(trkLim.pan_error)}. Grenzen werken alleen als de camera zijn positie via VISCA doorgeeft.</span>`
+  $("#trkLimHelp").innerHTML = trkLim.pan_error ? `<span style="color:var(--warn)">${ic("alert")} ${esc(trkLim.pan_error)}. Grenzen werken alleen als de camera zijn positie via VISCA doorgeeft.</span>`
     : both ? "Beide grenzen ingesteld: volgen draait niet verder dan het groene stuk (blauw streepje = camera nu)."
     : has("left") || has("right") ? `Stel ook de grens ${has("left") ? "rechts" : "links"} in: pas met beide grenzen werkt het.`
     : "Geen grenzen: volgen mag overal heen draaien.";
@@ -2126,7 +2217,7 @@ function trkOpen(camId) {
   trkCamId = camId || ctrlCam || cfg.cameras[0]?.id || null;
   trkLookData = null; trkLim = { limits: trkCamLimits(), pan: null, pan_error: "" };
   $("#trkImg").hidden = true; $("#trkImg").removeAttribute("src");
-  $("#trkEmpty").hidden = false; $("#trkEmpty").textContent = "Klik op 📷 Nieuw beeld om personen te zoeken.";
+  $("#trkEmpty").hidden = false; $("#trkEmpty").textContent = "Klik op <b>Nieuw beeld</b> om personen te zoeken.";
   $("#dlgTrack").showModal(); trkRender(); trkLook();
 }
 $("#btnTrackSet").onclick = () => trkOpen(ctrlCam);
@@ -2567,7 +2658,7 @@ function renderCap() {
     const cap = st?.capacity || c.preset_capacity;
     const cls = !st ? "" : st.status === "fout" ? "err" : st.status === "bezig" || st.status === "wachten" ? "busy" : st.errors?.length ? "warn" : "ok";
     const detail = cap?.tested ? `<div class="small" style="margin-top:3px">${cap.tested.map(t =>
-      `<span title="${esc(t.note || "")}" style="color:${t.ok ? "var(--oktxt)" : "var(--live)"}">${t.n}${t.ok ? "✓" : "✗"}</span>`).join(" ")}</div>` : "";
+      `<span title="${esc(t.note || "")}" style="color:${t.ok ? "var(--oktxt)" : "var(--live)"}">${t.n} ${ic(t.ok ? "check" : "x", "sm")}</span>`).join(" ")}</div>` : "";
     const summary = cap ? `<b>${cap.max ? `max. preset ${cap.max}` : "geen werkende preset"}</b> · ${cap.total} bruikbaar` +
       (cap._tested ? ` <span class="small">(${fmtDate(cap._tested)})</span>` : "") +
       (cap.gaps?.length ? `<div class="small" style="color:var(--warn)">Let op: lager nummer werkte niet: ${cap.gaps.join(", ")}</div>` : "") : "";
@@ -2602,7 +2693,7 @@ function osdRender() {
   $$("#osdPad button, #osdBack").forEach(b => b.disabled = !open);
   const live = c && midiOnAir(c.id);
   $("#osdLive").hidden = !live;
-  if (live) $("#osdLive").innerHTML = `⚠ <b>${esc(c.name)}</b> staat nu <b>IN BEELD</b> op de videomixer: het menu komt in de livestream.`;
+  if (live) $("#osdLive").innerHTML = `${ic("alert")} <b>${esc(c.name)}</b> staat nu <b>IN BEELD</b> op de videomixer: het menu komt in de livestream.`;
 }
 async function osdKey(k) {
   if (!osdCamId) return;
@@ -2610,7 +2701,6 @@ async function osdKey(k) {
   const b = $(`#osdPad [data-k="${k}"]`) || (k === "back" ? $("#osdBack") : null);
   if (b) { b.classList.add("hit"); setTimeout(() => b.classList.remove("hit"), 150); }
   const j = await cmd("osd", { key: k }, osdCamId);
-  if (j?.ok && k !== "close" && !$("#osdImg").hidden) setTimeout(osdSnap, 400);
   return j;
 }
 async function osdToggle() {
@@ -2621,26 +2711,17 @@ async function osdToggle() {
   const j = await osdKey("open");
   if (j?.ok) { osdOpen[c.id] = true; osdRender(); }
 }
-async function osdSnap() {
-  if (!osdCamId) return;
-  const img = $("#osdImg");
-  img.hidden = false;
-  img.src = `/api/snapshot?cam=${encodeURIComponent(osdCamId)}&t=${Date.now()}`;
-}
-$("#osdImg").onerror = () => { $("#osdImg").hidden = true; toast("Geen beeld van de camera"); };
 async function osdCloseCam(id) { if (id && osdOpen[id]) await cmd("osd", { key: "close" }, id); }
 $("#btnOsd").onclick = () => {
   osdCamId = ctrlCam || cfg.cameras[0]?.id || null;
-  $("#osdImg").hidden = true; $("#osdImg").removeAttribute("src");
   osdRender(); $("#dlgOsd").showModal(); $("#osdToggle").focus();
 };
 $("#osdCam").onchange = async (e) => {
   const prev = osdCamId;
   await osdCloseCam(prev);                    // nooit twee menu's tegelijk open laten staan
-  osdCamId = e.target.value; $("#osdImg").hidden = true; osdRender();
+  osdCamId = e.target.value; osdRender();
 };
 $("#osdToggle").onclick = osdToggle;
-$("#osdSnap").onclick = osdSnap;
 $$("#osdPad button, #osdBack").forEach(b => b.onclick = () => osdKey(b.dataset.k));
 $("#osdDone").onclick = () => $("#dlgOsd").close();
 $("#dlgOsd").addEventListener("close", () => { osdCloseCam(osdCamId); });   // ook bij Esc: menu op de camera dicht
@@ -2680,7 +2761,7 @@ function applyTheme() {
   const p = themePref();
   const t = p === "auto" ? (themeMq.matches ? "light" : "dark") : p;
   document.documentElement.dataset.theme = t;
-  $("#btnTheme").textContent = t === "light" ? "🌙 Donkere modus" : "☀ Lichte modus";
+  $("#btnTheme").innerHTML = t === "light" ? ic("moon") + " Donkere modus" : ic("sun") + " Lichte modus";
 }
 function setTheme(p) { store.set("theme", p); applyTheme(); }
 themeMq.addEventListener?.("change", applyTheme);
@@ -2693,7 +2774,6 @@ const ytWin = $("#ytWin");
 const ytOpt = {
   get auto() { return store.get("ytAuto") !== "0"; },
   get sound() { return store.get("ytSound") === "1"; },
-  get wallTop() { return store.get("ytWallTop") !== "0"; },   // volledig scherm: vastgezet in de balk bovenaan (standaard aan)
 };
 let ytShownVid = null;      // video in de iframe
 let ytUserClosed = false;   // zelf gesloten tijdens deze livestream: niet steeds opnieuw openen
@@ -2738,8 +2818,8 @@ function ytPlace(g = ytGeom()) {
   let { x, y, w } = g;
   ytWin.classList.toggle("auto", g.auto);
   const wall = document.body.classList.contains("wall");
-  if (g.auto && wall && ytOpt.wallTop && !ytWin.hidden) {
-    // vastgezet bovenaan: plek en maat bepaalt de balk (dockLayout), samen met de andere vastgezette vensters
+  if (wall && !ytWin.hidden) {
+    // volledig scherm: plek en maat bepaalt de balk bovenaan (dockLayout), samen met de andere vensters
     $("#ytAutoBtn").hidden = true;
     dockLayout();
     return;
@@ -2824,10 +2904,10 @@ function ytRender() {
     const start = yt.start ? new Date(yt.start) : null;
     const when = start && !isNaN(start) ? start.toLocaleString("nl-NL", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "";
     msg.innerHTML = !yt.channel
-      ? `<div>Nog geen YouTube-kanaal ingesteld.</div><button class="icon" data-act="prefs">⚙ Kanaal instellen</button>`
+      ? `<div>Nog geen YouTube-kanaal ingesteld.</div><button class="icon" data-act="prefs">${ic("settings")} Kanaal instellen</button>`
       : `<div>${yt.upcoming ? "Livestream gepland" + (when ? " · " + esc(when) : "") : "Het kanaal is nu niet live."}</div>`
         + `<div class="small">${yt.error ? esc(yt.error) : yt.checked ? "Laatst gecontroleerd " + esc(yt.checked) : "Bezig met controleren…"}</div>`
-        + `<button class="icon" data-act="check">⟳ Nu controleren</button>`;
+        + `<button class="icon" data-act="check">${ic("refresh")} Nu controleren</button>`;
   }
 }
 function ytShow(on) {
@@ -2853,24 +2933,23 @@ function ytToggle() {
 }
 /* ---- keuzemenu onder de YouTube/LIVE-knop ---- */
 function ytMenuRender() {
-  const g = ytGeom(), chk = (on) => `<span class="chk">${on ? "✓" : ""}</span>`;
+  const g = ytGeom(), chk = (on) => `<span class="chk">${on ? ic("check") : ""}</span>`;
   const stat = !yt.channel ? "Nog geen kanaal ingesteld"
     : yt.live ? `<b>● LIVE</b> · ${esc(yt.title || "")}`
     : yt.upcoming ? `Gepland · ${esc(yt.title || "")}`
     : yt.error ? esc(yt.error) : "Niet live" + (yt.checked ? " · gecontroleerd " + esc(yt.checked) : "");
   $("#ytMenu").innerHTML = `
     <div class="ystat" title="${esc(yt.channel || "")}">${stat}</div>
-    <button class="mi" data-y="toggle" role="menuitem">${ytWin.hidden ? "📺 Venster tonen" : "📺 Venster verbergen"} <kbd>${esc(keyLabel(keyOf("youtube")))}</kbd></button>
-    <button class="mi" data-y="auto" role="menuitem" title="Zelf een vrije plek naast of onder de tegels zoeken">⌖ Automatisch plaatsen ${chk(g.auto)}</button>
-    <div class="ysize"><span class="lbl">↔ Grootte</span>${[["260", "Klein"], ["360", "Middel"], ["520", "Groot"]]
+    <button class="mi" data-y="toggle" role="menuitem">${ic("tv")} ${ytWin.hidden ? "Venster tonen" : "Venster verbergen"} <kbd>${esc(keyLabel(keyOf("youtube")))}</kbd></button>
+    <button class="mi" data-y="auto" role="menuitem" title="Zelf een vrije plek naast of onder de tegels zoeken">${ic("locate")} Automatisch plaatsen ${chk(g.auto)}</button>
+    <div class="ysize"><span class="lbl">${ic("width")} Grootte</span>${[["260", "Klein"], ["360", "Middel"], ["520", "Groot"]]
       .map(([w, t]) => `<button data-w="${w}" class="${Math.abs(g.w - w) < 2 ? "on" : ""}">${t}</button>`).join("")}</div>
-    <button class="mi" data-y="walltop" role="menuitem" title="Bij volledig scherm staat het venster vastgezet in de balk bovenaan; de camera's staan eronder">📌 Vastgezet bovenaan bij volledig scherm ${chk(ytOpt.wallTop)}</button>
-    <button class="mi" data-y="sound" role="menuitem">🔊 Met geluid starten ${chk(ytOpt.sound)}</button>
-    <button class="mi" data-y="autoopen" role="menuitem">⚡ Automatisch openen bij live ${chk(ytOpt.auto)}</button>
+    <button class="mi" data-y="sound" role="menuitem">${ic("volume")} Met geluid starten ${chk(ytOpt.sound)}</button>
+    <button class="mi" data-y="autoopen" role="menuitem">${ic("zap")} Automatisch openen bij live ${chk(ytOpt.auto)}</button>
     <div class="msep"></div>
-    <button class="mi" data-y="check" role="menuitem" ${yt.channel ? "" : "disabled"}>⟳ Nu controleren</button>
-    <button class="mi" data-y="open" role="menuitem" ${yt.channel ? "" : "disabled"}>↗ Openen op YouTube</button>
-    <button class="mi" data-y="prefs" role="menuitem">⚙ Kanaal instellen…</button>`;
+    <button class="mi" data-y="check" role="menuitem" ${yt.channel ? "" : "disabled"}>${ic("refresh")} Nu controleren</button>
+    <button class="mi" data-y="open" role="menuitem" ${yt.channel ? "" : "disabled"}>${ic("external")} Openen op YouTube</button>
+    <button class="mi" data-y="prefs" role="menuitem">${ic("settings")} Kanaal instellen…</button>`;
 }
 function ytMenuOpen(open) {
   if (open) { setMenu(false); ytMenuRender(); }
@@ -2889,7 +2968,6 @@ $("#ytMenu").addEventListener("click", (e) => {
   }
   const a = e.target.closest("button[data-y]:not([disabled])")?.dataset.y; if (!a) return;
   if (a === "auto") { const g = ytGeomRaw(); store.set("ytGeom", JSON.stringify(g.auto === false ? { w: ytGeom().w } : { ...g, ...(() => { const r = ytWin.getBoundingClientRect(); return ytWin.hidden ? {} : { x: Math.round(r.left), y: Math.round(r.top) }; })(), auto: false })); if (!ytWin.hidden) ytPlace(); return ytMenuRender(); }
-  if (a === "walltop") { ytSetWallTop(!ytOpt.wallTop); return ytMenuRender(); }
   if (a === "sound") { store.set("ytSound", ytOpt.sound ? "0" : "1"); ytShownVid = "_"; ytRender(); return ytMenuRender(); }
   if (a === "autoopen") { store.set("ytAuto", ytOpt.auto ? "0" : "1"); return ytMenuRender(); }
   ytMenuOpen(false);
@@ -2917,7 +2995,7 @@ function ytChannelUrl(c) {
 // slepen (titelbalk) en schalen (hoekje), houdt 16:9
 function ytDrag(el, onMove) {
   el.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || e.target.closest("button")) return;
+    if (e.button !== 0 || e.target.closest("button") || isWall()) return;   // volledig scherm: dockDrag
     e.preventDefault();
     const r = ytWin.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
     ytWin.classList.add("dragging"); el.setPointerCapture(e.pointerId);
@@ -2960,16 +3038,10 @@ $("#btnQuit").onclick = async () => {
   ytShow(false);
   const d = document.createElement("div");
   d.style.cssText = "position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);font:16px system-ui;color:var(--muted);text-align:center";
-  d.innerHTML = '<div><div style="font-size:42px">⏻</div><p>PTZ Control is afgesloten.</p><p>Start de app opnieuw om verder te gaan.</p></div>';
+  d.innerHTML = '<div>' + ic("power", "xl") + '<p>PTZ Control is afgesloten.</p><p>Start de app opnieuw om verder te gaan.</p></div>';
   document.body.appendChild(d);
 };
 $("#prefsCancel").onclick = () => $("#dlgPrefs").close();
-// aanzetten = ook automatisch plaatsen weer aan (anders blijft een versleept venster op zijn plek staan)
-function ytSetWallTop(on) {
-  store.set("ytWallTop", on ? "1" : "0");
-  if (on && ytGeomRaw().auto === false) store.set("ytGeom", JSON.stringify({ w: ytGeom().w }));
-  if (!ytWin.hidden) ytPlace();
-}
 $("#prefsSave").onclick = async () => {
   const chan = $("#ytChannel").value.trim();
   if (chan !== ((cfg.youtube || {}).channel || "")) {
@@ -3008,9 +3080,9 @@ async function wsPost(body) {
 }
 function wsMenuRender() {
   $("#wsMenu").innerHTML = wsData.list.map(w => `<button class="mi" data-ws="${esc(w.id)}" role="menuitem">
-      ${esc(w.name)} <span class="chk">${w.id === wsData.active ? "✓" : ""}</span></button>`).join("")
-    + `<div class="msep"></div><button class="mi" data-wsact="new" role="menuitem">＋ Nieuwe workspace…</button>
-       <button class="mi" data-wsact="manage" role="menuitem">⚙ Workspaces beheren…</button>`;
+      ${esc(w.name)} <span class="chk">${w.id === wsData.active ? ic("check") : ""}</span></button>`).join("")
+    + `<div class="msep"></div><button class="mi" data-wsact="new" role="menuitem">${ic("plus")} Nieuwe workspace…</button>
+       <button class="mi" data-wsact="manage" role="menuitem">${ic("settings")} Workspaces beheren…</button>`;
 }
 function wsMenuOpen(open) {
   if (open) { setMenu(false); ytMenuOpen?.(false); wsMenuRender(); }
@@ -3038,8 +3110,8 @@ function wsDlgRender() {
     + wsData.list.map(w => `<option value="${esc(w.id)}">Kopie van ${esc(w.name)}</option>`).join("");
   $("#wsList").innerHTML = wsData.list.map(w => `<div class="wsrow" data-id="${esc(w.id)}">
       <input type="text" value="${esc(w.name)}" maxlength="60" title="Naam wijzigen (Enter)">
-      ${w.id === wsData.active ? '<span class="small" style="color:var(--ok)">✓ actief</span>' : `<button class="icon" data-a="open">Openen</button>`}
-      ${w.id === "standaard" || w.id === wsData.active ? "<span></span>" : `<button class="icon danger" data-a="del" title="Workspace en al zijn instellingen verwijderen">🗑</button>`}
+      ${w.id === wsData.active ? `<span class="small" style="color:var(--ok)">${ic("check")} actief</span>` : `<button class="icon" data-a="open">Openen</button>`}
+      ${w.id === "standaard" || w.id === wsData.active ? "<span></span>" : `<button class="icon danger" data-a="del" title="Workspace en al zijn instellingen verwijderen" aria-label="Verwijderen">${ic("trash")}</button>`}
     </div>`).join("");
 }
 function wsDlgOpen(focusNew) { wsDlgRender(); $("#dlgWs").showModal(); if (focusNew) $("#wsNewName").focus(); }
@@ -3251,13 +3323,13 @@ function accessApply() {
   const b = $("#btnLock");
   b.hidden = !access.pin_set;
   b.classList.toggle("locked", viewOnly());
-  b.textContent = viewOnly() ? "🔒 Alleen kijken" : access.local ? "🔓" : "🔓 Ontgrendeld";
+  b.innerHTML = viewOnly() ? ic("lock") + " Alleen kijken" : access.local ? ic("unlock") : ic("unlock") + " Ontgrendeld";
   b.title = viewOnly() ? "Pincode invoeren om te bedienen" : access.local ? "Deze computer heeft geen pincode nodig" : "Ontgrendeld; klik voor toegang";
   if ($("#dlgAccess").open) accessRender();
 }
 function pinPrompt() {
   if ($("#dlgPin").open || Date.now() - pinT < 1500) return;
-  if ($$("dialog").some(d => d.open)) return toast("Alleen kijken: voer eerst de pincode in (🔒 rechtsboven)");
+  if ($$("dialog").some(d => d.open)) return toast("Alleen kijken: voer eerst de pincode in (slotje rechtsboven)");
   $("#pinInput").value = ""; $("#pinErr").textContent = "";
   $("#dlgPin").showModal(); setTimeout(() => $("#pinInput").focus(), 50);
 }
@@ -3272,7 +3344,7 @@ $("#pinInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#p
 $("#viewUnlock").onclick = (e) => { e.preventDefault(); pinPrompt(); };
 $("#btnLock").onclick = () => viewOnly() ? pinPrompt() : $("#btnAccess").click();
 function accessRender() {
-  $("#acStatus").textContent = access.pin_set ? "🔒 Pincode staat aan" : "Geen pincode: iedereen op het netwerk kan bedienen";
+  $("#acStatus").innerHTML = access.pin_set ? ic("lock") + " Pincode staat aan" : "Geen pincode: iedereen op het netwerk kan bedienen";
   $("#acRemove").hidden = !access.pin_set;
   $("#acLock").hidden = !access.pin_set || access.local;
   $("#acLogoutAll").hidden = !access.pin_set;
@@ -3318,7 +3390,7 @@ function alertList() {
 function alertCheck() {
   const bar = $("#alertBar");
   if (alertDemo) {   // voorbeeld in de rondleiding
-    $("#alertText").textContent = "⚠ " + camLabel((cfg.cameras || [])[0]?.name || "1") + " niet bereikbaar (voorbeeld)";
+    $("#alertText").innerHTML = ic("alert") + " " + esc(camLabel((cfg.cameras || [])[0]?.name || "1")) + " niet bereikbaar (voorbeeld)";
     bar.classList.remove("ok"); bar.classList.add("show"); return;
   }
   const cur = alertList();
@@ -3329,11 +3401,11 @@ function alertCheck() {
   if (cur.size) {
     clearTimeout(alertOkT);
     bar.classList.remove("ok");
-    $("#alertText").textContent = "⚠ " + [...cur.values()].join(" · ");
+    $("#alertText").innerHTML = ic("alert") + " " + esc([...cur.values()].join(" · "));
     bar.classList.toggle("show", [...cur.keys()].some(k => !alertHidden.has(k)));   // verborgen tot er een nieuwe fout bij komt
     if (added) { bar.classList.remove("new"); void bar.offsetWidth; bar.classList.add("new"); }
   } else if (fixed.length && bar.classList.contains("show")) {
-    $("#alertText").textContent = "✓ Alles weer in orde";
+    $("#alertText").innerHTML = ic("check") + " Alles weer in orde";
     bar.classList.add("ok"); clearTimeout(alertOkT);
     alertOkT = setTimeout(() => bar.classList.remove("show", "ok"), 4000);
   } else if (!fixed.length && !bar.classList.contains("ok")) bar.classList.remove("show");
@@ -3352,7 +3424,7 @@ $("#alertLog").onclick = () => $("#btnLog").click();
 setInterval(alertCheck, 2000);
 
 /* ---- 🚧 Oefenstand: alle schermen naar een kopie met nagebootste camera's ---- */
-if (PRACTICE) { document.body.classList.add("practice"); $("#practiceBar").classList.add("show"); $("#btnPractice").textContent = "⏹ Oefenstand stoppen"; }
+if (PRACTICE) { document.body.classList.add("practice"); $("#practiceBar").classList.add("show"); $("#btnPractice").innerHTML = ic("stop") + " Oefenstand stoppen"; }
 async function practiceSet(on) {
   if (viewOnly()) return pinPrompt();
   if (on && !confirm("Oefenstand starten?\n\n• Op ALLE schermen gaat PTZ Control naar de oefenstand.\n• De camera's in de kerk bewegen niet; je bedient nagebootste camera's met dezelfde presets.\n• De videomixer wordt losgekoppeld.\n• Wat je verandert (presets, namen) wordt niet bewaard.\n\nNiet doen tijdens een dienst.")) return;
@@ -3398,7 +3470,7 @@ function logRender() {
     if (d !== day) { day = d; html += `<tr class="day"><td colspan="4">${esc(d)}</td></tr>`; }
     const extra = (e.n || 1) > 1 ? `<span class="lx">×${e.n}, laatst ${logTime(e.last)}</span>` : "";
     html += `<tr class="${esc(e.kind)}"><td class="lt">${logTime(e.t)}</td><td class="lw" title="${esc(e.who || "")}">${esc(e.who || "")}</td>
-      <td class="lc">${esc(e.cam || "")}</td><td class="lm">${e.kind === "fout" ? "⚠ " : ""}${esc(e.msg)}${extra}</td></tr>`;
+      <td class="lc">${esc(e.cam || "")}</td><td class="lm">${e.kind === "fout" ? ic("alert", "warn") + " " : ""}${esc(e.msg)}${extra}</td></tr>`;
   }
   $("#logTable").innerHTML = html || `<tr><td class="muted">${logEntries.size ? "Niets gevonden met deze filters." : "Nog niets gelogd."}</td></tr>`;
 }
@@ -3438,7 +3510,7 @@ const fmtSize = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max
 async function abkLoad() {
   const j = await (await fetch("/api/autobackup")).json();
   $("#abkTable").innerHTML = (j.list || []).map(a => `<tr><td>${esc(a.created)}</td><td>${esc(a.reason)}</td><td>${fmtSize(a.size)}</td>
-    <td><button class="icon" data-r="${esc(a.name)}">Terugzetten…</button> <a class="icon" href="/api/autobackup/file?name=${encodeURIComponent(a.name)}&download=1" style="text-decoration:none" title="Downloaden">⬇</a></td></tr>`).join("")
+    <td><button class="icon" data-r="${esc(a.name)}">Terugzetten…</button> <a class="icon" href="/api/autobackup/file?name=${encodeURIComponent(a.name)}&download=1" style="text-decoration:none" title="Downloaden" aria-label="Downloaden">${ic("download")}</a></td></tr>`).join("")
     || '<tr><td class="muted">Nog geen automatische back-ups (de eerste komt binnen een minuut na het starten).</td></tr>';
   $$("#abkTable [data-r]").forEach(b => b.onclick = async () => {
     const r = await fetch("/api/autobackup/file?name=" + encodeURIComponent(b.dataset.r));
@@ -3462,7 +3534,7 @@ const isTablet = () => tabletMode() === "on" || (tabletMode() === "auto" && tabl
 function tabletApply() {
   const on = isTablet();
   document.body.classList.toggle("tablet", on);
-  $("#btnTablet").textContent = "📱 Tabletweergave: " + { auto: `automatisch (${on ? "aan" : "uit"})`, on: "aan", off: "uit" }[tabletMode()];
+  $("#btnTablet").innerHTML = ic("tablet") + " Tabletweergave: " + { auto: `automatisch (${on ? "aan" : "uit"})`, on: "aan", off: "uit" }[tabletMode()];
   if (on && view === ALL && ctrlCam) view = ctrlCam;     // op een tablet één camera tegelijk, met grote tegels
   renderTabBar();
 }
@@ -3492,7 +3564,7 @@ function wzRow(c = {}) {
   d.innerHTML = `<input type="text" data-f="name" placeholder="Naam" value="${esc(c.name || "")}">
     <input type="text" data-f="host" placeholder="192.168.100.88" value="${esc(c.host || "")}">
     <select data-f="protocol"><option value="http">HTTP-CGI</option><option value="visca" ${c.protocol === "visca" ? "selected" : ""}>VISCA (TCP)</option></select>
-    <button class="icon" data-a="test">Testen</button><span class="wzres"></span><button class="icon" data-a="del" title="Verwijderen">✕</button>`;
+    <button class="icon" data-a="test">Testen</button><span class="wzres"></span><button class="icon" data-a="del" title="Verwijderen" aria-label="Verwijderen">${ic("x")}</button>`;
   d.dataset.id = c.id || "";
   d.querySelector("[data-a=del]").onclick = () => d.remove();
   d.querySelector("[data-a=test]").onclick = async () => {
@@ -3502,7 +3574,7 @@ function wzRow(c = {}) {
     if (!r?.ok) { res.className = "wzres err"; res.textContent = r?.error || "mislukt"; return; }
     const ok = r.snapshot || r.visca;
     res.className = "wzres " + (ok ? "ok" : "err");
-    res.textContent = r.snapshot ? "✓ beeld ontvangen" : r.visca ? "✓ bereikbaar (VISCA), geen beeld" : r.http ? "✗ geen beeld: " + r.error : "✗ niet bereikbaar";
+    res.innerHTML = r.snapshot ? ic("check") + " beeld ontvangen" : r.visca ? ic("check") + " bereikbaar (VISCA), geen beeld" : r.http ? ic("x") + " geen beeld: " + esc(r.error) : ic("x") + " niet bereikbaar";
   };
   return d;
 }
@@ -3616,7 +3688,7 @@ function midiRender() {
   if (document.activeElement !== $("#midiPort")) $("#midiPort").value = midiCfg.port;
   if (document.activeElement !== $("#midiDev")) $("#midiDev").value = midiCfg.dev;
   $("#midiPorts").textContent = midi.ports?.length ? "Gevonden MIDI-poorten: " + midi.ports.join(", ") : "Geen MIDI-poorten gevonden.";
-  $("#midiRec").textContent = midi.recording ? "■ Verkenning stoppen" : "▶ Verkenning starten";
+  $("#midiRec").innerHTML = midi.recording ? ic("stop") + " Verkenning stoppen" : ic("play") + " Verkenning starten";
   $("#midiRecInfo").textContent = midi.recording ? "Bezig: druk nu op de knoppen van de mixer." : "";
 }
 async function midiPollLog() {
@@ -3668,7 +3740,7 @@ function updRender() {
   box.hidden = !show; box.classList.toggle("preview", updPreview);
   $("#btnUpd").title = `Kijken of er een nieuwe versie van PTZ Control is${upd.current ? " (nu " + upd.current + ")" : ""}`;
   if (!show) return;
-  $("#updTitle").textContent = u.installing ? "⏳ Bijwerken…" : "⬆ Nieuwe versie beschikbaar";
+  $("#updTitle").innerHTML = u.installing ? ic("loader", "spin") + " Bijwerken…" : ic("circle-up") + " Nieuwe versie beschikbaar";
   $("#updInfo").textContent = u.installing
     ? (u.mode !== "git" && u.progress != null && u.progress < 100 ? `Nieuwe versie downloaden… ${u.progress}%`
       : "PTZ Control start zo opnieuw; deze pagina ververst vanzelf (ca. 10–30 seconden).")
@@ -3819,13 +3891,13 @@ function songWinRender() {
   $("#songWinList").innerHTML = cur ? cur.items.map(it => it.header ? `<li class="hdr">${esc(it.name)}</li>`
     : `<li class="${it.n - 1 === i ? "now" : ""}"><span class="sn">${it.n}</span>${esc(it.name)}</li>`).join("") : "";
   $("#songWinSrc").textContent = keys.length ? (cur.label.startsWith("ProPresenter") && songs.pp?.checked ? "bijgewerkt " + songs.pp.checked
-    : songs.voordienst?.checked ? "bijgewerkt " + songs.voordienst.checked : "") : "Instellen via ⚙";
+    : songs.voordienst?.checked ? "bijgewerkt " + songs.voordienst.checked : "") : "Instellen via het tandwiel";
   const nowEl = $("#songWinList li.now");
   if (nowEl && nowEl.dataset.k !== String(i)) { nowEl.dataset.k = String(i); nowEl.scrollIntoView({ block: "center" }); }
 }
 function songGeom() { try { return JSON.parse(store.get("songGeom") || "{}"); } catch { return {}; } }
 function songPlace() {
-  if (isWall() && store.get("songDock") !== "0") { dockLayout(); return; }   // vastgezet bovenaan
+  if (isWall()) { dockLayout(); return; }   // volledig scherm: in de balk bovenaan
   const g = songGeom();
   if (g.w) songWin.style.width = Math.min(g.w, innerWidth - 8) + "px";
   if (g.h) songWin.style.height = Math.min(g.h, innerHeight - 8) + "px";
@@ -3847,7 +3919,7 @@ function songWinToggle() {
 }
 function songDrag(el, onMove) {
   el.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || e.target.closest("button")) return;
+    if (e.button !== 0 || e.target.closest("button") || isWall()) return;   // volledig scherm: dockDrag
     e.preventDefault();
     const r = songWin.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
     el.setPointerCapture(e.pointerId);
@@ -3857,7 +3929,6 @@ function songDrag(el, onMove) {
       el.removeEventListener("pointermove", move);
       const b = songWin.getBoundingClientRect();
       store.set("songGeom", JSON.stringify({ x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height) }));
-      if (isWall()) dockLayout();
     };
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up, { once: true });
@@ -3865,7 +3936,6 @@ function songDrag(el, onMove) {
   });
 }
 songDrag($("#songHead"), (r, dx, dy) => {
-  if (isWall() && store.get("songDock") !== "0" && Math.hypot(dx, dy) > 4) store.set("songDock", "0");   // slepen = losmaken
   songWin.style.left = Math.max(0, Math.min(r.left + dx, innerWidth - r.width)) + "px";
   songWin.style.top = Math.max(0, Math.min(r.top + dy, innerHeight - r.height)) + "px";
 });
@@ -3876,18 +3946,8 @@ songDrag($("#songGrip"), (r, dx, dy) => {
 addEventListener("resize", () => { if (!songWin.hidden) songPlace(); });
 $("#btnSongBar").onclick = () => songWinToggle();
 $("#songClose").onclick = () => songWinShow(false);
-$("#songPin").onclick = () => {
-  const pinned = store.get("songDock") !== "0";
-  if (pinned) { const r = songWin.getBoundingClientRect();   // losmaken: zwevend iets onder de balk
-    store.set("songGeom", JSON.stringify({ x: Math.round(r.left + 20), y: Math.round(r.top + 60), w: Math.round(r.width), h: Math.round(Math.min(r.height, 360)) })); }
-  store.set("songDock", pinned ? "0" : "1");
-  songPlace(); dockLayout();
-};
-$("#ytPin").onclick = () => {
-  if (ytGeom().auto && ytOpt.wallTop) { const r = ytWin.getBoundingClientRect();
-    store.set("ytGeom", JSON.stringify({ x: Math.round(r.left + 20), y: Math.round(r.top + 60), w: Math.round(Math.min(r.width, 640)), auto: false })); ytPlace(); }
-  else ytSetWallTop(true);
-};
+dockDrag($("#ctrlCard"), "ctrl", $("#ctrlBar")); dockDrag($("#padCard"), "pad", $("#padBar"));
+dockDrag(ytWin, "yt", $("#ytHead")); dockDrag(songWin, "song", $("#songHead"));
 $("#songSet").onclick = () => $("#btnSongs").click();
 $("#songSrcBtn").onclick = () => {
   const keys = Object.keys(songLists()), cur = keys.includes(store.get("songSrc")) ? store.get("songSrc") : keys[0];
@@ -3899,9 +3959,9 @@ fetch("/api/liederen").then(r => r.json()).then(j => { delete j.config; if (!son
 /* ---- 🎓 Rondleiding ----
    🧑 Elke functie hoort hier een stap te hebben. Voeg je iets toe of haal je iets weg: werk TOUR_STEPS bij (zie CLAUDE.md §2a). */
 const TOUR_STEPS = [
-  { title: "Welkom bij PTZ Control 👋", text: () => `<p>Met deze app bedien je de PTZ-camera's in de kerk: presets oproepen, handmatig bewegen, iemand volgen en de livestream bekijken.</p>
+  { title: "Welkom bij PTZ Control", text: () => `<p>Met deze app bedien je de PTZ-camera's in de kerk: presets oproepen, handmatig bewegen, iemand volgen en de livestream bekijken.</p>
       <p>Deze rondleiding laat in een paar minuten elke functie zien. Tijdens de rondleiding reageren de camera's niet.</p>
-      <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → 🎓 Rondleiding</b>.</p>` },
+      <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → ${ic("cap")} Rondleiding</b>.</p>` },
   { target: ["#tabs"], title: "Camera's en weergave", text: () => `<p>Kies hier één camera, of <b>Alle camera's</b> om alle presetrasters naast elkaar te zien.</p>
       <p>In <i>Alle camera's</i> kies je met de cameratoets (standaard <kbd>Shift</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>) welke camera je bedient; die kolom licht op.</p>` },
   { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>LIVE</b>.</p>
@@ -3910,68 +3970,68 @@ const TOUR_STEPS = [
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
   { target: ["#presetArea .tile .edit", "#presetArea"], title: "Preset bewerken", text: () => `<p>Het potlood (of rechtsklik / lang drukken op een tegel) opent het presetvenster:</p>
       <ul><li>naam en <b>kleur</b> geven (een gekleurde streep bovenop de tegel, bijv. per soort shot)</li><li>oproepen of de huidige positie hier opslaan</li><li>thumbnail vernieuwen</li>
-      <li>🎯 <i>na oproepen automatisch volgen</i></li><li>naam en foto wissen</li></ul>` },
+      <li>${ic("track")} <i>na oproepen automatisch volgen</i></li><li>naam en foto wissen</li></ul>` },
   { target: ["#btnStore"], title: "Preset opslaan", text: () => `<p>Zet de camera goed, klik op <b>＋ Preset opslaan</b> en tik op de tegel waar de positie moet komen. Er wordt meteen een foto gemaakt voor de tegel.</p>
       <p>Met de Xbox-controller: <b>Menu</b>-knop vasthouden en een presetknop indrukken.</p>
-      <p>Per ongeluk overschreven? Onderin verschijnt even <b>↶ Ongedaan maken</b>: de camera gaat terug naar de oude positie en de preset en foto worden zoals ze waren.</p>` },
-  { target: ["#presetSearch"], title: "🔍 Zoeken en volgorde", text: () => `<p>Typ een naam, nummer of kleur (bijv. <i>blauw</i>) om alleen die presets te zien. <kbd>Esc</kbd> wist het zoeken.</p>
-      <p>Met de muis kun je <b>tegels verslepen</b> om ze in een eigen volgorde te zetten (per camera, voor elk scherm). Het presetnummer in de camera blijft gelijk. <b>↺ Volgorde</b> zet alles terug op nummer.</p>` },
+      <p>Per ongeluk overschreven? Onderin verschijnt even <b>${ic("undo")} Ongedaan maken</b>: de camera gaat terug naar de oude positie en de preset en foto worden zoals ze waren.</p>` },
+  { target: ["#presetSearch"], title: ic("search") + " Zoeken en volgorde", text: () => `<p>Typ een naam, nummer of kleur (bijv. <i>blauw</i>) om alleen die presets te zien. <kbd>Esc</kbd> wist het zoeken.</p>
+      <p>Met de muis kun je <b>tegels verslepen</b> om ze in een eigen volgorde te zetten (per camera, voor elk scherm). Het presetnummer in de camera blijft gelijk. <b>${ic("reset")} Volgorde</b> zet alles terug op nummer.</p>` },
   { target: [".colhead .cdot", ".tab .cdot", "#tabs"], title: "● Camerastatus", text: () => `<p>Het bolletje bij elke camera is <b>groen</b> als de camera bereikbaar is en <b>rood</b> als hij niet reageert (met <i>niet bereikbaar</i> erbij). Zo zie je vóór de dienst al dat er iets mis is.</p>` },
-  { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>📥 Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
+  { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>${ic("download")} Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
   { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
-  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>HOME</b>, <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
+  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
       <p>Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
-  { target: ["#btnTrack"], title: "🎯 Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
-      <p>Handbediening, HOME, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
-  { target: ["#btnTrackSet"], title: "🖼 Kader en persoon kiezen", text: () => `<p><b>🖼 Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>
+  { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
+      <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
+  { target: ["#btnTrackSet"], title: ic("image") + " Kader en persoon kiezen", text: () => `<p><b>Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>
       <ul><li><b>Klik op een persoon</b> om precies die te volgen; komt iemand anders voorbij, dan blijft de camera bij jouw keuze.</li>
       <li>Sleep de <b>oranje lijnen</b> voor het kader: binnen het kader staat de camera stil, loopt de persoon eruit, dan draait hij terug naar de <b>witte stippellijn</b>.</li>
-      <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met ◀ ▶ en klik <i>Grens … = hier</i>).</li></ul>` },
-  { target: ["#padCard"], title: "🎮 Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
+      <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met de pijlen en klik <i>Grens … = hier</i>).</li></ul>` },
+  { target: ["#padCard"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
       <li>D-pad ←/→ = andere camera, ↓ = home, RB = volgen</li><li>View = alles stoppen</li></ul>
       <p>Is de controller verbonden, dan staat er een groen <b>● Verbonden</b> in de titel. Hier zet je ook zachte beweging, tilt omkeren en de maximale snelheid (per apparaat).</p>` },
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
-  { target: ["#keyHints"], title: "Sneltoetsen", text: () => `<p>Dit overzicht toont de toetsen zoals ze nu zijn ingesteld. Met <b>aanpassen</b> (of Menu → ⌨ Sneltoetsen) kies je zelf andere toetsen.</p>` },
+  { target: ["#keyHints"], title: "Sneltoetsen", text: () => `<p>Dit overzicht toont de toetsen zoals ze nu zijn ingesteld. Met <b>aanpassen</b> (of Menu → ${ic("keyboard")} Sneltoetsen) kies je zelf andere toetsen.</p>` },
   { target: ["#chkFollow"], parent: "label", title: "Volg selectie", text: () => `<p>Staat dit aan, dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
       <p>Het bolletje is <b>groen</b> zolang de verbinding met de app goed is.</p>` },
-  { target: ["#ytWrap"], title: "📺 YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
+  { target: ["#ytWrap"], title: ic("tv") + " YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
       <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream).</p>
       <p>Het venster kun je slepen aan de titelbalk en groter maken met de hoek rechtsonder. Starten en stoppen van de stream gebeurt buiten deze app.</p>` },
-  { target: ["#btnSongBar", "#btnPad"], title: "🎵 Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → 🎵 Liederen</b>.</p>` },
-  { target: ["#wsWrap"], title: "📍 Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
+  { target: ["#btnSongBar", "#btnPad"], title: ic("music") + " Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → ${ic("music")} Liederen</b>.</p>` },
+  { target: ["#wsWrap"], title: ic("pin") + " Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
       <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. We lopen ze kort langs.</p>` },
-  { target: ["#btnKeys"], menu: "main", title: "⌨ Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
-  { target: ["#btnWall"], menu: "main", title: "⛶ Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
+  { target: ["#btnKeys"], menu: "main", title: ic("keyboard") + " Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
+  { target: ["#btnWall"], menu: "main", title: ic("maximize") + " Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
     <p>Op volledig scherm zijn de <b>camerabediening</b> (toets <kbd>${esc(keyLabel(keyOf("ctrl")) || "C")}</kbd>), de <b>Xbox-instellingen</b> (<kbd>${esc(keyLabel(keyOf("pad")) || "X")}</kbd>), <b>YouTube</b> (<kbd>${esc(keyLabel(keyOf("youtube")) || "Y")}</kbd>) en de <b>liederen</b> (<kbd>${esc(keyLabel(keyOf("songs")) || "L")}</kbd>) vensters.
-      Met <b>📌</b> zet je een venster <b>vast in de balk bovenaan</b>: daar staan ze naast elkaar, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. Sleep je een venster aan de titel weg, dan zweeft het los; 📌 zet het weer vast.</p>` },
-  { target: ["#btnBackup"], menu: "main", title: "💾 Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
+      Ze staan altijd <b>naast elkaar in de balk bovenaan</b>, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. <b>Sleep een venster aan de titelbalk op een ander venster</b> om van plek te wisselen: het neemt die plek in en de andere schuiven één plek op.</p>` },
+  { target: ["#btnBackup"], menu: "main", title: ic("save") + " Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
-  { target: ["#btnSettings"], menu: "main", title: "📷 Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
-  { target: ["#btnMidi"], menu: "main", title: "🎛 Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
+  { target: ["#btnSettings"], menu: "main", title: ic("video") + " Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
+  { target: ["#btnMidi"], menu: "main", title: ic("sliders") + " Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
   { target: ["#alertBar"], show: () => { alertDemo = true; alertCheck(); }, hide: () => { alertDemo = false; $("#alertBar").classList.remove("show"); alertPrev = new Map(); alertCheck(); },
-    title: "⚠ Foutmelding op alle schermen", text: () => `<p>Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op <b>alle schermen</b> een rode balk, ook op volledig scherm: een <b>camera niet bereikbaar</b>, de <b>videomixer niet verbonden</b>, of <b>geen verbinding met PTZ Control</b> zelf.</p><p>Is het opgelost, dan wordt de balk even groen en verdwijnt hij. Met <b>Verbergen</b> haal je hem weg tot er een nieuwe fout bij komt; <b>Bekijk log</b> opent het activiteitenlog.</p>` },
-  { target: ["#btnPractice"], menu: "main", title: "🚧 Oefenstand", text: () => `<p>Oefenen zonder dat er iets beweegt in de kerk: PTZ Control schakelt over op <b>nagebootste camera's</b> met dezelfde camera's, presets en foto's. Handig voor nieuwe vrijwilligers.</p><p>Geldt voor <b>alle schermen</b> (oranje balk en rand), de videomixer wordt losgekoppeld en wat je verandert wordt niet bewaard. Stoppen via de balk of hier. <b>Niet tijdens een dienst.</b></p>` },
-  { target: ["#btnSongs"], menu: "main", title: "🎵 Liederen", text: () => `<p>Koppel <b>ProPresenter</b> (via het netwerk) en/of de <b>Voordienst app</b> (API-adres met token). PTZ Control ziet dan welk nummer er op het scherm staat en zet elk nummer in het <b>activiteitenlog</b>, met de plek in de playlist en het nummer uit de Voordienst app.</p><p>Zo zie je na de dienst precies wat er gezongen is. De camera's bewegen hierdoor niet.</p>` },
-  { target: ["#btnLog"], menu: "main", title: "📋 Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
-  { target: ["#btnAccess"], menu: "main", title: "🔒 Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>🔒 Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
-  { target: ["#btnTablet"], menu: "main", title: "📱 Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },
-  { target: ["#btnCap"], menu: "main", title: "🧪 Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
-  { target: ["#btnOsd"], menu: "main", title: "🖥 OSD-menu camera", text: () => `<p>Bedien het <b>menu van de camera zelf</b> (belichting, kleur, beeld…) met pijltjes, <b>OK</b> en <b>Terug</b>, met het toetsenbord of de Xbox-controller (D-pad, A, B). <i>📷 Beeld bekijken</i> haalt één foto op zodat je ziet waar je bent.</p><p><b>Het menu staat ook in de livestream</b>: zet eerst een andere camera in beeld. Staat de camera IN BEELD, dan vraagt de app eerst of je het zeker weet. Zolang het menu open is staat er <b>OSD-MENU</b> bij de camera en reageert hij niet op presets of volgen. Venster dicht = menu dicht.</p>` },
-  { target: ["#btnTheme"], menu: "main", title: "☀ / 🌙 Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
-  { target: ["#btnTour"], menu: "main", title: "🎓 Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
-  { target: ["#btnUpd"], menu: "main", title: "🔄 Op updates controleren", text: () => `<p>Kijkt meteen of er een nieuwe versie van PTZ Control is. De app doet dit ook zelf, elke 6 uur.</p>` },
+    title: ic("alert") + " Foutmelding op alle schermen", text: () => `<p>Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op <b>alle schermen</b> een rode balk, ook op volledig scherm: een <b>camera niet bereikbaar</b>, de <b>videomixer niet verbonden</b>, of <b>geen verbinding met PTZ Control</b> zelf.</p><p>Is het opgelost, dan wordt de balk even groen en verdwijnt hij. Met <b>Verbergen</b> haal je hem weg tot er een nieuwe fout bij komt; <b>Bekijk log</b> opent het activiteitenlog.</p>` },
+  { target: ["#btnPractice"], menu: "main", title: ic("cone") + " Oefenstand", text: () => `<p>Oefenen zonder dat er iets beweegt in de kerk: PTZ Control schakelt over op <b>nagebootste camera's</b> met dezelfde camera's, presets en foto's. Handig voor nieuwe vrijwilligers.</p><p>Geldt voor <b>alle schermen</b> (oranje balk en rand), de videomixer wordt losgekoppeld en wat je verandert wordt niet bewaard. Stoppen via de balk of hier. <b>Niet tijdens een dienst.</b></p>` },
+  { target: ["#btnSongs"], menu: "main", title: ic("music") + " Liederen", text: () => `<p>Koppel <b>ProPresenter</b> (via het netwerk) en/of de <b>Voordienst app</b> (API-adres met token). PTZ Control ziet dan welk nummer er op het scherm staat en zet elk nummer in het <b>activiteitenlog</b>, met de plek in de playlist en het nummer uit de Voordienst app.</p><p>Zo zie je na de dienst precies wat er gezongen is. De camera's bewegen hierdoor niet.</p>` },
+  { target: ["#btnLog"], menu: "main", title: ic("list") + " Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
+  { target: ["#btnAccess"], menu: "main", title: ic("lock") + " Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>${ic("lock")} Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
+  { target: ["#btnTablet"], menu: "main", title: ic("tablet") + " Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },
+  { target: ["#btnCap"], menu: "main", title: ic("flask") + " Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
+  { target: ["#btnOsd"], menu: "main", title: ic("osd") + " OSD-menu camera", text: () => `<p>Bedien het <b>menu van de camera zelf</b> (belichting, kleur, beeld…) met pijltjes, <b>OK</b> en <b>Terug</b>, met het toetsenbord of de Xbox-controller (D-pad, A, B). Kijk op de monitor van de videomixer waar je in het menu bent.</p><p><b>Het menu staat ook in de livestream</b>: zet eerst een andere camera in beeld. Staat de camera IN BEELD, dan vraagt de app eerst of je het zeker weet. Zolang het menu open is staat er <b>OSD-MENU</b> bij de camera en reageert hij niet op presets of volgen. Venster dicht = menu dicht.</p>` },
+  { target: ["#btnTheme"], menu: "main", title: ic("sun") + " Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
+  { target: ["#btnTour"], menu: "main", title: ic("cap") + " Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
+  { target: ["#btnUpd"], menu: "main", title: ic("refresh") + " Op updates controleren", text: () => `<p>Kijkt meteen of er een nieuwe versie van PTZ Control is. De app doet dit ook zelf, elke 6 uur.</p>` },
   { target: ["#updNote"], show: () => { updPreview = true; updRender(); }, hide: () => { updPreview = false; updRender(); },
-    title: "⬆ Nieuwe versie", text: () => `<p>Is er een nieuwe versie, dan verschijnt <b>rechtsonder</b> zo'n melding met wat er nieuw is.</p>
+    title: ic("circle-up") + " Nieuwe versie", text: () => `<p>Is er een nieuwe versie, dan verschijnt <b>rechtsonder</b> zo'n melding met wat er nieuw is.</p>
       <ul><li><b>Nu bijwerken</b>: de app werkt zichzelf bij en start opnieuw (ca. 10 seconden geen bediening, dus niet tijdens een dienst).</li>
       <li><b>Later</b>: verbergt de melding voor deze versie op dit apparaat.</li></ul>
       <p class="muted">Ook de losse app (.exe/.app) downloadt de nieuwe versie zelf, vervangt zichzelf en start opnieuw. Op volledig scherm blijft de melding weg.</p>` },
-  { target: ["#btnQuit"], menu: "main", title: "⏻ Afsluiten", text: () => `<p>Stopt PTZ Control op deze computer. Alle schermen verliezen dan de verbinding tot de app opnieuw wordt gestart. De camera's blijven staan waar ze zijn.</p>` },
-  { title: "Klaar! 🎉", text: () => `<p>Je kent nu alle functies. ${cfg.cameras.length ? "Veel succes bij de dienst!" : "Begin met <b>Menu → 📷 Camera's</b> om je camera's toe te voegen."}</p>
-      <p class="muted">Deze rondleiding start niet meer vanzelf. Opnieuw bekijken: <b>Menu → 🎓 Rondleiding</b>.</p>` },
+  { target: ["#btnQuit"], menu: "main", title: ic("power") + " Afsluiten", text: () => `<p>Stopt PTZ Control op deze computer. Alle schermen verliezen dan de verbinding tot de app opnieuw wordt gestart. De camera's blijven staan waar ze zijn.</p>` },
+  { title: "Klaar!", text: () => `<p>Je kent nu alle functies. ${cfg.cameras.length ? "Veel succes bij de dienst!" : `Begin met <b>Menu → ${ic("video")} Camera's</b> om je camera's toe te voegen.`}</p>
+      <p class="muted">Deze rondleiding start niet meer vanzelf. Opnieuw bekijken: <b>Menu → ${ic("cap")} Rondleiding</b>.</p>` },
 ];
 let tourIdx = -1, tourStepShown = -1;
 function tourTarget(st) {

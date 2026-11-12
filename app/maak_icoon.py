@@ -8,13 +8,13 @@ mask=Image.new("L",(S,S),0); ImageDraw.Draw(mask).rounded_rectangle(r(100,100,92
 grad=Image.new("RGBA",(S,S))
 gd=ImageDraw.Draw(grad)
 for y in range(S):
-    t=y/S; c=(int(48-(48-17)*t),int(54-(54-19)*t),int(64-(64-24)*t),255); gd.line([(0,y),(S,y)],fill=c)
+    t=y/S; c=(int(36-(36-18)*t),int(41-(41-21)*t),int(72-(72-40)*t),255); gd.line([(0,y),(S,y)],fill=c)   # navy van de huisstijl (Voordienst)
 # schaduw
 sh=Image.new("RGBA",(S,S),(0,0,0,0)); ImageDraw.Draw(sh).rounded_rectangle(r(100,118,924,942),radius=185*k,fill=(0,0,0,110))
 sh=sh.filter(ImageFilter.GaussianBlur(18*k)); img.alpha_composite(sh)
 img.paste(grad,(0,0),mask)
 d=ImageDraw.Draw(img)
-acc=(242,169,59,255); dark=(26,29,35,255); mid=(70,76,88,255); light=(214,218,224,255); lighter=(236,238,241,255)
+acc=(129,140,248,255); dark=(26,29,35,255); mid=(70,76,88,255); light=(214,218,224,255); lighter=(236,238,241,255)   # acc = indigo (lichte tint van --accent, contrast op navy)
 # voet
 d.rounded_rectangle(r(352,700,672,770),radius=22*k,fill=light)
 d.rectangle(r(472,640,552,712),fill=(190,195,203,255))

@@ -11,6 +11,8 @@ PTZ_DATA=/tmp/ptz-demo PTZ_YT_BASE=http://127.0.0.1:9 PTZ_MIDI_FAKE=1 PTZ_UPDATE
 python docs/tools/screenshots.py docs/screenshots             # alle screenshots (1440×900, licht, donker, telefoon)
 ```
 
+Draait de server op een andere poort (bijv. omdat de echte PTZ Control al op 8080 draait), zet dan `PTZ_URL=http://127.0.0.1:<poort>` voor `screenshots.py` en `rondleiding_test.py`.
+
 ## Rondleiding testen
 
 Met dezelfde server (demodata) draaien: `python docs/tools/rondleiding_test.py`. Doorloopt alle stappen op drie schermformaten en meldt stappen zonder zichtbaar doel, kaarten buiten beeld en camera-commando's tijdens de rondleiding.
@@ -29,4 +31,4 @@ Met dezelfde server (demodata) draaien: `python docs/tools/rondleiding_test.py`.
 
 ## Volgen simuleren
 
-`python docs/tools/volg_sim.py /tmp/ptz-volg` (met opencv-python + numpy) start PTZ Control op poort 8080 (`PTZ_PORT`) met één nagebootste camera *Sim* die echt draait op de pan-commando's van de tracker. Op een getekend podium loopt *rood* heen en weer, kruist *blauw* er voor langs en staat *groen* stil. Uiterlijk (kleding), volgkader en pan-regelaar zijn de echte code van `tracker.py`; alleen de detector is vervangen (vindt de getekende hoofden). Toestand: `http://127.0.0.1:8091/state` (`PTZ_SIM_PORT`) met per persoon de plek in beeld (0–1), `/reset` zet de camera terug, `/pan?x=0.3` zet hem op een plek. De panpositie (voor de grenzen) komt via een nagebootste VISCA-poort 8092 (`PTZ_SIM_VISCA`). Open *🖼 Kader en persoon kiezen…* om te klikken en het kader te verslepen.
+`python docs/tools/volg_sim.py /tmp/ptz-volg` (met opencv-python + numpy) start PTZ Control op poort 8080 (`PTZ_PORT`) met één nagebootste camera *Sim* die echt draait op de pan-commando's van de tracker. Op een getekend podium loopt *rood* heen en weer, kruist *blauw* er voor langs en staat *groen* stil. Uiterlijk (kleding), volgkader en pan-regelaar zijn de echte code van `tracker.py`; alleen de detector is vervangen (vindt de getekende hoofden). Toestand: `http://127.0.0.1:8091/state` (`PTZ_SIM_PORT`) met per persoon de plek in beeld (0–1), `/reset` zet de camera terug, `/pan?x=0.3` zet hem op een plek. De panpositie (voor de grenzen) komt via een nagebootste VISCA-poort 8092 (`PTZ_SIM_VISCA`). Klik op *Kader…* naast de volgknop om te klikken en het kader te verslepen.
