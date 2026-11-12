@@ -1,3 +1,4 @@
+import os
 from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -5,7 +6,7 @@ with sync_playwright() as p:
         pg = b.new_page(viewport={"width": vw, "height": vh}); errs = []; cmds = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("request", lambda r: cmds.append(r.url) if "/api/cmd" in r.url else None)
-        pg.goto("http://127.0.0.1:8080/"); pg.wait_for_timeout(1500)
+        pg.goto(os.environ.get("PTZ_URL", "http://127.0.0.1:8080") + "/"); pg.wait_for_timeout(1500)
         assert pg.is_visible("#tourCard"), "tour niet gestart"
         n = pg.evaluate("TOUR_STEPS.length"); probs = []
         for i in range(n):

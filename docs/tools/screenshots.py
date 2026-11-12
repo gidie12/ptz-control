@@ -1,6 +1,6 @@
 import os, sys, urllib.request
 from playwright.sync_api import sync_playwright
-OUT = sys.argv[1]; URL = "http://127.0.0.1:8080/?notour"
+OUT = sys.argv[1]; URL = os.environ.get("PTZ_URL", "http://127.0.0.1:8080") + "/?notour"
 YT = "ytUpdate({type:'youtube', channel:'@kerkzwolle', live:true, upcoming:false, video_id:null, title:'Kerkdienst zondag 10:00', checked:'09:58:12', error:null});"
 LIVE = ("lastPreset={links:1, midden:2, rechts:4}; "
         "camst={links:{ok:true,checked:'09:58:00'},midden:{ok:true,checked:'09:58:00'},rechts:{ok:true,checked:'09:58:00'}}; "
@@ -44,7 +44,7 @@ with sync_playwright() as p:
     pg.click("#presetArea .tile .edit"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/preset-bewerken.png"); pg.click("#pCancel")
     pg.click("#btnPad"); pg.click("#btnSettings"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/cameras.png"); pg.click("#btnCancel")
     pg.click("#btnPad"); pg.click("#btnSettings"); pg.wait_for_timeout(300); pg.click("#btnWizard"); pg.wait_for_timeout(500)
-    pg.evaluate("$$('#wzList .wzres')[0].className='wzres ok'; $$('#wzList .wzres')[0].textContent='✓ beeld ontvangen'; $('#wzScanInfo').textContent='3 gevonden in 192.168.100.0/24'")
+    pg.evaluate("$$('#wzList .wzres')[0].className='wzres ok'; $$('#wzList .wzres')[0].innerHTML=ic('check')+' beeld ontvangen'; $('#wzScanInfo').textContent='3 gevonden in 192.168.100.0/24'")
     pg.screenshot(path=f"{OUT}/wizard.png"); pg.click("#wzSkip")
     pg.evaluate("undoOffer('Midden · Preset 3 opgeslagen', 'midden', 3)"); pg.wait_for_timeout(300)
     pg.screenshot(path=f"{OUT}/ongedaan-maken.png", clip={"x": 420, "y": 760, "width": 600, "height": 140}); pg.evaluate("$('#undoNote').hidden = true")
@@ -75,9 +75,9 @@ with sync_playwright() as p:
     pg.evaluate("setWall(true)"); pg.wait_for_timeout(600); pg.screenshot(path=f"{OUT}/volledig-scherm.png")
     pg.evaluate("ytShow(true); setCardShown('ctrlCard', true); setCardShown('padCard', true)"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-bediening.png")
     pg.evaluate("songWinShow(true); dockLayout()"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-bediening-boven.png")
-    pg.evaluate("store.set('padFloat', JSON.stringify({x: 40, y: 470, w: 360})); dockLayout()")
-    pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-zwevend.png")
-    pg.evaluate("store.set('padFloat', ''); setCardShown('ctrlCard', false); setCardShown('padCard', false); songWinShow(false); ytShow(false); setWall(false)")
+    pg.evaluate("store.set('dockOrder', JSON.stringify(['yt', 'song', 'ctrl', 'pad'])); dockLayout()")
+    pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-wisselen.png")
+    pg.evaluate("store.set('dockOrder', ''); setCardShown('ctrlCard', false); setCardShown('padCard', false); songWinShow(false); ytShow(false); setWall(false)")
     pg.evaluate("tourStart()"); pg.wait_for_timeout(300)
     for _ in range(2): pg.click("#tourNext")
     pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/rondleiding.png")
