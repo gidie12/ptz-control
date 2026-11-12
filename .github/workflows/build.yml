@@ -119,6 +119,7 @@ jobs:
         if: matrix.naam == 'windows'
         shell: pwsh
         run: |
+          $env:PTZ_INSTALL = "0"
           $env:PTZ_DATA = "$env:RUNNER_TEMP\ptzdata"
           $p = Start-Process -FilePath "dist\PTZ Control.exe" -ArgumentList "--no-open","--no-tray","--port","8765" -PassThru
           $ok = $false
