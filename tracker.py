@@ -37,7 +37,7 @@ class FrameGrabber(threading.Thread):
         self.frame = None
         self.ts = 0.0
         self.running = True
-        self.error = ""
+        self.error = self.error_detail = ""
         self.lock = threading.Lock()
 
     def run(self):
@@ -49,10 +49,11 @@ class FrameGrabber(threading.Thread):
             except Exception:  # noqa: BLE001
                 pass
             if not cap.isOpened():
-                self.error = f"Kan stream niet openen: {self.url}"
+                self.error = "geen verbinding met de camerastream"
+                self.error_detail = f"Niet te openen: {self.url} — staat RTSP aan op de camera en klopt het adres?"
                 time.sleep(2)
                 continue
-            self.error = ""
+            self.error = self.error_detail = ""
             fails = 0
             is_file = not self.url.startswith(("rtsp", "http", "udp", "srt"))
             delay = 1.0 / (cap.get(cv2.CAP_PROP_FPS) or 25) if is_file else 0
@@ -412,6 +413,7 @@ class CameraTracker(threading.Thread):
         self.pending = None       # (cx, hist, sinds) aangeklikte persoon die we nog moeten vinden
         self.last_seen = 0.0
         self.status = ""
+        self.problem = False      # staat de huidige status voor een fout (rood in de UI)?
         self.fps = 0.0
         self.sent = None          # laatst verzonden richting (left/right) of None
         self.at_limit = None      # 'left'/'right' als we tegen een grens staan
@@ -458,10 +460,12 @@ class CameraTracker(threading.Thread):
         """Box van het huidige doel als het net gezien is, anders None."""
         return self.box if self.box and time.time() - self.last_seen < 1.0 else None
 
-    def _status(self, status, force=False):
-        if status != self.status or force:
-            self.status = status
-            self.on_status({"status": status, "fps": round(self.fps, 1), "detector": self.detector.kind,
+    def _status(self, status, force=False, problem=False, detail=""):
+        """problem=True → de UI toont dit als fout (rood), niet als gewone voortgang."""
+        if status != self.status or problem != self.problem or force:
+            self.status, self.problem = status, problem
+            self.on_status({"status": status, "problem": problem, "detail": detail,
+                            "fps": round(self.fps, 1), "detector": self.detector.kind,
                             "note": getattr(self.detector, "note", ""), "picked": self.picked,
                             "frame": self.frame_cfg})
 
@@ -488,7 +492,7 @@ class CameraTracker(threading.Thread):
                 self.sent = direction
                 self.send("move", {"dir": direction, "pan": speed, "tilt": 1})
         except Exception as e:  # noqa: BLE001
-            self._status(f"camera-fout: {e}")
+            self._status(f"camera-fout: {e}", problem=True)
 
     def _learn(self, hist, sim):
         """Uiterlijk langzaam bijwerken (licht verandert), alleen als we zeker zijn van de match."""
@@ -588,7 +592,8 @@ class CameraTracker(threading.Thread):
             frame, ts = self.grabber.latest()
             if frame is None or time.time() - ts > 1.5:
                 self._cmd(self.ctrl.halt())
-                self._status(self.grabber.error or "geen beeld")
+                self._status(self.grabber.error or "geen beeld van de camera",
+                             problem=True, detail=self.grabber.error_detail)
                 time.sleep(0.2)
                 continue
             if ts == last_ts:
@@ -599,7 +604,7 @@ class CameraTracker(threading.Thread):
             try:
                 people = self.detector.detect(frame)
             except Exception as e:  # noqa: BLE001
-                self._status(f"detectiefout: {e}")
+                self._status(f"detectiefout: {e}", problem=True)
                 time.sleep(0.5)
                 continue
             if not self.running:
