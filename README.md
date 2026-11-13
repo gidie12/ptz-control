@@ -215,6 +215,7 @@ Gebruik:
   - **Persoon aanklikken**: elke gevonden persoon krijgt een kader *Volg 1, 2…*. Klik erop en de camera volgt precies die persoon (volgen gaat dan ook aan). Gaat de gekozen persoon even uit beeld, dan stopt de camera en wacht hij tot dezelfde persoon terug is, in plaats van iemand anders te pakken. **Automatisch (grootste persoon)** zet dat weer los.
 
 <img src="docs/screenshots/volgen-instellen.png" width="720" alt="Volgen instellen: kader en persoon kiezen">
+- Gaat er iets mis (bijvoorbeeld geen RTSP-beeld), dan wordt de knop **rood** met de reden; de volledige melding staat in de tooltip en in het activiteitenlog.
 - Volgen kost alleen rekenkracht zolang het aan staat: de detector bekijkt hooguit **8 beelden per seconde** per camera (genoeg voor een lopende spreker; instelbaar met de omgevingsvariabele `PTZ_TRACK_FPS`). YOLO gebruikt de GPU van de Apple-chip, YOLOX in de losse app de processor.
 - Camera's per camera: **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
 

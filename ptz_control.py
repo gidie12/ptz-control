@@ -208,7 +208,7 @@ def broadcast(event):
 # systeemgebeurtenissen (camera weg/terug, mixer, YouTube, taken, updates) via _observe() op de SSE-events.
 ACTLOG = _actlog.Log(os.path.join(DATA_DIR, "activiteit.log"), lambda e: broadcast({"type": "log", "entry": e}))
 OBSERVED = {"camstatus", "midi", "youtube", "job", "update"}
-_OBS = {"cam": {}, "midi": None, "yt": None, "job": False, "upd": None}
+_OBS = {"cam": {}, "midi": None, "yt": None, "job": False, "upd": None, "track": {}}
 JOB_LABEL = {"capture": "Uitlezen van camera's", "apply": "Terugzetten naar camera's",
              "load": "Presets laden van camera", "captest": "Presetaantal testen"}
 
@@ -261,6 +261,16 @@ def _observe(ev):
             elif _OBS["yt"]:
                 syslog("YouTube-stream afgelopen")
             _OBS["yt"] = key
+    elif t == "track":
+        cid = ev.get("cam")
+        was = _OBS["track"].get(cid, False)
+        now = bool(ev.get("on")) and bool(ev.get("problem"))
+        _OBS["track"][cid] = now
+        if now and not was:
+            syslog("Volgen: " + (ev.get("status") or "fout") + (f" ({ev['detail']})" if ev.get("detail") else ""),
+                   "fout", _cam_name(cid))
+        elif was and not now and ev.get("on"):
+            syslog("Volgen weer in orde", "systeem", _cam_name(cid))
     elif t == "job":
         running = bool(ev.get("running"))
         if _OBS["job"] and not running and ev.get("kind"):
@@ -992,7 +1002,8 @@ def person_model_dirs():
 
 
 def _track_status(cam_id, **kw):
-    st = TRACK_STATUS.setdefault(cam_id, {"type": "track", "cam": cam_id, "on": False, "status": ""})
+    st = TRACK_STATUS.setdefault(cam_id, {"type": "track", "cam": cam_id, "on": False, "status": "",
+                                          "problem": False, "detail": ""})
     st.update(kw)
     broadcast(dict(st))
 
@@ -1063,7 +1074,7 @@ def start_tracking(cam, pick=None):
             settings=settings)
         TRACKERS[cam["id"]] = t
         t.start()
-    _track_status(cam["id"], on=True, status="starten…", detector=det.kind, picked=bool(pick))
+    _track_status(cam["id"], on=True, status="starten…", problem=False, detail="", detector=det.kind, picked=bool(pick))
 
 
 # ---- volgbeeld: één beeld met de gevonden personen, om er een aan te klikken (geen live preview)
@@ -1220,7 +1231,7 @@ def stop_tracking(cam_id, halt=True, quiet=False):
         t.stop(halt=halt)
         t.join(timeout=1.0)  # wacht tot de lopende detectie klaar is, zodat er geen pan meer achteraan komt
     if not quiet and (t or TRACK_STATUS.get(cam_id, {}).get("on")):
-        _track_status(cam_id, on=False, status="uit", picked=False)
+        _track_status(cam_id, on=False, status="uit", problem=False, detail="", picked=False)
 
 
 def follow_after_preset(cam, delay=2.5):
@@ -1230,7 +1241,7 @@ def follow_after_preset(cam, delay=2.5):
         try:
             start_tracking(cam)
         except Exception as e:  # noqa: BLE001
-            _track_status(cam["id"], on=False, status=str(e))
+            _track_status(cam["id"], on=False, status=str(e), problem=True)
     t = threading.Timer(delay, go)
     t.daemon = True
     FOLLOW_TIMERS[cam["id"]] = t
