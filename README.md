@@ -298,7 +298,7 @@ De vormgeving volgt de huisstijl van de Voordienst app: lichtgrijze achtergrond 
 
 ![Lichte modus](docs/screenshots/hoofdscherm-licht.png)
 
-Op een telefoon of smalle tablet staan de onderdelen onder elkaar:
+De app past zich aan elke schermgrootte aan. Passen de cameratabbladen niet naast de knoppen in de kopbalk, dan krijgen ze een eigen regel (en schuiven ze opzij als ze ook dan niet passen). Op een smal scherm tonen de knoppen in de kop alleen hun icoon (de uitleg staat erbij als je erop wijst) en staan de onderdelen onder elkaar:
 
 <img src="docs/screenshots/telefoon.png" width="260" alt="Op een telefoon">
 
