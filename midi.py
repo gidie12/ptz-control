@@ -1,10 +1,13 @@
-"""Koppeling met de Roland V-1HD via MIDI (USB): welke ingang is live + verkenningslog.
+"""Koppeling met de Roland V-1HD via MIDI of direct via USB: welke ingang is live + verkenningslog.
 
-Draait als achtergrondthread in de server. Heeft `mido` + `python-rtmidi` nodig;
-zonder die packages start de server gewoon en meldt de status waarom MIDI niet werkt.
+Draait als achtergrondthread in de server. Twee verbindingssoorten (`conn`):
+- "midi": MIDI-poort van het systeem (USB-MIDI met driver) via `mido` + `python-rtmidi`;
+- "usb":  rechtstreeks via libusb (`pyusb` + `libusb-package`), zonder MIDI-driver (v1hd_usb.py).
+Zonder de packages start de server gewoon en meldt de status waarom het niet werkt.
 
 Config (per workspace, in cameras.json): cfg.midi = {
-    enabled: bool, port: "V-1HD" (deel van de poortnaam), dev: 16 (SysEx device-ID),
+    enabled: bool, conn: "midi" | "usb",
+    port: "V-1HD" (deel van de poortnaam; bij USB: productnaam of "vid:pid"), dev: 16 (SysEx device-ID),
     live_bus: "A" | "B" (rij aan de kant waar de fader staat), map: {"1": camid, ... "4": camid}
 }
 🧑 De fader wordt nooit gebruikt; op de mixer is de gekozen ingang rood (= live).
@@ -18,19 +21,22 @@ import threading
 import time
 
 import roland_v1hd as rv
+import v1hd_usb
 
 POLL = 0.5          # s tussen opvragen van video sel + lampjes
 RETRY = 3.0         # s tussen pogingen om de poort te openen
 LOG_MAX = 5000
 FAKE = None        # nagebootste mixer bij PTZ_MIDI_FAKE (alleen tests/screenshots)
 
-DEFAULTS = {"enabled": False, "port": "V-1HD", "dev": rv.DEFAULT_DEV, "live_bus": "A", "map": {}}
+CONNS = ("midi", "usb")
+DEFAULTS = {"enabled": False, "conn": "midi", "port": "V-1HD", "dev": rv.DEFAULT_DEV, "live_bus": "A", "map": {}}
 
 
 def norm_cfg(m):
     m = dict(m or {})
     out = dict(DEFAULTS)
     out["enabled"] = bool(m.get("enabled", False))
+    out["conn"] = "usb" if str(m.get("conn", "midi")).lower() == "usb" else "midi"
     out["port"] = str(m.get("port") or DEFAULTS["port"]).strip()[:80] or DEFAULTS["port"]
     try:
         out["dev"] = max(0, min(31, int(m.get("dev", DEFAULTS["dev"]))))
@@ -87,14 +93,24 @@ class _MidoPort:
                 pass
 
 
-def _make_backend():
+def _make_backend(conn="midi"):
     fake = os.environ.get("PTZ_MIDI_FAKE")
-    if fake:  # tests/screenshots: nagebootste mixer (docs/tools/nep_v1hd.py)
+    if fake:  # tests/screenshots: nagebootste mixer (docs/tools/nep_v1hd.py), voor MIDI én USB
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "tools"))
         import nep_v1hd
         global FAKE
-        FAKE = nep_v1hd.FakeV1HD(a=int(fake) if fake.isdigit() else 1)
+        if FAKE is None:
+            FAKE = nep_v1hd.FakeV1HD(a=int(fake) if fake.isdigit() else 1)
+        if conn == "usb":
+            return v1hd_usb.UsbBackend(finder=lambda: [nep_v1hd.FakeUsbDev(FAKE)]), None
         return nep_v1hd.FakeBackend(FAKE), None
+    if conn == "usb":
+        try:
+            return v1hd_usb.UsbBackend(), None
+        except ImportError:
+            return None, "USB-packages ontbreken (pyusb + libusb-package). Start PTZ Control opnieuw met de starter om ze te installeren."
+        except Exception as e:  # noqa: BLE001
+            return None, "USB direct niet beschikbaar: %s" % e
     try:
         return MidoBackend(), None
     except ImportError:
@@ -109,11 +125,10 @@ class Watcher:
         self.get_cfg = get_cfg
         self.cameras = cameras
         self.on_change = on_change
-        if backend is None:
-            backend, err = _make_backend()
-        else:
-            err = None
-        self.backend, self.backend_error = backend, err
+        self._fixed = backend           # tests: één vaste backend voor beide soorten
+        self._backends = {}             # conn → (backend, fout); lui gemaakt
+        self.backend, self.backend_error = None, None
+        self.conn = None
         self.lock = threading.Lock()
         self.port = None
         self.port_name = ""
@@ -148,9 +163,9 @@ class Watcher:
         self._emit(force=True)
 
     def config_changed(self, old, new):
-        """Na /api/midi/config: alleen opnieuw verbinden als aan/uit, poort of device-ID veranderde."""
+        """Na /api/midi/config: alleen opnieuw verbinden als aan/uit, verbinding, poort of device-ID veranderde."""
         o, n = norm_cfg(old), norm_cfg(new)
-        if (o["enabled"], o["port"], o["dev"]) != (n["enabled"], n["port"], n["dev"]):
+        if (o["enabled"], o["conn"], o["port"], o["dev"]) != (n["enabled"], n["conn"], n["port"], n["dev"]):
             return self.refresh()
         with self.lock:
             self._cache = None
@@ -186,6 +201,20 @@ class Watcher:
             return self._snapshot()
 
     # ------------------------------------------------------------ intern
+    def _use(self, conn):
+        """Backend voor deze verbindingssoort kiezen (lui maken, onthouden)."""
+        if conn == self.conn and (self.backend or self.backend_error):
+            return
+        if self._fixed is not None:
+            b, e = self._fixed, None
+        else:
+            if conn not in self._backends:
+                self._backends[conn] = _make_backend(conn)
+            b, e = self._backends[conn]
+        if self.port:
+            self._close()
+        self.conn, self.backend, self.backend_error, self.ports = conn, b, e, []
+
     def _cfg(self):
         # config en cameralijst hooguit 1× per seconde van schijf lezen (de lus draait ~50×/s)
         now = time.time()
@@ -211,6 +240,7 @@ class Watcher:
         live_cams = [cfg["map"][str(i)] for i in live if cfg["map"].get(str(i)) in cams]
         return {
             "type": "midi",
+            "conn": self.conn or cfg["conn"],
             "available": self.backend is not None,
             "error": self.backend_error or self.error,
             "enabled": cfg["enabled"],
@@ -230,7 +260,7 @@ class Watcher:
             snap = self._snapshot()
         key = (snap["connected"], snap["port"], snap["error"], tuple(snap["live"]), tuple(snap["live_cams"]),
                snap["sel"].get("A"), snap["sel"].get("B"), snap["pressed"], snap["recording"], tuple(snap["ports"]),
-               snap["enabled"])
+               snap["enabled"], snap["conn"], snap["available"])
         if force or key != self._last_key:
             self._last_key = key
             try:
@@ -260,11 +290,19 @@ class Watcher:
             self.error = "MIDI-poorten opvragen mislukt: %s" % e
             return
         self.ports = list(ins)
+        usb = cfg["conn"] == "usb"
         want = cfg["port"].lower()
-        pin = next((n for n in ins if want in n.lower()), None)
-        pout = next((n for n in outs if want in n.lower()), None)
+        if usb:
+            pin = pout = self.backend.match(cfg["port"])
+        else:
+            pin = next((n for n in ins if want in n.lower()), None)
+            pout = next((n for n in outs if want in n.lower()), None)
         if not pin:
-            self.error = "Geen MIDI-poort met '%s' gevonden. Is de V-1HD via USB aangesloten en aan?" % cfg["port"]
+            if usb:
+                self.error = ("Geen Roland-apparaat met '%s' via USB gevonden%s. Is de V-1HD aangesloten en aan?"
+                              % (cfg["port"], (" (wel: %s)" % ", ".join(ins)) if ins else ""))
+            else:
+                self.error = "Geen MIDI-poort met '%s' gevonden. Is de V-1HD via USB aangesloten en aan?" % cfg["port"]
             return
         try:
             self.port = self.backend.open(pin, pout)
@@ -273,7 +311,7 @@ class Watcher:
             self._log("Verbonden met '%s'%s" % (pin, "" if pout else " (geen uitgang)"))
         except Exception as e:  # noqa: BLE001
             self.port = None
-            self.error = "MIDI-poort openen mislukt: %s" % e
+            self.error = ("USB-verbinding openen mislukt: %s" if usb else "MIDI-poort openen mislukt: %s") % e
 
     def _handle(self, d, raw):
         st = self.state
@@ -306,6 +344,9 @@ class Watcher:
         last_try = 0
         while not self._stop:
             cfg = self._cfg()
+            if cfg["conn"] != self.conn or (cfg["enabled"] and not self.backend and not self.backend_error):
+                with self.lock:
+                    self._use(cfg["conn"])
             if not self.backend or not cfg["enabled"]:
                 with self.lock:
                     if self.port:
@@ -338,6 +379,6 @@ class Watcher:
                 with self.lock:
                     self._log("Verbinding verbroken: %s" % e)
                     self._close()
-                    self.error = "MIDI-verbinding verbroken: %s" % e
+                    self.error = ("USB-verbinding verbroken: %s" if self.conn == "usb" else "MIDI-verbinding verbroken: %s") % e
             self._emit()
             time.sleep(0.02)

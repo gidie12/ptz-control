@@ -2,6 +2,8 @@
 # De bediening zelf heeft genoeg aan standaard-Python; deze packages zijn voor 'persoon volgen'.
 mido>=1.3            # videomixer (Roland V-1HD) via USB-MIDI
 python-rtmidi>=1.5
+pyusb>=1.2            # videomixer direct via USB (zonder MIDI-driver)
+libusb-package>=1.0.26  # levert libusb mee voor pyusb
 certifi              # root-certificaten voor https (YouTube) met Python van python.org op de Mac
 numpy>=1.24
 opencv-python>=4.8,<5   # 5.x mist de ingebouwde persoonsdetector (HOG)
