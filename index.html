@@ -3768,7 +3768,7 @@ $("#updGo").onclick = async () => {
   updUpdate({ ...upd, installing: true });
 };
 $("#btnUpd").onclick = async () => {
-  if (upd.mode === "off") return toast("Updatecontrole is niet beschikbaar: de map van PTZ Control is niet schrijfbaar");
+  if (upd.mode === "off") return toast("Updatecontrole is niet beschikbaar: " + (upd.off_reason || "uitgezet op deze server"));
   toast("Controleren op updates…", true);
   const r = await post("/api/update/check", {});
   if (!r || r.ok === false) return;
