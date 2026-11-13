@@ -49,8 +49,9 @@ class Updater:
         self.on_change, self.restart = on_change, restart
         self._lock = threading.Lock()
         self._wake = threading.Event()
+        self.off_reason = None
         self.mode = self._detect_mode()
-        self.state = {"type": "update", "mode": self.mode, "current": self._current(), "available": False,
+        self.state = {"type": "update", "mode": self.mode, "off_reason": self.off_reason, "current": self._current(), "available": False,
                       "latest": None, "notes": [], "count": 0, "url": None, "can_install": False,
                       "checked": None, "error": None, "installing": False, "progress": None}
         self._cleanup_old_exe()
@@ -58,12 +59,17 @@ class Updater:
     # ------------------------------------------------------------ algemeen
     def _detect_mode(self):
         if os.environ.get("PTZ_UPDATE", "").lower() in ("0", "uit", "off", "no"):
+            self.off_reason = "uitgezet met PTZ_UPDATE=0 (test- of demoserver)"
             return "off"
         if self.frozen:
             return "release"
-        if os.path.isdir(os.path.join(self.here, ".git")) and self._git_works():
+        if os.path.exists(os.path.join(self.here, ".git")) and self._git_works():   # bestand bij een worktree
             return "git"
-        if os.path.exists(os.path.join(self.here, "ptz_control.py")) and os.access(self.here, os.W_OK):
+        if not os.path.exists(os.path.join(self.here, "ptz_control.py")):
+            self.off_reason = "ptz_control.py niet gevonden in " + self.here
+        elif not os.access(self.here, os.W_OK):
+            self.off_reason = "de map van PTZ Control is niet schrijfbaar (" + self.here + ")"
+        else:
             return "bron"
         return "off"
 
