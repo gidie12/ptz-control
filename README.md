@@ -58,7 +58,7 @@ Later nog eens bekijken: **Menu → Rondleiding**.
 ## Meerdere camera's tegelijk
 Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de LIVE-preset en alle presettegels.
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
-Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
+Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
 
 **Volledig scherm** (in het menu rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel).
 Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **Xbox-controller** (toets **X**), **YouTube** (toets **Y**) en **liederen** (toets **L**). Elke toets toont of verbergt zijn venster; **✕** in de titelbalk verbergt het ook. Alle vier zien er hetzelfde uit: titelbalk met badge en knoppen. Open vensters staan **altijd naast elkaar bovenaan**: tegen de bovenrand, even hoog als het hoogste venster, en de camera's schuiven eronder (zo ver omlaag als nodig, maar nooit uit beeld; de inhoud van de bediening- en Xbox-kaart wordt zo nodig kleiner of groter geschaald). Losmaken kan niet. **Van plek wisselen**: sleep een venster aan zijn titelbalk op een ander venster; het neemt die plek in en de vensters ertussen schuiven één plek op (elk scherm onthoudt de volgorde). Ingeklapt (pijltje) blijft van een venster alleen de titelbalk over. Buiten volledig scherm staan de bediening en de Xbox-controller gewoon in de zijbalk; daar klap je ze in en uit door op de titel te klikken, of met **C** en **X**. Elk scherm onthoudt welke vensters open zijn. Alle toetsen zijn aan te passen in **Sneltoetsen**.
@@ -233,7 +233,7 @@ Sticks en triggers liggen vast. De knoppen stel je per knop in via **Knoppeninde
 | A · B · X · Y | Preset 1–4 · met LB (Shift) ingedrukt: 5–8 |
 | ☰ Menu + A/B/X/Y | Huidige positie opslaan als preset (trilt ter bevestiging) |
 | D-pad ←/→ | Vorige / volgende camera · ↓ home (↑ vrij) |
-| RB | Volgen (pan) aan/uit · View = alles stoppen |
+| RB | Persoon volgen aan/uit · View = alles stoppen |
 
 Elke knop kan ook worden: een vaste camera, een andere preset, home, volgen, autofocus, fijn-modus, alles stoppen, of niets.
 **Shift** telt bij presets een instelbaar getal op (standaard 4); **Opslaan** vasthouden + presetknop slaat de huidige positie op.

@@ -168,7 +168,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
 ## 4. PTZJoy-joystick (verwijderd)
 
 - 🧑 Op verzoek verwijderd: endpoints `/api/joy/*`, de 🕹-dialoog en de README-sectie. De Xbox-controller vervangt hem.
-- Camerakeuze delen tussen schermen gaat via `POST /api/select` + SSE `select` ("Volg selectie" rechtsboven).
+- Camerakeuze delen tussen schermen gaat via `POST /api/select` + SSE `select` ("Volg selectie" rechtsboven). 🧑 Heet sinds 13 nov 2026 **Remote control · Meewisselen** (`#followWrap`, stijl D: tegel met schakel-icoon `i-link`/`i-link-off`, indigo aan / leisteen uit, `#liveDot` als badge op de tegel, `#chkFollow` als schakelaar). Zet **niet** de Xbox-controller aan/uit: alleen of dit scherm meewisselt bij SSE `select`.
 
 ## 5. Xbox-controller
 
