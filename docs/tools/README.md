@@ -8,7 +8,7 @@ python docs/tools/demo.py /tmp/ptz-demo                      # demodata: cameras
 python docs/tools/nep_propresenter.py 50001 &                # nagebootste ProPresenter (verzonnen playlist) voor 🎵 Liederen
 python docs/tools/nep_voordienst.py 50020 &                  # nagebootste Voordienst app (bearer token test-token-123)
 PTZ_DATA=/tmp/ptz-demo PTZ_YT_BASE=http://127.0.0.1:9 PTZ_MIDI_FAKE=1 PTZ_UPDATE=0 PTZ_CAMSTATUS=0 python ptz_control.py --no-open --no-tray &   # PTZ_MIDI_FAKE: nagebootste V-1HD (nep_v1hd.py), ingang 1 in beeld
-python docs/tools/screenshots.py docs/screenshots             # alle screenshots (1440×900, licht, donker, telefoon)
+python docs/tools/screenshots.py docs/screenshots             # alle screenshots (1440×900 en telefoon, altijd lichte modus)
 ```
 
 Draait de server op een andere poort (bijv. omdat de echte PTZ Control al op 8080 draait), zet dan `PTZ_URL=http://127.0.0.1:<poort>` voor `screenshots.py` en `rondleiding_test.py`.
