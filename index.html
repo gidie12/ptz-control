@@ -36,6 +36,7 @@
     --editbg: rgba(22,26,43,.85); --editfg: #e6e9f2; --editline: #2a3048;
     --mixoff: #2a3048; --mixgreen: #22c55e; --mixred: #ef4444; --mixtxt: #ffffff; --logbg: #0f1220;
     --pc-rood: #ef4444; --pc-oranje: #f97316; --pc-geel: #eab308; --pc-groen: #22c55e; --pc-blauw: #6366f1; --pc-paars: #a855f7;
+    --trkshade: rgba(5,6,12,.55); --trkline: #f59e0b; --trkaim: #ffffff; --trkbox: rgba(255,255,255,.85); --trkhit: #22c55e; --trktxt: #0b0d18;
   }
   :root[data-theme=light] {
     --tourdim: rgba(15,18,33,.45);
@@ -52,6 +53,7 @@
     --editbg: rgba(255,255,255,.9); --editfg: #1c2333; --editline: #e3e7ef;
     --mixoff: #e3e7ef; --mixgreen: #16a34a; --mixred: #dc2626; --mixtxt: #ffffff; --logbg: #f7f8fc;
     --pc-rood: #dc2626; --pc-oranje: #ea580c; --pc-geel: #d97706; --pc-groen: #16a34a; --pc-blauw: #4f46e5; --pc-paars: #9333ea;
+    --trkshade: rgba(15,18,33,.5); --trkline: #f59e0b; --trkaim: #ffffff; --trkbox: rgba(255,255,255,.9); --trkhit: #22c55e; --trktxt: #0b0d18;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
@@ -208,7 +210,7 @@
   #btnLock[hidden] { display: none; }
   #btnLock.locked { border-color: var(--accent); color: var(--accent); }
   body.viewonly #btnStore, body.viewonly #btnLoad, body.viewonly .tile .edit, body.viewonly #ctrlCard, body.viewonly #padCard,
-  body.viewonly .colhead .trk, body.viewonly #btnOrderReset, body.viewonly .tilectl, body.viewonly #btnOsd { display: none !important; }
+  body.viewonly .colhead .trk, body.viewonly #btnOrderReset, body.viewonly .tilectl, body.viewonly #btnOsd, body.viewonly #btnTrackSet { display: none !important; }
   body.viewonly .tile { cursor: default; }
   #viewBanner { display: none; background: var(--warnbg); color: var(--warntxt); border-bottom: 1px solid var(--warn); padding: 6px 16px;
     font-size: 13px; text-align: center; }
@@ -340,6 +342,45 @@
   .osdpad button:disabled, .osdside button:disabled { opacity: .35; }
   .osdside { display: flex; flex-direction: column; gap: 8px; min-width: 150px; }
   .osdpad button.hit { outline: 3px solid var(--accent); }
+  /* Volgen instellen: kader + persoon aanklikken (één beeld, geen live preview) */
+  #dlgTrack { width: min(860px, 96vw); }
+  .trkrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .trkrow select { width: auto !important; min-width: 160px; }
+  .trkst { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .trkst.on { color: var(--oktxt); }
+  #trkStage { position: relative; margin-top: 12px; border-radius: 10px; overflow: hidden; background: var(--img);
+    aspect-ratio: 16 / 9; border: 1px solid var(--line); touch-action: none; user-select: none; -webkit-user-select: none; }
+  #trkImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; display: block; }
+  #trkEmpty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+    color: var(--muted); font-size: 14px; padding: 20px; }
+  #trkEmpty[hidden], #trkImg[hidden] { display: none; }
+  .trkshade { position: absolute; top: 0; bottom: 0; background: var(--trkshade); pointer-events: none; }
+  .trkedge { position: absolute; top: 0; bottom: 0; width: 26px; margin-left: -13px; cursor: ew-resize; z-index: 3; }
+  .trkedge::before { content: ""; position: absolute; left: 11px; top: 0; bottom: 0; width: 4px; background: var(--trkline); border-radius: 2px; }
+  .trkedge span, .trkaim span { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); background: var(--trkline);
+    color: var(--trktxt); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+  .trkaim { position: absolute; top: 0; bottom: 0; width: 26px; margin-left: -13px; cursor: ew-resize; z-index: 3; }
+  .trkaim::before { content: ""; position: absolute; left: 12px; top: 0; bottom: 0; border-left: 2px dashed var(--trkaim); }
+  .trkaim span { top: auto; bottom: 8px; background: var(--trkaim); }
+  .pbox { position: absolute; border: 2px solid var(--trkbox); border-radius: 6px; cursor: pointer; z-index: 2; background: transparent;
+    padding: 0; }
+  .pbox:hover, .pbox:focus-visible { border-width: 3px; outline: none; background: rgba(255,255,255,.08); }
+  .pbox span { position: absolute; left: 0; top: 0; background: var(--trkbox); color: var(--trktxt); font-size: 11px; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;
+    border-radius: 3px 0 6px 0; padding: 2px 7px; white-space: nowrap; }
+  .pbox.target { border-color: var(--trkhit); border-width: 3px; }
+  .pbox.target span { background: var(--trkhit); }
+  .trkhelp { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .trkline { display: flex; gap: 6px; margin-top: 8px; }
+  .trkline .btn.trackbtn { margin-top: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trklim { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 12px; margin-top: 12px; }
+  .trklim h4 { margin: 0; font-size: 14px; }
+  .limbar { position: relative; height: 28px; margin: 12px 10px 4px; }
+  .limbar::before { content: ""; position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: var(--line); }
+  .limbar .limzone { position: absolute; top: 10px; height: 8px; background: var(--okbg); border: 1px solid var(--ok); border-radius: 999px; }
+  .limbar .limnow { position: absolute; top: 4px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--accent); }
+  .limbar .limtxt { position: absolute; top: -6px; font-size: 11px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+  .trklim .held { outline: 3px solid var(--accent); }
+  #btnTrackSet { height: 44px; font-size: 14px; flex: 0 0 auto; padding: 0 12px; white-space: nowrap; }
   .bsec { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
   .bsec h4 { margin: 0 0 4px; font-size: 14px; }
   .bsec .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
@@ -852,7 +893,8 @@
         <button class="btn sm" id="afOff">AF hand</button>
         <button class="btn sm" id="afPush">One-push</button>
       </div>
-      <button class="btn trackbtn" id="btnTrack" title="De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan)"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Persoon volgen</button>
+      <div class="trkline"><button class="btn trackbtn" id="btnTrack" title="De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan)"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Persoon volgen</button>
+        <button class="btn" id="btnTrackSet" title="Kader en persoon kiezen: instellen waar de persoon in beeld moet blijven en aanklikken wie gevolgd wordt"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg> Kader…</button></div>
       <div class="small" id="trackInfo" style="margin-top:4px"></div>
       <details ontoggle="fitDocked()">
         <summary>Snelheden</summary>
@@ -1259,6 +1301,47 @@
     Sluit je dit venster, dan gaat het menu op de camera ook dicht.</p>
   <div class="actions"><span></span><button class="icon" id="osdDone">Sluiten</button></div>
 </dialog>
+<dialog id="dlgTrack">
+  <h3><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Volgen instellen</h3>
+  <p class="small">Sleep de <b>oranje lijnen</b> om het kader te zetten: zolang de persoon daarbinnen blijft, staat de camera stil.
+    Loopt hij eruit, dan draait de camera tot hij weer op de <b>witte stippellijn</b> staat. <b>Klik op een persoon</b> om precies die te volgen;
+    de camera blijft dan bij die persoon (op kleding herkend), ook als iemand anders voorbij loopt. Alleen pan: tilt en zoom blijven staan.</p>
+  <div class="trkrow">Camera <select id="trkCam" aria-label="Camera"></select>
+    <span class="trkst" id="trkState">Volgen uit</span></div>
+  <div id="trkStage">
+    <img id="trkImg" alt="Beeld van de camera met de gevonden personen" hidden>
+    <div id="trkEmpty">Klik op <b>Nieuw beeld</b> om personen te zoeken.</div>
+    <div class="trkshade" id="trkShadeL"></div><div class="trkshade" id="trkShadeR"></div>
+    <div id="trkBoxes"></div>
+    <div class="trkedge" id="trkEdgeL" data-k="l" role="slider" aria-label="Linkergrens van het kader" tabindex="0"><span>kader</span></div>
+    <div class="trkedge" id="trkEdgeR" data-k="r" role="slider" aria-label="Rechtergrens van het kader" tabindex="0"><span>kader</span></div>
+    <div class="trkaim" id="trkAim" data-k="x" role="slider" aria-label="Doelpositie" tabindex="0"><span>doel</span></div>
+  </div>
+  <div class="trkrow">
+    <button class="primary" id="trkLook" title="Eén beeld van de camera ophalen en personen zoeken (geen live beeld)"><svg class="ic" data-i="camera" aria-hidden="true"><use href="#i-camera"/></svg> Nieuw beeld</button>
+    <button class="icon" id="trkAuto" title="Niet één persoon vasthouden: de grootste persoon in beeld volgen">Automatisch (grootste persoon)</button>
+    <button class="icon" id="trkToggle"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Volgen aan</button>
+    <span style="flex:1"></span>
+    <button class="icon" id="trkReset" title="Kader terug naar de standaard (midden 40%)"><svg class="ic" data-i="reset" aria-hidden="true"><use href="#i-reset"/></svg> Kader standaard</button>
+  </div>
+  <div class="trkhelp" id="trkHelp"></div>
+  <div class="trklim" id="trkLim">
+    <h4><svg class="ic" data-i="width" aria-hidden="true"><use href="#i-width"/></svg> Grenzen links en rechts</h4>
+    <div class="trkhelp" style="margin-top:4px">Hoe ver de camera mag draaien tijdens het volgen. Draai met de pijlen (vasthouden) naar het verste punt en klik
+      <i>Grens … = hier</i>. Bij een grens stopt de camera en mag de persoon uit beeld lopen. Handbediening en presets blijven vrij.</div>
+    <div class="limbar" id="trkLimBar" hidden></div>
+    <div class="trkrow">
+      <button class="icon" id="trkPanL" title="Vasthouden: camera naar links (zet volgen uit)" aria-label="Camera naar links"><svg class="ic" data-i="chevron-left" aria-hidden="true"><use href="#i-chevron-left"/></svg></button>
+      <button class="icon" id="trkPanR" title="Vasthouden: camera naar rechts (zet volgen uit)" aria-label="Camera naar rechts"><svg class="ic" data-i="chevron-right" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      <button class="icon" id="trkLimL"><svg class="ic" data-i="pin" aria-hidden="true"><use href="#i-pin"/></svg> Grens links = hier</button>
+      <button class="icon" id="trkLimR"><svg class="ic" data-i="pin" aria-hidden="true"><use href="#i-pin"/></svg> Grens rechts = hier</button>
+      <span style="flex:1"></span>
+      <button class="icon" id="trkLimClear">Grenzen wissen</button>
+    </div>
+    <div class="trkhelp" id="trkLimHelp"></div>
+  </div>
+  <div class="actions"><span></span><button class="icon" id="trkDone">Sluiten</button></div>
+</dialog>
 <dialog id="dlgLog">
   <h3><svg class="ic" data-i="list" aria-hidden="true"><use href="#i-list"/></svg> Activiteitenlog</h3>
   <p class="small">Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer, wat er op de mixer in beeld stond en welke liederen er gezongen zijn.
@@ -1357,7 +1440,7 @@ async function loadConfig() {
   if (view === null && cfg.cameras.length > 1) view = ALL;
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
-  render(); renderBackup(); renderPadProfiles(); renderPadMap(); renderLoad(); renderCap(); renderKeyHints();
+  render(); renderBackup(); renderPadProfiles(); renderPadMap(); renderLoad(); renderCap(); renderKeyHints(); trkRender();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -2021,6 +2104,8 @@ $("#btnSave").onclick = async () => {
   cfg.cameras = $$("#camList .camrow").map(r => {
     const o = { id: r.dataset.id, presets: old[r.dataset.id]?.presets || {}, track_presets: old[r.dataset.id]?.track_presets || [] };
     if (old[r.dataset.id]?.hotkey) o.hotkey = old[r.dataset.id].hotkey;   // sneltoets wordt in het venster Sneltoetsen ingesteld
+    if (old[r.dataset.id]?.track_frame) o.track_frame = old[r.dataset.id].track_frame;   // volgkader: venster Volgen instellen
+    if (old[r.dataset.id]?.track_limits) o.track_limits = old[r.dataset.id].track_limits;   // pan-grenzen: idem
     const fields = [...r.querySelectorAll("[data-f]"), ...r.nextElementSibling.querySelectorAll("[data-f]")];
     fields.forEach(i => o[i.dataset.f] = i.type === "checkbox" ? i.checked
       : ["visca_port", "track_speed"].includes(i.dataset.f) ? +i.value : i.value.trim());
@@ -2036,7 +2121,7 @@ function trackBtnHtml(camId) {
   const t = track[camId] || {};
   if (cfg.tracking_error) return "";
   const warn = t.on && /fout|geen beeld|kan stream|onderbroken/i.test(t.status || "");
-  const cls = !t.on ? "" : warn ? "warn" : t.status === "volgt" ? "on" : "wait";
+  const cls = !t.on ? "" : warn ? "warn" : /^volgt/.test(t.status || "") ? "on" : "wait";
   return `<span class="trk ${cls}" title="Persoon volgen (alleen pan)">${ic("track")} ${t.on ? esc(t.status || "aan") : "volgen"}</span>`;
 }
 async function toggleTrack(camId) {
@@ -2044,6 +2129,146 @@ async function toggleTrack(camId) {
   if (!r.ok) toast(r.error || "Volgen mislukt");
 }
 $("#btnTrack").onclick = () => ctrlCam && toggleTrack(ctrlCam);
+
+/* ---- Volgen instellen: kader {l, r, x} (deel van de beeldbreedte) en een persoon aanklikken.
+   Eén beeld per klik op Nieuw beeld (van de lopende tracker, anders /snapshot.jpg): bewust geen live preview. */
+const TRK_DEFAULT = { l: 0.3, r: 0.7, x: 0.5 };
+let trkCamId = null, trkLookData = null, trkDrag = null, trkDirty = false;   // dirty = gewijzigd, nog niet opgeslagen
+const trkFrame = (c) => ({ ...TRK_DEFAULT, ...((c || camById(trkCamId))?.track_frame || {}) });
+let trkF = { ...TRK_DEFAULT };
+function trkRender() {
+  const sel = $("#trkCam");
+  if (!sel || !$("#dlgTrack").open) return;
+  const opts = (cfg.cameras || []).map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+  if (sel.innerHTML !== opts) sel.innerHTML = opts;
+  sel.value = trkCamId || "";
+  const t = track[trkCamId] || {};
+  $("#trkState").textContent = t.on ? `● ${t.status || "aan"}` : "Volgen uit";
+  $("#trkState").classList.toggle("on", !!t.on && /volgt/.test(t.status || ""));
+  $("#trkToggle").innerHTML = t.on ? ic("stop") + " Volgen uit" : ic("track") + " Volgen aan";
+  $("#trkAuto").disabled = !t.on || !t.picked;
+  const pct = v => (v * 100).toFixed(2) + "%";
+  if (!trkDrag && !trkDirty) trkF = trkFrame();
+  $("#trkShadeL").style.cssText = `left:0;width:${pct(trkF.l)}`;
+  $("#trkShadeR").style.cssText = `left:${pct(trkF.r)};right:0`;
+  $("#trkEdgeL").style.left = pct(trkF.l); $("#trkEdgeR").style.left = pct(trkF.r); $("#trkAim").style.left = pct(trkF.x);
+  [["#trkEdgeL", trkF.l], ["#trkEdgeR", trkF.r], ["#trkAim", trkF.x]].forEach(([s, v]) => $(s).setAttribute("aria-valuenow", Math.round(v * 100)));
+  const d = trkLookData, n = d?.people?.length || 0;
+  $("#trkBoxes").innerHTML = (d?.people || []).map(p => `<button class="pbox${p.target ? " target" : ""}" data-i="${p.i}"
+      style="left:${pct(p.cx - p.w / 2)};top:${pct(p.cy - p.h / 2)};width:${pct(p.w)};height:${pct(p.h)}"
+      aria-label="Persoon ${p.i + 1} volgen"><span>${p.target ? ic("check") + " volgt" : "Volg " + (p.i + 1)}</span></button>`).join("");
+  $("#trkHelp").innerHTML = !d ? (t.on ? "Volgen staat aan. Klik op <b>Nieuw beeld</b> om te zien wie er gevolgd wordt." : "")
+    : (n ? `${n} ${n === 1 ? "persoon" : "personen"} gevonden${d.source === "volgbeeld" ? " (beeld van de tracker)" : ""}. Klik op een kader om die persoon te volgen.`
+         : "Geen personen gevonden. Zet de camera op het podium en probeer opnieuw.")
+    + (t.on && t.picked ? " · Houdt één gekozen persoon vast." : t.on ? " · Volgt automatisch de grootste persoon." : "");
+  trkLimRender();
+}
+let trkLim = { limits: {}, pan: null, pan_error: "" };
+function trkLimRender() {
+  const lim = trkLim.limits || {}, has = k => Number.isInteger(lim[k]), both = has("left") && has("right");
+  const bar = $("#trkLimBar");
+  bar.hidden = !(both || has("left") || has("right"));
+  if (!bar.hidden) {
+    // schaal: van links naar rechts zoals de camera kijkt (ook als de camera andersom telt)
+    const vals = [lim.left, lim.right, trkLim.pan].filter(Number.isInteger);
+    const sign = both ? Math.sign(lim.right - lim.left) || 1 : 1;
+    const lo = Math.min(...vals.map(v => v * sign)), hi = Math.max(...vals.map(v => v * sign)), pad = (hi - lo) * 0.12 || 1;
+    const pos = v => (((v * sign) - lo + pad) / (hi - lo + 2 * pad) * 100).toFixed(1) + "%";
+    let h = "";
+    if (both) h += `<span class="limzone" style="left:${pos(lim.left)};width:calc(${pos(lim.right)} - ${pos(lim.left)})"></span>`;
+    if (has("left")) h += `<span class="limtxt" style="left:${pos(lim.left)}">grens links</span>`;
+    if (has("right")) h += `<span class="limtxt" style="left:${pos(lim.right)}">grens rechts</span>`;
+    if (Number.isInteger(trkLim.pan)) h += `<span class="limnow" style="left:${pos(trkLim.pan)}" title="Camera staat nu hier"></span>`;
+    bar.innerHTML = h;
+  }
+  $("#trkLimHelp").innerHTML = trkLim.pan_error ? `<span style="color:var(--warn)">${ic("alert")} ${esc(trkLim.pan_error)}. Grenzen werken alleen als de camera zijn positie via VISCA doorgeeft.</span>`
+    : both ? "Beide grenzen ingesteld: volgen draait niet verder dan het groene stuk (blauw streepje = camera nu)."
+    : has("left") || has("right") ? `Stel ook de grens ${has("left") ? "rechts" : "links"} in: pas met beide grenzen werkt het.`
+    : "Geen grenzen: volgen mag overal heen draaien.";
+  $("#trkLimClear").disabled = !(has("left") || has("right"));
+}
+async function trkLimSet(side) {
+  const r = await post("/api/track/limit", { cam: trkCamId, side });
+  if (!r.ok) return toast(r.error || "Grens niet ingesteld");
+  trkLim = r; trkLimRender();
+  toast(side === "clear" ? "Grenzen gewist" : `Grens ${side === "left" ? "links" : "rechts"} ingesteld`, true);
+}
+$("#trkLimL").onclick = () => trkLimSet("left");
+$("#trkLimR").onclick = () => trkLimSet("right");
+$("#trkLimClear").onclick = () => trkLimSet("clear");
+[["#trkPanL", "left"], ["#trkPanR", "right"]].forEach(([s, d]) => hold($(s), () => cmd("move", { dir: d, pan: sp("#spPan"), tilt: 1 }, trkCamId),
+  async () => { await cmd("stop", {}, trkCamId); setTimeout(() => $("#dlgTrack").open && trkLook(), 600); }));
+async function trkLook() {
+  if (!trkCamId) return;
+  $("#trkLook").disabled = true; $("#trkEmpty").textContent = "Beeld ophalen en personen zoeken…"; $("#trkEmpty").hidden = false;
+  const r = await post("/api/track/look", { cam: trkCamId });
+  $("#trkLook").disabled = false;
+  if (!r.ok) { $("#trkEmpty").textContent = r.error || "Geen beeld"; $("#trkImg").hidden = true; trkLookData = null; return trkRender(); }
+  trkLookData = r;
+  trkLim = { limits: r.limits || {}, pan: r.pan ?? null, pan_error: r.pan_error || "" };
+  $("#trkStage").style.aspectRatio = String(r.aspect || 16 / 9);
+  const img = $("#trkImg");
+  img.onload = () => { img.hidden = false; $("#trkEmpty").hidden = true; };
+  img.src = r.img;
+  trkRender();
+}
+async function trkPick(i) {
+  const r = await post("/api/track/pick", { cam: trkCamId, i });
+  if (!r.ok) return toast(r.error || "Kiezen mislukt");
+  toast("Volgt deze persoon", true);
+  if (trkLookData) trkLookData.people.forEach(p => p.target = p.i === i);
+  trkRender();
+  setTimeout(() => $("#dlgTrack").open && trkLook(), 1500);   // één keer opnieuw kijken: zit hij erop?
+}
+async function trkSaveFrame() {
+  const c = camById(trkCamId);
+  if (!c) return;
+  c.track_frame = { ...trkF }; trkDirty = false;
+  const r = await post("/api/track/frame", { cam: trkCamId, frame: trkF });
+  if (!r.ok) toast(r.error || "Kader niet opgeslagen"); else c.track_frame = r.frame;
+  trkRender();
+}
+function trkMove(k, v) {
+  v = Math.max(0, Math.min(1, v)); trkDirty = true;
+  if (k === "l") trkF.l = Math.min(v, trkF.r - 0.1);
+  else if (k === "r") trkF.r = Math.max(v, trkF.l + 0.1);
+  else trkF.x = v;
+  trkF.x = Math.max(trkF.l + 0.02, Math.min(trkF.r - 0.02, trkF.x));
+}
+function trkOpen(camId) {
+  if (viewOnly()) return pinPrompt();
+  trkCamId = camId || ctrlCam || cfg.cameras[0]?.id || null;
+  trkLookData = null; trkLim = { limits: trkCamLimits(), pan: null, pan_error: "" };
+  $("#trkImg").hidden = true; $("#trkImg").removeAttribute("src");
+  $("#trkEmpty").hidden = false; $("#trkEmpty").textContent = "Klik op <b>Nieuw beeld</b> om personen te zoeken.";
+  $("#dlgTrack").showModal(); trkRender(); trkLook();
+}
+$("#btnTrackSet").onclick = () => trkOpen(ctrlCam);
+const trkCamLimits = () => ({ ...(camById(trkCamId)?.track_limits || {}) });
+$("#trkCam").onchange = (e) => { trkCamId = e.target.value; trkLookData = null; trkLim = { limits: trkCamLimits(), pan: null, pan_error: "" }; $("#trkImg").hidden = true; trkRender(); trkLook(); };
+$("#trkLook").onclick = trkLook;
+$("#trkAuto").onclick = async () => { const r = await post("/api/track/pick", { cam: trkCamId, auto: true }); if (!r.ok) toast(r.error || "Mislukt"); trkLook(); };
+$("#trkToggle").onclick = async () => { await toggleTrack(trkCamId); setTimeout(() => $("#dlgTrack").open && trkLook(), 2500); };
+$("#trkReset").onclick = () => { trkF = { ...TRK_DEFAULT }; trkSaveFrame(); };
+$("#trkDone").onclick = () => $("#dlgTrack").close();
+$("#trkBoxes").addEventListener("click", (e) => { const b = e.target.closest(".pbox"); if (b) trkPick(+b.dataset.i); });
+$$("#trkEdgeL, #trkEdgeR, #trkAim").forEach(h => {
+  h.addEventListener("pointerdown", (e) => { e.preventDefault(); h.setPointerCapture(e.pointerId); trkDrag = h.dataset.k; });
+  h.addEventListener("pointermove", (e) => {
+    if (trkDrag !== h.dataset.k) return;
+    const r = $("#trkStage").getBoundingClientRect();
+    trkMove(trkDrag, (e.clientX - r.left) / r.width); trkRender();
+  });
+  const end = () => { if (trkDrag) { trkDrag = null; trkSaveFrame(); } };
+  h.addEventListener("pointerup", end); h.addEventListener("pointercancel", end);
+  h.addEventListener("keydown", (e) => {     // toetsenbord: ←/→ verschuiven (Shift = grotere stap)
+    const d = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (!d) return;
+    e.preventDefault(); e.stopPropagation();
+    trkMove(h.dataset.k, trkF[h.dataset.k] + d * (e.shiftKey ? 0.05 : 0.01)); trkRender();
+    clearTimeout(h._t); h._t = setTimeout(trkSaveFrame, 500);
+  });
+});
 
 /* ================= Xbox-controller (Gamepad API) ================= */
 const pad = {
@@ -2987,6 +3212,7 @@ function connectEvents() {
       const prevStatus = track[ev.cam]?.status;
       track[ev.cam] = ev;
       if (prevStatus !== ev.status || !ev.on) { renderPresets(); renderSide(); } else renderSide();
+      if (ev.cam === trkCamId) trkRender();
     } else if (ev.type === "job") {
       const wasRunning = job.running;
       job = ev; renderBackup(); renderLoad(); renderCap();
@@ -3782,8 +4008,12 @@ const TOUR_STEPS = [
   { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
   { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
       <p>Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
-  { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker). Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
+  { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
       <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
+  { target: ["#btnTrackSet"], title: ic("image") + " Kader en persoon kiezen", text: () => `<p><b>Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>
+      <ul><li><b>Klik op een persoon</b> om precies die te volgen; komt iemand anders voorbij, dan blijft de camera bij jouw keuze.</li>
+      <li>Sleep de <b>oranje lijnen</b> voor het kader: binnen het kader staat de camera stil, loopt de persoon eruit, dan draait hij terug naar de <b>witte stippellijn</b>.</li>
+      <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met de pijlen en klik <i>Grens … = hier</i>).</li></ul>` },
   { target: ["#padCard"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
       <li>D-pad ←/→ = andere camera, ↓ = home, RB = volgen</li><li>View = alles stoppen</li></ul>

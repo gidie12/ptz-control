@@ -208,7 +208,14 @@ Gebruik:
 - **volgen** in de kolomkop (of de knop in de bediening, of toets **T**) zet volgen aan/uit. De status staat erbij: *volgt*, *zoekt persoon*, *geen beeld*.
 - In het preset-venster (✎): **Na oproepen automatisch volgen**. Bijv. "Preekstoel": camera gaat naar het shot en begint na 2,5 s te volgen.
 - Handbediening, home of een andere preset op die camera zet volgen direct uit. Zoom en focus mogen tijdens het volgen.
-- Bij meerdere mensen in beeld kiest hij de grootste (meestal de spreker vooraan) en blijft daarna bij diezelfde persoon.
+- Bij meerdere mensen in beeld kiest hij de grootste (meestal de spreker vooraan) en blijft daarna bij diezelfde persoon. Hij herkent die persoon aan de **kleur van de kleding** (bovenlijf), dus als iemand anders voorbij loopt of even voor de spreker langs gaat, blijft hij bij de spreker.
+- **Kader…** (naast de volgknop) opent het venster *Volgen instellen* met één beeld van de camera (geen live beeld; *Nieuw beeld* haalt een nieuw beeld):
+  - **Kader**: sleep de twee **oranje lijnen**. Zolang de persoon (helemaal) tussen die lijnen staat, staat de camera stil; loopt hij eruit, dan draait de camera tot hij weer op de **witte stippellijn** (doel) staat. Die mag ook uit het midden, bijv. links in beeld voor een tekst rechts. Smal kader = strak gevolgd, breed kader = rustig beeld. Loopt iemand sneller dan de camera bijhoudt, dan versnelt de camera tot de max. volgsnelheid. Het kader geldt per camera, voor alle schermen, en meteen (ook tijdens het volgen). Pijltjestoetsen op een lijn verschuiven hem ook.
+  - **Grenzen links en rechts**: hoe ver de camera mag draaien tijdens het volgen, bijv. niet verder dan de rand van het podium. Draai de camera met de **pijlen** (vasthouden) naar het verste punt links en klik **Grens links = hier**, daarna hetzelfde voor rechts. De balk eronder toont de grenzen (groen) en waar de camera nu staat. Bij een grens stopt de camera en mag de persoon uit beeld lopen; komt hij terug, dan volgt de camera weer. Handbediening en presets mogen wel verder. Werkt alleen als de camera zijn positie via VISCA (poort 5678) doorgeeft; anders staat er een melding.
+  - **Persoon aanklikken**: elke gevonden persoon krijgt een kader *Volg 1, 2…*. Klik erop en de camera volgt precies die persoon (volgen gaat dan ook aan). Gaat de gekozen persoon even uit beeld, dan stopt de camera en wacht hij tot dezelfde persoon terug is, in plaats van iemand anders te pakken. **Automatisch (grootste persoon)** zet dat weer los.
+
+<img src="docs/screenshots/volgen-instellen.png" width="720" alt="Volgen instellen: kader en persoon kiezen">
+- Volgen kost alleen rekenkracht zolang het aan staat: de detector bekijkt hooguit **8 beelden per seconde** per camera (genoeg voor een lopende spreker; instelbaar met de omgevingsvariabele `PTZ_TRACK_FPS`). YOLO gebruikt de GPU van de Apple-chip, YOLOX in de losse app de processor.
 - Camera's per camera: **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
 
 ![Preset bewerken](docs/screenshots/preset-bewerken.png)

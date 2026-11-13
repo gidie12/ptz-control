@@ -27,6 +27,30 @@ LOG = """(() => { const d = new Date(); d.setHours(9, 41, 0, 0); const t0 = d.ge
  [1500, 'actie', 'Mac regie (deze computer)', 'Midden', 'Persoon volgen aan'],
 ]; logEntries = new Map(r.map((x, i) => [i + 1, { id: i + 1, t: t0 + x[0], kind: x[1], who: x[2], cam: x[3], msg: x[4], n: x[5] || 1, last: t0 + x[0] + 40 }]));
 $('#logDevName').value = 'Mac regie'; logCams(); logRender(); })()"""
+def volg_jpeg():    # getekend podium met drie personen (verzonnen) voor het venster Volgen instellen
+    import base64, io
+    from PIL import Image, ImageDraw
+    W, H = 960, 540
+    im = Image.new("RGB", (W, H)); d = ImageDraw.Draw(im)
+    for yy in range(H):
+        t = yy / H; d.line([(0, yy), (W, yy)], fill=(int(70 + 60*t), int(52 + 38*t), int(44 + 22*t)))
+    d.rectangle([0, int(H * .74), W, H], fill=(96, 64, 40))
+    d.rectangle([W//2 - 9, 50, W//2 + 9, 210], fill=(230, 205, 150)); d.rectangle([W//2 - 55, 98, W//2 + 55, 116], fill=(230, 205, 150))
+    for x, shirt, s in ((300, (40, 60, 90), 1.0), (560, (150, 50, 40), 0.95), (800, (60, 110, 70), 0.8)):
+        top = int(H * .2 + (1 - s) * 120)
+        d.ellipse([x - 26*s, top, x + 26*s, top + 56*s], fill=(222, 186, 160))
+        d.rounded_rectangle([x - 46*s, top + 60*s, x + 46*s, H * .74 + 10], radius=int(18*s), fill=shirt)
+        d.rectangle([x - 34*s, H * .74 + 10, x + 34*s, H - 8], fill=(45, 40, 40))
+    b = io.BytesIO(); im.save(b, "JPEG", quality=85)
+    return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
+VOLG = """(() => { trkCamId = 'midden'; $('#dlgTrack').showModal();
+  track.midden = {type:'track', cam:'midden', on:true, status:'volgt gekozen persoon', picked:true, fps:11, detector:'yolox'};
+  cfg.cameras.find(c => c.id === 'midden').track_frame = {l: 0.22, r: 0.62, x: 0.36};
+  trkLookData = {source:'volgbeeld', aspect:16/9, people:[
+    {i:0, cx:0.3125, cy:0.505, w:0.1, h:0.59, target:true}, {i:1, cx:0.583, cy:0.515, w:0.095, h:0.57, target:false},
+    {i:2, cx:0.833, cy:0.54, w:0.08, h:0.52, target:false}]};
+  trkLim = {limits: {left: -1200, right: 900}, pan: 150, pan_error: ''};
+  const i = $('#trkImg'); i.src = '%s'; i.hidden = false; $('#trkEmpty').hidden = true; trkRender(); renderSide(); })()"""
 def practice(on):   # oefenstand aan/uit (alle schermen herladen)
     import json, urllib.request
     urllib.request.urlopen(urllib.request.Request(URL.split("/?")[0] + "/api/practice", json.dumps({"on": on}).encode(),
@@ -58,6 +82,10 @@ with sync_playwright() as p:
     pg.evaluate("osdOpen = {[osdCamId]: true}; osdRender(); renderTabs(); renderPresets()")
     pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/osd-menu.png")
     pg.evaluate("osdOpen = {}; osdRender(); renderTabs(); renderPresets()"); pg.click("#osdDone")
+    pg.set_viewport_size({"width": 1440, "height": 1150})   # venster is hoog: helemaal in beeld
+    pg.evaluate(VOLG % volg_jpeg()); pg.wait_for_timeout(500)   # 🎯 Volgen instellen (beeld en personen nagebootst)
+    pg.locator("#dlgTrack").screenshot(path=f"{OUT}/volgen-instellen.png"); pg.evaluate("track = {}; $('#dlgTrack').close(); renderSide()")
+    pg.set_viewport_size({"width": 1440, "height": 900})
     pg.click("#btnPad"); pg.click("#btnLog"); pg.wait_for_timeout(400); pg.evaluate(LOG); pg.wait_for_timeout(200)
     pg.screenshot(path=f"{OUT}/activiteitenlog.png"); pg.click("#logClose")
     pg.evaluate("camst.rechts = {ok:false, error:'geen verbinding'}; renderTabs(); renderPresets(); alertCheck()"); pg.wait_for_timeout(300)
