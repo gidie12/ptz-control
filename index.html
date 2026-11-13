@@ -717,9 +717,25 @@
   .ic:is([data-i="flask"], [data-i="cone"], [data-i="stop"]) { --tile: #ea580c; }
   .ic:is([data-i="list"], [data-i="zap"], [data-i="sun"], [data-i="thumbtack"]) { --tile: #d97706; }
   .ic:is([data-i="lock"], [data-i="unlock"], [data-i="volume"]) { --tile: #059669; }
-  .ic:is([data-i="cap"], [data-i="moon"]) { --tile: #7c3aed; }
+  .ic:is([data-i="cap"], [data-i="moon"], [data-i="help"]) { --tile: #7c3aed; }
   .ic:is([data-i="refresh"]) { --tile: #0d9488; }
   .ic:is([data-i="power"], [data-i="tv"], [data-i="alert"]) { --tile: #dc2626; }
+  /* 🧑 Hoofdmenu kort (13 nov 2026): bovenaan de dienst-items, Instellingen ▸ en Hulp ▸ als submenu, weergave als één regel met schakelaars.
+     Submenu = fixed naast het menu (JS zet de plek, want #mainMenu scrollt); ≤ 700 px of geen ruimte → ingeklapt onder het item (.inline). */
+  .mi.sub .subcaret { margin-left: auto; width: 15px; height: 15px; opacity: .55; transition: transform .15s; }
+  .mi.sub[aria-expanded="true"] { background: var(--hover); }
+  .mi.sub.inl .subcaret { transform: rotate(90deg); }
+  .submenu { position: fixed; left: 0; top: 0; right: auto; z-index: 31; min-width: 220px; }
+  .submenu.inline { position: static; min-width: 0; box-shadow: none; border: 0; border-left: 2px solid var(--line); border-radius: 0;
+    background: none; padding: 0 0 2px 6px; margin: 0 0 2px 22px; }
+  .mview { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 6px 6px 10px; }
+  .mview > span { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+  .mview .mtog { justify-content: center; }
+  .mtog { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .mtog:hover { background: var(--hover); }
+  .mtog:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); border-color: var(--accent); }
+  .mtog.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); }
   .warnbox > .ic:first-child, .lm .ic.warn { color: var(--warn); }
   /* 🧑 Meewisselen (Volg selectie) in stijl D: tegel (indigo aan, leisteen uit) met verbindingsbolletje, label op twee regels, schakelaar */
   label.follow { display: inline-flex; align-items: center; gap: 9px; padding: 5px 10px 5px 5px; cursor: pointer; user-select: none; }
@@ -803,6 +819,7 @@
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></symbol>
   <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
   <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
   <symbol id="i-locate" viewBox="0 0 24 24"><path d="M2 12h3M19 12h3M12 2v3M12 19v3"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/></symbol>
   <symbol id="i-width" viewBox="0 0 24 24"><path d="m18 8 4 4-4 4M6 8l-4 4 4 4M2 12h20"/></symbol>
   <symbol id="i-panel-top" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></symbol>
@@ -838,23 +855,31 @@
   <div class="menuwrap">
     <button class="icon" id="btnPad" title="Menu" aria-haspopup="true" aria-expanded="false">Menu <svg class="ic caret" data-i="chevron-down" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
     <div class="menu" id="mainMenu" hidden role="menu">
-      <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen"><svg class="ic" data-i="keyboard" aria-hidden="true"><use href="#i-keyboard"/></svg> Sneltoetsen</button>
-      <div class="msep"></div>
       <button class="mi" id="btnWall" role="menuitem" title="Alle camera's op het volledige scherm (toets F)"><svg class="ic" data-i="maximize" aria-hidden="true"><use href="#i-maximize"/></svg> Volledig scherm <kbd>F</kbd></button>
-      <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten"><svg class="ic" data-i="save" aria-hidden="true"><use href="#i-save"/></svg> Back-up</button>
-      <button class="mi" id="btnSettings" role="menuitem"><svg class="ic" data-i="video" aria-hidden="true"><use href="#i-video"/></svg> Camera's</button>
-      <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI of direct via USB): welke camera staat in beeld"><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Videomixer (MIDI/USB)</button>
-      <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg> Liederen</button>
-      <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan"><svg class="ic" data-i="flask" aria-hidden="true"><use href="#i-flask"/></svg> Presetaantal testen</button>
-      <button class="mi" id="btnOsd" role="menuitem" title="Het menu van de camera zelf bedienen (belichting, kleur, beeld). Staat ook in de livestream!"><svg class="ic" data-i="osd" aria-hidden="true"><use href="#i-osd"/></svg> OSD-menu camera</button>
-      <div class="msep"></div>
-      <button class="mi" id="btnPractice" role="menuitem" title="Oefenen met nagebootste camera's: de camera's in de kerk bewegen niet"><svg class="ic" data-i="cone" aria-hidden="true"><use href="#i-cone"/></svg> Oefenstand</button>
       <button class="mi" id="btnLog" role="menuitem" title="Wie deed wat en vanaf welk apparaat, plus fouten van camera's en de videomixer"><svg class="ic" data-i="list" aria-hidden="true"><use href="#i-list"/></svg> Activiteitenlog<span class="logcount" id="logCount" hidden></span></button>
-      <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Toegang (pincode)</button>
-      <button class="mi" id="btnTablet" role="menuitem" title="Grote tegels en camerakeuze onderin, voor een tablet"><svg class="ic" data-i="tablet" aria-hidden="true"><use href="#i-tablet"/></svg> Tabletweergave</button>
-      <button class="mi" id="btnTheme" role="menuitem" title="Snel wisselen tussen licht en donker (dit apparaat)"><svg class="ic" data-i="sun" aria-hidden="true"><use href="#i-sun"/></svg> Lichte modus</button>
-      <button class="mi" id="btnTour" role="menuitem" title="Alle functies stap voor stap uitgelegd"><svg class="ic" data-i="cap" aria-hidden="true"><use href="#i-cap"/></svg> Rondleiding</button>
-      <button class="mi" id="btnUpd" role="menuitem" title="Kijken of er een nieuwe versie van PTZ Control is"><svg class="ic" data-i="refresh" aria-hidden="true"><use href="#i-refresh"/></svg> Op updates controleren</button>
+      <button class="mi" id="btnOsd" role="menuitem" title="Het menu van de camera zelf bedienen (belichting, kleur, beeld). Staat ook in de livestream!"><svg class="ic" data-i="osd" aria-hidden="true"><use href="#i-osd"/></svg> OSD-menu camera</button>
+      <button class="mi" id="btnPractice" role="menuitem" title="Oefenen met nagebootste camera's: de camera's in de kerk bewegen niet"><svg class="ic" data-i="cone" aria-hidden="true"><use href="#i-cone"/></svg> Oefenstand</button>
+      <div class="msep"></div>
+      <button class="mi sub" id="miSet" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-controls="subSet"><svg class="ic" data-i="settings" aria-hidden="true"><use href="#i-settings"/></svg> Instellingen<svg class="ic subcaret" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      <div class="menu submenu" id="subSet" hidden role="menu" aria-label="Instellingen">
+        <button class="mi" id="btnSettings" role="menuitem"><svg class="ic" data-i="video" aria-hidden="true"><use href="#i-video"/></svg> Camera's</button>
+        <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI of direct via USB): welke camera staat in beeld"><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Videomixer (MIDI/USB)</button>
+        <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg> Liederen</button>
+        <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen"><svg class="ic" data-i="keyboard" aria-hidden="true"><use href="#i-keyboard"/></svg> Sneltoetsen</button>
+        <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Toegang (pincode)</button>
+        <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten"><svg class="ic" data-i="save" aria-hidden="true"><use href="#i-save"/></svg> Back-up</button>
+        <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan"><svg class="ic" data-i="flask" aria-hidden="true"><use href="#i-flask"/></svg> Presetaantal testen</button>
+      </div>
+      <button class="mi sub" id="miHelp" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-controls="subHelp"><svg class="ic" data-i="help" aria-hidden="true"><use href="#i-help"/></svg> Hulp<svg class="ic subcaret" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      <div class="menu submenu" id="subHelp" hidden role="menu" aria-label="Hulp">
+        <button class="mi" id="btnTour" role="menuitem" title="Alle functies stap voor stap uitgelegd"><svg class="ic" data-i="cap" aria-hidden="true"><use href="#i-cap"/></svg> Rondleiding</button>
+        <button class="mi" id="btnUpd" role="menuitem" title="Kijken of er een nieuwe versie van PTZ Control is"><svg class="ic" data-i="refresh" aria-hidden="true"><use href="#i-refresh"/></svg> Op updates controleren</button>
+      </div>
+      <div class="msep"></div>
+      <div class="mview" id="menuView"><span>Weergave</span>
+        <button class="mtog" id="btnTheme" title="Wisselen tussen licht en donker (dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg> Licht</button>
+        <button class="mtog" id="btnTablet" title="Tabletweergave: grote tegels en camerakeuze onderin (automatisch → aan → uit, dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-tablet"/></svg> Tablet: auto</button>
+      </div>
       <div class="msep"></div>
       <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)"><svg class="ic" data-i="power" aria-hidden="true"><use href="#i-power"/></svg> PTZ Control afsluiten</button>
     </div>
@@ -1166,7 +1191,7 @@
     <span class="ytbadge" id="songBadge">LIEDEREN</span>
     <span class="yttitle" id="songTitle">Liederen</span>
     <button id="songSrcBtn" title="Wisselen tussen ProPresenter en de Voordienst app" hidden aria-label="Bron wisselen"><svg class="ic" data-i="swap" aria-hidden="true"><use href="#i-swap"/></svg></button>
-    <button id="songSet" title="Instellingen (Menu → Liederen)" aria-label="Instellingen"><svg class="ic" data-i="settings" aria-hidden="true"><use href="#i-settings"/></svg></button>
+    <button id="songSet" title="Instellingen (Menu → Instellingen → Liederen)" aria-label="Instellingen"><svg class="ic" data-i="settings" aria-hidden="true"><use href="#i-settings"/></svg></button>
     <button id="songClose" title="Venster sluiten (L)" aria-label="Sluiten"><svg class="ic" data-i="x" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="songnowbox"><div class="snow" id="songNow"></div><div class="snext" id="songNext"></div></div>
@@ -1413,7 +1438,7 @@
     <div class="wzrow small muted" style="margin-top:12px"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span></span><span>Resultaat</span><span></span></div>
     <div id="wzList"></div>
     <button class="icon" id="wzAdd" style="margin-top:8px">+ Camera</button>
-    <p class="small muted">Wachtwoord, VISCA-poort en volginstellingen kun je later aanpassen bij Menu → Camera's.</p>
+    <p class="small muted">Wachtwoord, VISCA-poort en volginstellingen kun je later aanpassen bij Menu → Instellingen → Camera's.</p>
   </div>
   <div data-step="2" hidden>
     <p>Staan er al presets in de camera's (bijvoorbeeld van het PTZOptics-programma)? Dan kan PTZ Control ze ophalen, met een foto per preset.</p>
@@ -1421,7 +1446,7 @@
     <div class="row" style="margin-top:12px"><button class="primary" id="wzLoad"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Presets ophalen van de camera's</button></div>
   </div>
   <div data-step="3" hidden>
-    <p>Klaar! Je camera's staan erin. Hierna volgt een korte rondleiding langs alle functies (later opnieuw via Menu → Rondleiding).</p>
+    <p>Klaar! Je camera's staan erin. Hierna volgt een korte rondleiding langs alle functies (later opnieuw via Menu → Hulp → Rondleiding).</p>
   </div>
   <div class="actions"><button class="icon" id="wzSkip">Overslaan</button>
     <span style="display:flex;gap:8px"><button class="icon" id="wzBack">← Terug</button><button class="primary" id="wzNext">Volgende →</button></span></div>
@@ -1586,7 +1611,7 @@ function hiddenHint(c, nums) {
 function renderPresets() {
   const area = $("#presetArea"); area.innerHTML = "";
   $("#presetCard").classList.toggle("storing", storeMode);
-  if (!cfg.cameras.length) { area.innerHTML = `<p class="muted">Nog geen camera's. Kies Menu → ${ic("video")} Camera's.</p>`; return; }
+  if (!cfg.cameras.length) { area.innerHTML = `<p class="muted">Nog geen camera's. Kies Menu → Instellingen → ${ic("video")} Camera's.</p>`; return; }
 
   if (view === ALL) {
     $("#presetTitle").textContent = `Presets · ${cfg.cameras.length} camera's tegelijk`;
@@ -2463,14 +2488,87 @@ $("#padMax").oninput = () => { pad.max = +$("#padMax").value; $("#padMaxV").text
 function setMenu(open) {
   const m = $("#mainMenu");
   m.hidden = !open;
+  subOpen(null);
   $("#btnPad").setAttribute("aria-expanded", open ? "true" : "false");
   if (open) { m.style.maxHeight = ""; m.style.maxHeight = Math.max(200, innerHeight - m.getBoundingClientRect().top - 10) + "px"; }   // altijd helemaal in beeld (scrollt)
 }
+/* Submenu's (Instellingen ▸, Hulp ▸): muis = openen bij hover, tik/klik/Enter/→ = openen, ←/Esc = terug.
+   Breed scherm: fixed links naast het menu (rechts als daar geen plek is); ≤ 700 px of nergens plek: ingeklapt onder het item. */
+let subTimer = 0;
+const subNarrow = () => innerWidth <= 700;
+const subBtn = (sm) => $(`#mainMenu [aria-controls="${sm.id}"]`);
+const subOpenEl = () => $("#mainMenu .submenu:not([hidden])");
+function subOpen(id, focus) {
+  clearTimeout(subTimer);
+  $$("#mainMenu .submenu").forEach(sm => {
+    const on = sm.id === id, btn = subBtn(sm);
+    sm.hidden = !on; btn.setAttribute("aria-expanded", on ? "true" : "false");
+    if (!on) { btn.classList.remove("inl"); return; }
+    sm.classList.remove("inline"); sm.style.left = sm.style.top = "";
+    let inline = subNarrow();
+    if (!inline) {
+      const r = btn.getBoundingClientRect(), w = sm.offsetWidth, h = sm.offsetHeight;
+      let x = r.left - w - 6;
+      if (x < 8) x = r.right + 6;
+      if (x + w > innerWidth - 8) inline = true;
+      else { sm.style.left = x + "px"; sm.style.top = Math.max(8, Math.min(r.top - 6, innerHeight - h - 8)) + "px"; }
+    }
+    sm.classList.toggle("inline", inline); btn.classList.toggle("inl", inline);
+    if (inline) sm.scrollIntoView({ block: "nearest" });
+    if (focus) sm.querySelector(".mi")?.focus();
+  });
+}
+function subLeave() {
+  if (subNarrow() || !$("#tour").hidden) return;
+  clearTimeout(subTimer);
+  subTimer = setTimeout(() => { const o = subOpenEl(); if (o && !o.classList.contains("inline")) subOpen(null); }, 350);
+}
+$$("#mainMenu .mi.sub").forEach(btn => {
+  const id = btn.getAttribute("aria-controls"), sm = $("#" + id);
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (sm.classList.contains("inline") && !sm.hidden) subOpen(null);   // ingeklapt: tik = open/dicht
+    else subOpen(id, e.detail === 0);                                    // e.detail 0 = toetsenbord: eerste item focussen
+  });
+  btn.addEventListener("mouseenter", () => {
+    if (subNarrow() || matchMedia("(hover: none)").matches) return;
+    clearTimeout(subTimer); subTimer = setTimeout(() => subOpen(id), 120);
+  });
+  btn.addEventListener("mouseleave", subLeave);
+  sm.addEventListener("mouseenter", () => clearTimeout(subTimer));
+  sm.addEventListener("mouseleave", subLeave);
+});
+// andere menuregel aanwijzen = open (zwevend) submenu dicht
+$$("#mainMenu > .mi:not(.sub), #mainMenu > .mview").forEach(b => b.addEventListener("mouseenter", subLeave));
+$("#mainMenu").addEventListener("scroll", () => { const o = subOpenEl(); if (o && !o.classList.contains("inline") && $("#tour").hidden) subOpen(null); });
+addEventListener("resize", () => { const o = subOpenEl(); if (o) subOpen(o.id); });
 $("#btnPad").onclick = (e) => { e.stopPropagation(); setMenu($("#mainMenu").hidden); };
-// keuze in het menu sluit het menu (de eigen onclick van het item doet de rest)
-$$("#mainMenu .mi").forEach(b => b.addEventListener("click", () => setMenu(false)));
-document.addEventListener("click", (e) => { if (!e.target.closest(".menuwrap")) setMenu(false); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#mainMenu").hidden) setMenu(false); }, true);
+// keuze in het menu sluit het menu (de eigen onclick van het item doet de rest); submenu-knoppen en schakelaars niet
+$$("#mainMenu .mi:not(.sub)").forEach(b => b.addEventListener("click", () => setMenu(false)));
+document.addEventListener("click", (e) => { if (!e.target.closest(".menuwrap") && !e.target.closest("#tour")) setMenu(false); });
+document.addEventListener("keydown", (e) => {
+  if ($("#mainMenu").hidden) return;
+  const sm = e.target.closest?.(".submenu");
+  if (e.key === "Escape") {
+    e.stopPropagation();
+    const o = subOpenEl();
+    if (o) { subOpen(null); subBtn(o).focus(); } else { setMenu(false); $("#btnPad").focus(); }
+    return;
+  }
+  if (!e.target.closest?.("#mainMenu")) return;
+  // pijltjes, Enter en Spatie in het menu bedienen geen camera
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " ", "Home", "End"].includes(e.key)) e.stopPropagation();
+  if (e.key === "ArrowRight" && e.target.matches(".mi.sub")) { e.preventDefault(); subOpen(e.target.getAttribute("aria-controls"), true); }
+  else if (e.key === "ArrowLeft" && sm) { e.preventDefault(); subOpen(null); subBtn(sm).focus(); }
+  else if (["ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) {
+    e.preventDefault();
+    const box = sm || $("#mainMenu");
+    const list = [...box.querySelectorAll(".mi, .mtog")].filter(b => b.offsetParent && (b.closest(".submenu") || null) === (sm || null));
+    const i = list.indexOf(e.target);
+    const n = e.key === "Home" ? 0 : e.key === "End" ? list.length - 1 : (i + (e.key === "ArrowDown" ? 1 : -1) + list.length) % list.length;
+    list[n]?.focus();
+  }
+}, true);
 
 window.addEventListener("gamepadconnected", (e) => { pad.idx = e.gamepad.index; padUI(e.gamepad); toast("Controller verbonden", true); });
 window.addEventListener("gamepaddisconnected", (e) => {
@@ -2854,7 +2952,8 @@ function applyTheme() {
   const p = themePref();
   const t = p === "auto" ? (themeMq.matches ? "light" : "dark") : p;
   document.documentElement.dataset.theme = t;
-  $("#btnTheme").innerHTML = t === "light" ? ic("moon") + " Donkere modus" : ic("sun") + " Lichte modus";
+  $("#btnTheme").innerHTML = t === "light" ? ic("sun") + " Licht" : ic("moon") + " Donker";   // toont het huidige thema
+  $("#btnTheme").title = `Nu ${t === "light" ? "licht" : "donker"}: klik voor ${t === "light" ? "donker" : "licht"} (dit apparaat)`;
 }
 function setTheme(p) { store.set("theme", p); applyTheme(); }
 themeMq.addEventListener?.("change", applyTheme);
@@ -3634,7 +3733,9 @@ const isTablet = () => tabletMode() === "on" || (tabletMode() === "auto" && tabl
 function tabletApply() {
   const on = isTablet();
   document.body.classList.toggle("tablet", on);
-  $("#btnTablet").innerHTML = ic("tablet") + " Tabletweergave: " + { auto: `automatisch (${on ? "aan" : "uit"})`, on: "aan", off: "uit" }[tabletMode()];
+  $("#btnTablet").innerHTML = ic("tablet") + " Tablet: " + { auto: "auto", on: "aan", off: "uit" }[tabletMode()];
+  $("#btnTablet").classList.toggle("on", on);
+  $("#btnTablet").title = "Tabletweergave: " + { auto: `automatisch (nu ${on ? "aan" : "uit"})`, on: "aan", off: "uit" }[tabletMode()] + ". Klik: automatisch → aan → uit (dit apparaat)";
   if (on && view === ALL && ctrlCam) view = ctrlCam;     // op een tablet één camera tegelijk, met grote tegels
   renderTabBar();
 }
@@ -4067,7 +4168,7 @@ fetch("/api/liederen").then(r => r.json()).then(j => { delete j.config; if (!son
 const TOUR_STEPS = [
   { title: "Welkom bij PTZ Control", text: () => `<p>Met deze app bedien je de PTZ-camera's in de kerk: presets oproepen, handmatig bewegen, iemand volgen en de livestream bekijken.</p>
       <p>Deze rondleiding laat in een paar minuten elke functie zien. Tijdens de rondleiding reageren de camera's niet.</p>
-      <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → ${ic("cap")} Rondleiding</b>.</p>` },
+      <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → Hulp → ${ic("cap")} Rondleiding</b>.</p>` },
   { target: ["#tabs"], title: "Camera's en weergave", text: () => `<p>Kies hier één camera, of <b>Alle camera's</b> om alle presetrasters naast elkaar te zien.</p>
       <p>In <i>Alle camera's</i> kies je met de cameratoets (standaard <kbd>Shift</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>) welke camera je bedient; die kolom licht op.</p>` },
   { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>LIVE</b>.</p>
@@ -4100,34 +4201,36 @@ const TOUR_STEPS = [
       <p>Is de controller verbonden, dan staat er een groen <b>● Verbonden</b> in de titel. Hier zet je ook zachte beweging, tilt omkeren en de maximale snelheid (per apparaat).</p>` },
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
-  { target: ["#keyHints"], title: "Sneltoetsen", text: () => `<p>Dit overzicht toont de toetsen zoals ze nu zijn ingesteld. Met <b>aanpassen</b> (of Menu → ${ic("keyboard")} Sneltoetsen) kies je zelf andere toetsen.</p>` },
+  { target: ["#keyHints"], title: "Sneltoetsen", text: () => `<p>Dit overzicht toont de toetsen zoals ze nu zijn ingesteld. Met <b>aanpassen</b> (of Menu → Instellingen → ${ic("keyboard")} Sneltoetsen) kies je zelf andere toetsen.</p>` },
   { target: ["#followWrap"], title: ic("link") + " Remote control: meewisselen", text: () => `<p>Staat de schakelaar aan (tegel indigo), dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
       <p>Het bolletje is <b>groen</b> zolang de verbinding met de app goed is.</p>` },
   { target: ["#ytWrap"], title: ic("tv") + " YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
       <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream).</p>
       <p>Het venster kun je slepen aan de titelbalk en groter maken met de hoek rechtsonder. Starten en stoppen van de stream gebeurt buiten deze app.</p>` },
-  { target: ["#btnSongBar", "#btnPad"], title: ic("music") + " Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → ${ic("music")} Liederen</b>.</p>` },
+  { target: ["#btnSongBar", "#btnPad"], title: ic("music") + " Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → Instellingen → ${ic("music")} Liederen</b>.</p>` },
   { target: ["#wsWrap"], title: ic("pin") + " Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
       <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
-  { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. We lopen ze kort langs.</p>` },
-  { target: ["#btnKeys"], menu: "main", title: ic("keyboard") + " Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
+  { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. Bovenaan staat wat je <b>tijdens de dienst</b> gebruikt; het inrichten zit onder <b>Instellingen</b> en de uitleg onder <b>Hulp</b>. We lopen ze kort langs.</p>` },
   { target: ["#btnWall"], menu: "main", title: ic("maximize") + " Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
     <p>Op volledig scherm zijn de <b>camerabediening</b> (toets <kbd>${esc(keyLabel(keyOf("ctrl")) || "C")}</kbd>), de <b>Xbox-instellingen</b> (<kbd>${esc(keyLabel(keyOf("pad")) || "X")}</kbd>), <b>YouTube</b> (<kbd>${esc(keyLabel(keyOf("youtube")) || "Y")}</kbd>) en de <b>liederen</b> (<kbd>${esc(keyLabel(keyOf("songs")) || "L")}</kbd>) vensters.
       Ze staan altijd <b>naast elkaar in de balk bovenaan</b>, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. <b>Sleep een venster aan de titelbalk op een ander venster</b> om van plek te wisselen: het neemt die plek in en de andere schuiven één plek op.</p>` },
-  { target: ["#btnBackup"], menu: "main", title: ic("save") + " Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
-      <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
-  { target: ["#btnSettings"], menu: "main", title: ic("video") + " Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
-  { target: ["#btnMidi"], menu: "main", title: ic("sliders") + " Videomixer (MIDI/USB)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel: via de <b>MIDI-poort</b> (met driver) of <b>USB direct</b> (zonder driver). Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
+  { target: ["#btnLog"], menu: "main", title: ic("list") + " Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
   { target: ["#alertBar"], show: () => { alertDemo = true; alertCheck(); }, hide: () => { alertDemo = false; $("#alertBar").classList.remove("show"); alertPrev = new Map(); alertCheck(); },
     title: ic("alert") + " Foutmelding op alle schermen", text: () => `<p>Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op <b>alle schermen</b> een rode balk, ook op volledig scherm: een <b>camera niet bereikbaar</b>, de <b>videomixer niet verbonden</b>, of <b>geen verbinding met PTZ Control</b> zelf.</p><p>Is het opgelost, dan wordt de balk even groen en verdwijnt hij. Met <b>Verbergen</b> haal je hem weg tot er een nieuwe fout bij komt; <b>Bekijk log</b> opent het activiteitenlog.</p>` },
-  { target: ["#btnPractice"], menu: "main", title: ic("cone") + " Oefenstand", text: () => `<p>Oefenen zonder dat er iets beweegt in de kerk: PTZ Control schakelt over op <b>nagebootste camera's</b> met dezelfde camera's, presets en foto's. Handig voor nieuwe vrijwilligers.</p><p>Geldt voor <b>alle schermen</b> (oranje balk en rand), de videomixer wordt losgekoppeld en wat je verandert wordt niet bewaard. Stoppen via de balk of hier. <b>Niet tijdens een dienst.</b></p>` },
-  { target: ["#btnSongs"], menu: "main", title: ic("music") + " Liederen", text: () => `<p>Koppel <b>ProPresenter</b> (via het netwerk) en/of de <b>Voordienst app</b> (API-adres met token). PTZ Control ziet dan welk nummer er op het scherm staat en zet elk nummer in het <b>activiteitenlog</b>, met de plek in de playlist en het nummer uit de Voordienst app.</p><p>Zo zie je na de dienst precies wat er gezongen is. De camera's bewegen hierdoor niet.</p>` },
-  { target: ["#btnLog"], menu: "main", title: ic("list") + " Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
-  { target: ["#btnAccess"], menu: "main", title: ic("lock") + " Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>${ic("lock")} Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
-  { target: ["#btnTablet"], menu: "main", title: ic("tablet") + " Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; hier zet je hem per apparaat aan, uit of op automatisch.</p>` },
-  { target: ["#btnCap"], menu: "main", title: ic("flask") + " Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
   { target: ["#btnOsd"], menu: "main", title: ic("osd") + " OSD-menu camera", text: () => `<p>Bedien het <b>menu van de camera zelf</b> (belichting, kleur, beeld…) met pijltjes, <b>OK</b> en <b>Terug</b>, met het toetsenbord of de Xbox-controller (D-pad, A, B). Kijk op de monitor van de videomixer waar je in het menu bent.</p><p><b>Het menu staat ook in de livestream</b>: zet eerst een andere camera in beeld. Staat de camera IN BEELD, dan vraagt de app eerst of je het zeker weet. Zolang het menu open is staat er <b>OSD-MENU</b> bij de camera en reageert hij niet op presets of volgen. Venster dicht = menu dicht.</p>` },
-  { target: ["#btnTheme"], menu: "main", title: ic("sun") + " Licht en donker", text: () => `<p>Wissel tussen de lichte en donkere weergave. Dit geldt alleen voor dit apparaat.</p>` },
+  { target: ["#btnPractice"], menu: "main", title: ic("cone") + " Oefenstand", text: () => `<p>Oefenen zonder dat er iets beweegt in de kerk: PTZ Control schakelt over op <b>nagebootste camera's</b> met dezelfde camera's, presets en foto's. Handig voor nieuwe vrijwilligers.</p><p>Geldt voor <b>alle schermen</b> (oranje balk en rand), de videomixer wordt losgekoppeld en wat je verandert wordt niet bewaard. Stoppen via de balk of hier. <b>Niet tijdens een dienst.</b></p>` },
+  { target: ["#miSet"], menu: "main", sub: "subSet", title: ic("settings") + " Instellingen", text: () => `<p>Alles om de app in te richten: camera's, videomixer, liederen, sneltoetsen, pincode, back-up en het presetaantal testen. Wijs het aan met de muis of tik erop; op een smal scherm klapt de lijst onder het item open.</p>` },
+  { target: ["#btnSettings"], menu: "main", title: ic("video") + " Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
+  { target: ["#btnMidi"], menu: "main", title: ic("sliders") + " Videomixer (MIDI/USB)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel: via de <b>MIDI-poort</b> (met driver) of <b>USB direct</b> (zonder driver). Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
+  { target: ["#btnSongs"], menu: "main", title: ic("music") + " Liederen", text: () => `<p>Koppel <b>ProPresenter</b> (via het netwerk) en/of de <b>Voordienst app</b> (API-adres met token). PTZ Control ziet dan welk nummer er op het scherm staat en zet elk nummer in het <b>activiteitenlog</b>, met de plek in de playlist en het nummer uit de Voordienst app.</p><p>Zo zie je na de dienst precies wat er gezongen is. De camera's bewegen hierdoor niet.</p>` },
+  { target: ["#btnKeys"], menu: "main", title: ic("keyboard") + " Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
+  { target: ["#btnAccess"], menu: "main", title: ic("lock") + " Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>${ic("lock")} Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
+  { target: ["#btnBackup"], menu: "main", title: ic("save") + " Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
+      <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
+  { target: ["#btnCap"], menu: "main", title: ic("flask") + " Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
+  { target: ["#btnTheme"], menu: "main", title: ic("sun") + " Licht en donker", text: () => `<p>Onder <b>Weergave</b>: tik om te wisselen tussen licht en donker. De knop toont het huidige thema. Dit geldt alleen voor dit apparaat.</p>` },
+  { target: ["#btnTablet"], menu: "main", title: ic("tablet") + " Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; met deze schakelaar zet je hem per apparaat op automatisch, aan of uit (indigo = aan).</p>` },
+  { target: ["#miHelp"], menu: "main", sub: "subHelp", title: ic("help") + " Hulp", text: () => `<p>Deze rondleiding opnieuw starten en kijken of er een nieuwe versie is.</p>` },
   { target: ["#btnTour"], menu: "main", title: ic("cap") + " Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
   { target: ["#btnUpd"], menu: "main", title: ic("refresh") + " Op updates controleren", text: () => `<p>Kijkt meteen of er een nieuwe versie van PTZ Control is. De app doet dit ook zelf, elke 6 uur.</p>` },
   { target: ["#updNote"], show: () => { updPreview = true; updRender(); }, hide: () => { updPreview = false; updRender(); },
@@ -4136,8 +4239,8 @@ const TOUR_STEPS = [
       <li><b>Later</b>: verbergt de melding voor deze versie op dit apparaat.</li></ul>
       <p class="muted">Ook de losse app (.exe/.app) downloadt de nieuwe versie zelf, vervangt zichzelf en start opnieuw. Op volledig scherm blijft de melding weg.</p>` },
   { target: ["#btnQuit"], menu: "main", title: ic("power") + " Afsluiten", text: () => `<p>Stopt PTZ Control op deze computer. Alle schermen verliezen dan de verbinding tot de app opnieuw wordt gestart. De camera's blijven staan waar ze zijn.</p>` },
-  { title: "Klaar!", text: () => `<p>Je kent nu alle functies. ${cfg.cameras.length ? "Veel succes bij de dienst!" : `Begin met <b>Menu → ${ic("video")} Camera's</b> om je camera's toe te voegen.`}</p>
-      <p class="muted">Deze rondleiding start niet meer vanzelf. Opnieuw bekijken: <b>Menu → ${ic("cap")} Rondleiding</b>.</p>` },
+  { title: "Klaar!", text: () => `<p>Je kent nu alle functies. ${cfg.cameras.length ? "Veel succes bij de dienst!" : `Begin met <b>Menu → Instellingen → ${ic("video")} Camera's</b> om je camera's toe te voegen.`}</p>
+      <p class="muted">Deze rondleiding start niet meer vanzelf. Opnieuw bekijken: <b>Menu → Hulp → ${ic("cap")} Rondleiding</b>.</p>` },
 ];
 let tourIdx = -1, tourStepShown = -1;
 function tourTarget(st) {
@@ -4185,6 +4288,10 @@ function tourShow(i) {
   const st = TOUR_STEPS[tourIdx]; tourStepShown = tourIdx;
   if (st.show) st.show();
   setMenu(st.menu === "main"); ytMenuOpen(false);
+  if (st.menu === "main") {     // doel in een submenu (Instellingen ▸ / Hulp ▸): dat submenu openen
+    const sm = st.sub ? $("#" + st.sub) : (st.target || []).map(t => $(t)).find(Boolean)?.closest(".submenu");
+    if (sm) subOpen(sm.id);
+  }
   $("#tourTitle").innerHTML = st.title;
   $("#tourText").innerHTML = st.text();
   $("#tourCount").textContent = `${tourIdx + 1} / ${TOUR_STEPS.length}`;

@@ -36,12 +36,12 @@ Open `http://localhost:8080`, of op een tablet `http://<ip-van-deze-pc>:8080` (h
 Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (volgen: zie hieronder). Instellingen komen in `cameras.json`.
 
 ## Eerste keer
-Bij de eerste start (nog geen camera's) opent de **wizard**: camera's zoeken in het netwerk of zelf invullen (naam + IP), per camera **Testen** (krijgt de app beeld?), en daarna eventueel de presets ophalen die al in de camera's staan. Daarna volgt de rondleiding. Later opnieuw: **Menu → Camera's → Hulp bij instellen…**
+Bij de eerste start (nog geen camera's) opent de **wizard**: camera's zoeken in het netwerk of zelf invullen (naam + IP), per camera **Testen** (krijgt de app beeld?), en daarna eventueel de presets ophalen die al in de camera's staan. Daarna volgt de rondleiding. Later opnieuw: **Menu → Instellingen → Camera's → Hulp bij instellen…**
 
 ![Wizard](docs/screenshots/wizard.png)
 
 Of met de hand:
-1. **Menu → Camera's** (menu rechtsboven): voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
+1. **Menu → Instellingen → Camera's** (menu rechtsboven): voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
    Een ingevuld **wachtwoord** wordt na het opslaan nooit meer getoond (het veld zegt *opgeslagen*): leeg laten houdt het, iets nieuws typen vervangt het, de gebruikersnaam leegmaken haalt het weg.
 2. Je bestaande presets op de camera werken meteen. Rechtsklik, lang indrukken of ✎ op een tegel om een naam te geven
    en een **thumbnail** te maken van het huidige beeld.
@@ -51,13 +51,13 @@ Of met de hand:
 De eerste keer dat je de bediening op een apparaat opent, start vanzelf een **rondleiding** die elke functie stap voor stap aanwijst
 (presets, opslaan, laden, handbediening, volgen, Xbox-controller, sneltoetsen, YouTube en elk menu-item). Tijdens de rondleiding
 reageren de camera's niet. Volgende: **→** of **Enter**, vorige: **←**, stoppen: **Esc**.
-Later nog eens bekijken: **Menu → Rondleiding**.
+Later nog eens bekijken: **Menu → Hulp → Rondleiding**.
 
 ![Rondleiding](docs/screenshots/rondleiding.png)
 
 ## Meerdere camera's tegelijk
 Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de LIVE-preset en alle presettegels.
-Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
+Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Instellingen → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
 Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
 
 **Volledig scherm** (in het menu rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel).
@@ -71,7 +71,9 @@ Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **X
 
 ![Volledig scherm: vensters van plek gewisseld (YouTube en liederen vooraan)](docs/screenshots/volledig-scherm-wisselen.png)
 
-<img src="docs/screenshots/menu.png" width="440" alt="Menu">
+<img src="docs/screenshots/menu.png" width="560" alt="Menu met Instellingen open">
+
+**Het menu** (rechtsboven) is kort gehouden. Bovenaan staat wat je tijdens de dienst gebruikt: *Volledig scherm*, *Activiteitenlog*, *OSD-menu camera* en *Oefenstand*. Het inrichten zit onder **Instellingen ▸** (Camera's, Videomixer, Liederen, Sneltoetsen, Toegang, Back-up, Presetaantal testen) en de uitleg onder **Hulp ▸** (Rondleiding, Op updates controleren). Met de muis gaat een submenu open als je erop wijst; op een tablet of telefoon tik je erop (op een smal scherm klapt het onder het item open). Daaronder staan bij *Weergave* twee schakelaars: licht/donker en tabletweergave.
 
 
 ## Tijdens de dienst
@@ -99,7 +101,7 @@ en slaat er niets onder op (ook niet via de Xbox-controller). Gebruik 1–89 of 
 **Menu → OSD-menu camera** (zie hieronder).
 
 ## Presetaantal testen
-Menu → **Presetaantal testen**. Test per camera hoeveel presets hij echt kan opslaan en oproepen (ca. 1 minuut per
+Menu → Instellingen → **Presetaantal testen**. Test per camera hoeveel presets hij echt kan opslaan en oproepen (ca. 1 minuut per
 camera; de camera's bewegen, dus niet tijdens een dienst). Bestaande presets worden daarna exact teruggezet en lege nummers
 weer gewist. Het resultaat (bijv. "max. preset 254 · 244 bruikbaar") blijft bewaard en is later terug te zien.
 
@@ -141,12 +143,12 @@ Tip: lees de camera's uit en download een back-up na elke wijziging aan de prese
 ![Back-up](docs/screenshots/back-up.png)
 
 ## Automatische back-up
-PTZ Control maakt **elke dag** en **altijd vóór een update** zelf een back-up van alle workspaces (camera's, presets, foto's, instellingen) op de computer waar de app draait. De laatste 10 blijven bewaard. Je vindt ze onderaan in **Menu → Back-up** (*4. Automatische back-ups*): per back-up **Terugzetten…** of **⬇** om te downloaden, en **Nu een back-up maken**.
+PTZ Control maakt **elke dag** en **altijd vóór een update** zelf een back-up van alle workspaces (camera's, presets, foto's, instellingen) op de computer waar de app draait. De laatste 10 blijven bewaard. Je vindt ze onderaan in **Menu → Instellingen → Back-up** (*4. Automatische back-ups*): per back-up **Terugzetten…** of **⬇** om te downloaden, en **Nu een back-up maken**.
 
 <img src="docs/screenshots/automatische-back-up.png" width="720" alt="Automatische back-ups">
 
 ## Pincode en alleen kijken
-Zonder pincode kan iedereen op het kerknetwerk de camera's bedienen. Met **Menu → Toegang (pincode)** stel je een pincode in (4–8 cijfers):
+Zonder pincode kan iedereen op het kerknetwerk de camera's bedienen. Met **Menu → Instellingen → Toegang (pincode)** stel je een pincode in (4–8 cijfers):
 - Andere apparaten (telefoon, tablet, laptop) kunnen dan **alleen meekijken**: presets, *IN BEELD*, de livestream. Rechtsboven staat **Alleen kijken** en bovenin een gele balk. Tik je op een preset, dan vraagt de app de pincode.
 - Na de pincode blijft dat apparaat ingelogd (half jaar). **Dit apparaat vergrendelen** en **Alle apparaten uitloggen** staan in hetzelfde venster.
 - **Op de computer waar PTZ Control draait is nooit een pincode nodig**, zodat je jezelf niet kunt buitensluiten. Pincode vergeten? Daar kun je hem wijzigen of weghalen.
@@ -189,7 +191,7 @@ Geef elk apparaat onderin het venster een **naam** (bijv. *iPad regie*); die kom
 <img src="docs/screenshots/activiteitenlog.png" width="720" alt="Activiteitenlog">
 
 ## Tabletweergave
-Op een iPad of tablet (aanraakscherm) gaat de **tabletweergave** vanzelf aan: grote tegels van één camera en onderin een balk met grote knoppen om de camera te kiezen, met *IN BEELD* en het statusbolletje. Zelf aan/uit/automatisch: **Menu → Tabletweergave** (per apparaat).
+Op een iPad of tablet (aanraakscherm) gaat de **tabletweergave** vanzelf aan: grote tegels van één camera en onderin een balk met grote knoppen om de camera te kiezen, met *IN BEELD* en het statusbolletje. Zelf automatisch/aan/uit: de schakelaar **Tablet** onder *Weergave* in het menu (per apparaat).
 
 <img src="docs/screenshots/tablet.png" width="560" alt="Tabletweergave">
 
@@ -267,7 +269,7 @@ en de stream verschijnt in een **klein venster** (standaard automatisch, zonder 
 <img src="docs/screenshots/youtube-menu.png" width="560" alt="YouTube-menu">
 
 ## Videomixer (Roland V-1HD)
-Sluit de V-1HD met een **USB-kabel** aan op de computer waar PTZ Control draait en open Menu → **Videomixer (MIDI/USB)**.
+Sluit de V-1HD met een **USB-kabel** aan op de computer waar PTZ Control draait en open Menu → Instellingen → **Videomixer (MIDI/USB)**.
 
 - Vink **Koppeling met de videomixer aan** aan. Bovenin staat of de mixer gevonden is.
 - **Verbinding**: *MIDI-poort* (via de MIDI-poort van het systeem; op de Mac/Windows meestal met de Roland-driver) of *USB direct* (PTZ Control spreekt de mixer zelf aan via USB, zonder MIDI-driver). Beide doen hetzelfde. Ziet de computer geen MIDI-poort van de V-1HD, probeer dan USB direct. Bij USB direct mag geen andere driver of app (zoals *V-1HD Remote*) de mixer tegelijk gebruiken; op Windows is daarvoor een WinUSB-driver nodig (bijv. via Zadig).
@@ -282,7 +284,7 @@ De koppeling geldt voor alle schermen en wordt per workspace en in de back-up be
 ![Videomixer](docs/screenshots/videomixer.png)
 
 ## Liederen (ProPresenter en Voordienst app)
-Met Menu → **Liederen** ziet PTZ Control welke nummers er gezongen worden. Elk nummer komt in het **Activiteitenlog** (filter *Liederen*), met de plek in de playlist en het nummer uit de Voordienst app. De camera's bewegen hierdoor niet.
+Met Menu → Instellingen → **Liederen** ziet PTZ Control welke nummers er gezongen worden. Elk nummer komt in het **Activiteitenlog** (filter *Liederen*), met de plek in de playlist en het nummer uit de Voordienst app. De camera's bewegen hierdoor niet.
 
 - **ProPresenter**: zet in ProPresenter *Instellingen → Netwerk* → **Netwerk inschakelen** aan. Vul in PTZ Control het IP-adres van die computer en de poort in (staan in hetzelfde ProPresenter-scherm; `127.0.0.1` als ProPresenter op dezelfde computer draait). PTZ Control kijkt elke 2 seconden welke presentatie op het scherm staat en welke playlist actief is. In het log: *Playlist: Zondag 10:00 (7 items): …* en per nummer *▶ Opwekking 733 – … (2 van 7 in Zondag 10:00, voordienst nr. 1)*. Hetzelfde nummer na een leeg scherm komt er niet twee keer in. Werkt met ProPresenter 7.9 en nieuwer; PTZ Control vraagt alleen informatie op en wijzigt niets in ProPresenter.
 - **Voordienst app**: vul het **API-adres** van de liederen in (`https://…`) en het **API-token** dat je in de Voordienst app aanmaakt. PTZ Control stuurt het mee als `Authorization: Bearer <token>` en leest de lijst opnieuw met de ingestelde **ophaalfrequentie** (standaard elke 10 seconden, instelbaar van 2 tot 600). Het token wordt na het opslaan nooit meer getoond (ook niet aan andere schermen) en zit niet in een back-up zonder wachtwoorden; met **Wissen** haal je het weg. Bij een nieuwe of gewijzigde lijst komt *Liederen geladen: … (n liederen): …* in het log; een ongeldig of verlopen token geeft een fout (*HTTP 401*). Verwacht formaat:
@@ -301,11 +303,9 @@ De instellingen gelden voor alle schermen en worden per workspace en in de back-
 <img src="docs/screenshots/liederenvenster.png" width="720" alt="Liederenvenster"> <img src="docs/screenshots/liederen.png" width="720" alt="Liederen: ProPresenter"> <img src="docs/screenshots/voordienst-app.png" width="720" alt="Liederen: Voordienst app">
 
 ## Licht of donker
-Menu → **Lichte modus / Donkere modus** wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
+De schakelaar onder *Weergave* in het menu (toont **Licht** of **Donker**) wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
 
 De vormgeving volgt de huisstijl van de Voordienst app: lichtgrijze achtergrond met witte kaarten, één hoofdkleur (indigo) voor selectie en knoppen, een donkere kopbalk en het lettertype Inter (zonder internet valt de app terug op het systeemlettertype). Rood = LIVE/fout, groen = in orde, amber = let op, oranje = onderweg/oefenstand.
-
-![Lichte modus](docs/screenshots/hoofdscherm-licht.png)
 
 De app past zich aan elke schermgrootte aan. Passen de cameratabbladen niet naast de knoppen in de kopbalk, dan krijgen ze een eigen regel (en schuiven ze opzij als ze ook dan niet passen). Op een smal scherm tonen de knoppen in de kop alleen hun icoon (de uitleg staat erbij als je erop wijst) en staan de onderdelen onder elkaar:
 
@@ -316,17 +316,17 @@ Klik op **Standaard** (met het locatiepictogram) naast de titel. Een workspace i
 - *Nieuwe workspace…*: kies een naam en begin leeg of als kopie van een bestaande.
 - Wisselen geldt voor alle schermen die met deze computer verbonden zijn (ze herladen vanzelf). Volgen stopt bij het wisselen.
 - *Workspaces beheren…*: hernoemen, openen of verwijderen (verwijderen wist alles van die workspace; maak eerst een back-up als je het wilt bewaren).
-- **Back-ups:** Menu → Back-up maakt een back-up van de workspace die nu open is (de naam staat in het bestand). Vink *alle workspaces* aan voor één bestand met alles. Bij terugzetten kies je: in de huidige workspace, of als nieuwe workspace. Een back-up van alle workspaces zet ze allemaal terug (workspaces die er niet in staan blijven staan).
+- **Back-ups:** Menu → Instellingen → Back-up maakt een back-up van de workspace die nu open is (de naam staat in het bestand). Vink *alle workspaces* aan voor één bestand met alles. Bij terugzetten kies je: in de huidige workspace, of als nieuwe workspace. Een back-up van alle workspaces zet ze allemaal terug (workspaces die er niet in staan blijven staan).
 - Direct in een bepaalde workspace starten: `python3 ptz_control.py --workspace "Kerk Zwolle"` (ook als extra argument achter `Start PTZ Control`).
 
 ## Sneltoetsen
 Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · C = camerabediening · X = Xbox-instellingen · Y = YouTube-venster · L = liederenvenster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
-**Alle toetsen zijn aan te passen** via Menu → Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
+**Alle toetsen zijn aan te passen** via Menu → Instellingen → Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
 
 ![Sneltoetsen](docs/screenshots/sneltoetsen.png)
 
 ## Updates
-PTZ Control kijkt zelf elke 6 uur (en kort na het starten) of er een nieuwe versie is. Is die er, dan verschijnt **rechtsonder** een melding met wat er nieuw is. Zelf kijken: **Menu → Op updates controleren**.
+PTZ Control kijkt zelf elke 6 uur (en kort na het starten) of er een nieuwe versie is. Is die er, dan verschijnt **rechtsonder** een melding met wat er nieuw is. Zelf kijken: **Menu → Hulp → Op updates controleren**.
 
 - **Nu bijwerken** (versie via *Start PTZ Control* / git): de app haalt de nieuwe versie op (`git pull`), werkt zo nodig de packages bij en start zichzelf opnieuw. De bediening is dan ongeveer 10 seconden weg; open schermen verversen vanzelf. ⚠ Niet tijdens een dienst.
 - **Map zonder git** (bijv. de code als ZIP van GitHub gedownload, of git staat niet op deze computer): **Nu bijwerken** stapt over op de **losse app**. Die wordt gedownload en komt in dezelfde map in plaats van de Dock-snelkoppeling `PTZ Control.app`, dus het Dock-icoon blijft werken. Op Windows komt `PTZ Control.exe` op de vaste plek `%LOCALAPPDATA%\Programs\PTZ Control` en wijst de snelkoppeling *PTZ Control* in Startmenu en op het bureaublad voortaan naar de .exe. Je instellingen, presets en foto's worden gekopieerd naar de vaste plek buiten de app (Mac: `~/Library/Application Support/PTZ Control`, Windows: `%APPDATA%\PTZ Control`); wat daar al stond, gaat naar een submap `voor-overstap-<datum>`. `cameras.json` in de oude map heet daarna `cameras.json.overgezet` (reservekopie). Vanaf dan werkt de losse app zichzelf bij.
