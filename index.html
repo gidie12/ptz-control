@@ -527,7 +527,8 @@
   #ytMenu .mi[disabled] { opacity: .45; cursor: default; }
   #ytMenu .ysize { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 14px; }
   #ytMenu .ysize span.lbl { flex: 1; white-space: nowrap; }
-  #ytMenu .ysize button { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
+  #ytMenu .ysize button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
+  #ytMenu .ysize button:not(.on):hover { border-color: var(--accent); }
   #ytMenu .ysize button.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); font-weight: 600; }
   #ytWin { position: fixed; z-index: 25; width: 360px; left: 16px; top: 80px; background: var(--panel);
     border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); overflow: hidden;
@@ -676,7 +677,7 @@
   .ic:is([data-i="keyboard"], [data-i="gamepad"], [data-i="settings"], [data-i="plus"], [data-i="external"], [data-i="x"]) { --tile: #64748b; }
   .ic:is([data-i="maximize"], [data-i="tablet"], [data-i="osd"], [data-i="locate"], [data-i="panel-top"]) { --tile: #2563eb; }
   .ic:is([data-i="save"], [data-i="download"], [data-i="upload"]) { --tile: #0891b2; }
-  .ic:is([data-i="video"], [data-i="camera"], [data-i="wand"], [data-i="pin"]) { --tile: #4f46e5; }
+  .ic:is([data-i="video"], [data-i="camera"], [data-i="wand"], [data-i="pin"], [data-i="link"]) { --tile: #4f46e5; }
   .ic:is([data-i="sliders"], [data-i="music"]) { --tile: #db2777; }
   .ic:is([data-i="flask"], [data-i="cone"], [data-i="stop"]) { --tile: #ea580c; }
   .ic:is([data-i="list"], [data-i="zap"], [data-i="sun"], [data-i="thumbtack"]) { --tile: #d97706; }
@@ -685,6 +686,25 @@
   .ic:is([data-i="refresh"]) { --tile: #0d9488; }
   .ic:is([data-i="power"], [data-i="tv"], [data-i="alert"]) { --tile: #dc2626; }
   .warnbox > .ic:first-child, .lm .ic.warn { color: var(--warn); }
+  /* 🧑 Meewisselen (Volg selectie) in stijl D: tegel (indigo aan, leisteen uit) met verbindingsbolletje, label op twee regels, schakelaar */
+  label.follow { display: inline-flex; align-items: center; gap: 9px; padding: 5px 10px 5px 5px; cursor: pointer; user-select: none; }
+  .follow .ftile { position: relative; width: 26px; height: 26px; border-radius: 7px; background: #475569; color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; transition: background .15s; flex: none; }
+  .follow:has(.fsw:checked) .ftile { background: var(--accent); }
+  .follow .ftile .ic { width: 16px; height: 16px; stroke-width: 2.3; }
+  .follow .foff, .follow:has(.fsw:checked) .fon { display: inline; }
+  .follow .fon, .follow:has(.fsw:checked) .foff { display: none; }
+  .follow #liveDot { position: absolute; right: -3px; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted);
+    box-shadow: 0 0 0 2px var(--hdr); }
+  .follow .flbl { display: flex; flex-direction: column; line-height: 1.15; font-size: 13px; font-weight: 600; color: var(--hdrtxt); }
+  .follow .flbl small { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; opacity: .65; }
+  .follow .fsw { appearance: none; -webkit-appearance: none; margin: 0 0 0 2px; width: 30px; height: 18px; border-radius: 999px; flex: none;
+    background: rgba(255,255,255,.18); position: relative; cursor: pointer; transition: background .15s; }
+  .follow .fsw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff;
+    transition: transform .15s; }
+  .follow .fsw:checked { background: var(--accent); }
+  .follow .fsw:checked::after { transform: translateX(12px); }
+  .follow .fsw:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   #btnHome .ic { width: 24px; height: 24px; }
   .dpad .btn .ic { width: 22px; height: 22px; stroke-width: 2.4; }
   .osdpad .icon .ic { width: 20px; height: 20px; stroke-width: 2.4; }
@@ -739,6 +759,8 @@
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-link-off" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7"/><path d="M15 7h2a5 5 0 0 1 4 8"/><path d="M8 12h4"/><path d="m2 2 20 20"/></symbol>
   <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></symbol>
   <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6a1.4 1.4 0 0 1-1 .4H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6M19.4 18.4a9 9 0 0 0 0-12.8"/></symbol>
@@ -765,10 +787,11 @@
     <div class="menu" id="wsMenu" hidden role="menu"></div>
   </div>
   <div class="tabs" id="tabs"></div>
-  <label class="icon" style="display:flex;gap:6px;align-items:center;font-size:13px"
-    title="Wissel mee als op een ander scherm of met de controller een andere camera gekozen wordt. Het bolletje is groen als de verbinding met de app goed is.">
-    <span id="liveDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></span>
-    <input type="checkbox" id="chkFollow" checked> Volg selectie
+  <label class="icon follow" id="followWrap"
+    title="Meewisselen: dit scherm kiest mee als op een ander scherm of met de controller een andere camera gekozen wordt. Het bolletje is groen als de verbinding met de app goed is.">
+    <span class="ftile"><svg class="ic fon" aria-hidden="true"><use href="#i-link"/></svg><svg class="ic foff" aria-hidden="true"><use href="#i-link-off"/></svg><span id="liveDot"></span></span>
+    <span class="flbl"><small>Remote control</small>Meewisselen</span>
+    <input type="checkbox" id="chkFollow" class="fsw" role="switch" checked aria-label="Remote control: meewisselen">
   </label>
   <button class="icon" id="btnLock" hidden title="Pincode / alleen kijken"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg></button>
   <button class="icon" id="btnSongBar" hidden title="Liederenvenster tonen/verbergen (L)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg><span class="sbl" id="songBarLbl">Liederen</span></button>
@@ -785,7 +808,7 @@
       <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten"><svg class="ic" data-i="save" aria-hidden="true"><use href="#i-save"/></svg> Back-up</button>
       <button class="mi" id="btnSettings" role="menuitem"><svg class="ic" data-i="video" aria-hidden="true"><use href="#i-video"/></svg> Camera's</button>
       <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld"><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Videomixer (MIDI)</button>
-      <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg> Liederen (ProPresenter)</button>
+      <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg> Liederen</button>
       <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan"><svg class="ic" data-i="flask" aria-hidden="true"><use href="#i-flask"/></svg> Presetaantal testen</button>
       <button class="mi" id="btnOsd" role="menuitem" title="Het menu van de camera zelf bedienen (belichting, kleur, beeld). Staat ook in de livestream!"><svg class="ic" data-i="osd" aria-hidden="true"><use href="#i-osd"/></svg> OSD-menu camera</button>
       <div class="msep"></div>
@@ -870,7 +893,7 @@
         <button class="btn sm" id="afOff">AF hand</button>
         <button class="btn sm" id="afPush">One-push</button>
       </div>
-      <div class="trkline"><button class="btn trackbtn" id="btnTrack" title="Persoon volgen: alleen pan, tilt en zoom blijven staan"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Volgen (pan)</button>
+      <div class="trkline"><button class="btn trackbtn" id="btnTrack" title="De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan)"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Persoon volgen</button>
         <button class="btn" id="btnTrackSet" title="Kader en persoon kiezen: instellen waar de persoon in beeld moet blijven en aanklikken wie gevolgd wordt"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg> Kader…</button></div>
       <div class="small" id="trackInfo" style="margin-top:4px"></div>
       <details ontoggle="fitDocked()">
@@ -1550,7 +1573,7 @@ function renderSide() {
   const t = c ? track[c.id] || {} : {};
   const b = $("#btnTrack");
   b.classList.toggle("on", !!t.on);
-  b.innerHTML = ic("track") + (t.on ? ` Volgen aan · ${esc(t.status || "")}` : " Volgen (pan)");
+  b.innerHTML = ic("track") + (t.on ? ` Volgt persoon · ${esc(t.status || "")}` : " Persoon volgen");
   $("#trackInfo").textContent = cfg.tracking_error ? "Volgen niet beschikbaar: " + cfg.tracking_error
     : t.on && t.fps ? [
         ({yolo: "YOLO", yolox: "YOLOX"})[t.detector] || "OpenCV (alleen hele personen)",
@@ -1715,7 +1738,7 @@ const KEY_ACTIONS = {
   left: ["Links", "ArrowLeft", "Bewegen", true], right: ["Rechts", "ArrowRight", "Bewegen", true],
   zoom_in: ["Zoom in", "KeyQ", "Zoom en focus", true], zoom_out: ["Zoom uit", "KeyA", "Zoom en focus", true],
   focus_far: ["Focus ver", "KeyW", "Zoom en focus", true], focus_near: ["Focus dichtbij", "KeyS", "Zoom en focus", true],
-  stop: ["Stop", "Space", "Overig"], home: ["Home", "KeyH", "Overig"], track: ["Volgen (pan) aan/uit", "KeyT", "Overig"],
+  stop: ["Stop", "Space", "Overig"], home: ["Home", "KeyH", "Overig"], track: ["Persoon volgen aan/uit", "KeyT", "Overig"],
   wall: ["Volledig scherm", "KeyF", "Overig"], youtube: ["YouTube-venster tonen/verbergen", "KeyY", "Overig"],
   songs: ["Liederenvenster tonen/verbergen", "KeyL", "Overig"],
   ctrl: ["Camerabediening tonen/verbergen (volledig scherm) of in-/uitklappen", "KeyC", "Overig"],
@@ -2324,7 +2347,7 @@ const padMap = () => {
 function padActionOptions() {
   const o = [["", "— niets —"], ["cam_prev", "Vorige camera"], ["cam_next", "Volgende camera"]];
   cfg.cameras.forEach((c, i) => o.push(["cam:" + (i + 1), "Camera: " + c.name]));
-  o.push(["home", "Home"], ["track", "Volgen (pan) aan/uit"], ["af", "Autofocus (one-push)"], ["fine", "Fijn-modus aan/uit"],
+  o.push(["home", "Home"], ["track", "Persoon volgen aan/uit"], ["af", "Autofocus (one-push)"], ["fine", "Fijn-modus aan/uit"],
          ["stopall", "Alles stoppen"]);
   o.push(["shift", "Shift (vasthouden: presets +N)"], ["store", "Opslaan (vasthouden + presetknop)"]);
   const pn = presetNums(); for (let n = 1; pn.length < 8 && n <= 254; n++) if (!RESERVED(n) && !pn.includes(n)) pn.push(n);
@@ -2814,6 +2837,8 @@ function ytAutoSpot(maxW) {
   if (cols.length) consider(card.left, card.right, Math.max(...cols) + GAP + 4, "onder");
   return best.w ? best : null;
 }
+// bovengrens voor losse vensters: onder de (sticky) kop, anders verdwijnt de titelbalk eronder en kun je niet meer slepen
+function winTop() { if (isWall()) return 0; const h = $("header"); return h ? Math.max(0, Math.round(h.getBoundingClientRect().bottom)) : 0; }
 function ytPlace(g = ytGeom()) {
   let { x, y, w } = g;
   ytWin.classList.toggle("auto", g.auto);
@@ -2835,6 +2860,7 @@ function ytPlace(g = ytGeom()) {
     else if (wall) strip();   // volledig scherm zonder vrije plek: rechts een strook vrijhouden, de tegels schuiven op
     else { ytReserve(0); w = Math.min(g.w, innerWidth - 32); x = innerWidth - w - 16; y = innerHeight - ytH(w) - 16; }   // rechtsonder (over de zijbalk)
   } else ytReserve(0);
+  if (!wall) { x = Math.max(0, Math.min(x, innerWidth - w)); y = Math.max(winTop(), Math.min(y, innerHeight - ytH(w))); }
   ytWin.style.width = w + "px"; ytWin.style.left = x + "px"; ytWin.style.top = y + "px";
   $("#ytAutoBtn").hidden = g.auto;
   dockLayout();
@@ -3008,7 +3034,7 @@ function ytDrag(el, onMove) {
 }
 ytDrag($("#ytHead"), (r, dx, dy) => {
   ytWin.style.left = Math.max(0, Math.min(r.left + dx, innerWidth - r.width)) + "px";
-  ytWin.style.top = Math.max(0, Math.min(r.top + dy, innerHeight - r.height)) + "px";
+  ytWin.style.top = Math.max(winTop(), Math.min(r.top + dy, innerHeight - r.height)) + "px";
 });
 ytDrag($("#ytGrip"), (r, dx) => {
   ytWin.style.width = Math.max(220, Math.min(r.width + dx, innerWidth - r.left)) + "px";
@@ -3900,12 +3926,12 @@ function songPlace() {
   if (isWall()) { dockLayout(); return; }   // volledig scherm: in de balk bovenaan
   const g = songGeom();
   if (g.w) songWin.style.width = Math.min(g.w, innerWidth - 8) + "px";
-  if (g.h) songWin.style.height = Math.min(g.h, innerHeight - 8) + "px";
+  if (g.h) songWin.style.height = Math.min(g.h, innerHeight - winTop() - 8) + "px";
   if (g.x == null) { songWin.style.left = songWin.style.top = ""; songWin.style.right = "16px"; songWin.style.bottom = "16px"; return; }
   const r = songWin.getBoundingClientRect();
   songWin.style.right = songWin.style.bottom = "";
   songWin.style.left = Math.max(0, Math.min(g.x, innerWidth - r.width)) + "px";
-  songWin.style.top = Math.max(0, Math.min(g.y, innerHeight - r.height)) + "px";
+  songWin.style.top = Math.max(winTop(), Math.min(g.y, innerHeight - r.height)) + "px";
 }
 function songWinShow(on) {
   songWin.hidden = !on;
@@ -3937,7 +3963,7 @@ function songDrag(el, onMove) {
 }
 songDrag($("#songHead"), (r, dx, dy) => {
   songWin.style.left = Math.max(0, Math.min(r.left + dx, innerWidth - r.width)) + "px";
-  songWin.style.top = Math.max(0, Math.min(r.top + dy, innerHeight - r.height)) + "px";
+  songWin.style.top = Math.max(winTop(), Math.min(r.top + dy, innerHeight - r.height)) + "px";
 });
 songDrag($("#songGrip"), (r, dx, dy) => {
   songWin.style.width = Math.max(220, Math.min(r.width + dx, innerWidth - r.left)) + "px";
@@ -3995,7 +4021,7 @@ const TOUR_STEPS = [
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
   { target: ["#keyHints"], title: "Sneltoetsen", text: () => `<p>Dit overzicht toont de toetsen zoals ze nu zijn ingesteld. Met <b>aanpassen</b> (of Menu → ${ic("keyboard")} Sneltoetsen) kies je zelf andere toetsen.</p>` },
-  { target: ["#chkFollow"], parent: "label", title: "Volg selectie", text: () => `<p>Staat dit aan, dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
+  { target: ["#followWrap"], title: ic("link") + " Remote control: meewisselen", text: () => `<p>Staat de schakelaar aan (tegel indigo), dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
       <p>Het bolletje is <b>groen</b> zolang de verbinding met de app goed is.</p>` },
   { target: ["#ytWrap"], title: ic("tv") + " YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
       <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream).</p>
