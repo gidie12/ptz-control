@@ -318,6 +318,13 @@ def describe_request(path, body, code, resp):
         msg = _preset_label(cam or {}, body.get("n")) + ": overschrijven ongedaan gemaakt"
     elif path == "/api/track":
         msg = "Persoon volgen " + ("aan" if (resp or {}).get("on") else "uit") if ok else "Persoon volgen"
+    elif path == "/api/track/pick":
+        msg = "Volgen: automatisch de grootste persoon" if body.get("auto") else "Volgen: persoon aangeklikt"
+    elif path == "/api/track/frame":
+        msg = "Volgkader ingesteld" if ok else "Volgkader"
+    elif path == "/api/track/limit":
+        msg = {"left": "Volgen: grens links ingesteld", "right": "Volgen: grens rechts ingesteld"}.get(
+            body.get("side"), "Volgen: grenzen gewist")
     elif path == "/api/thumb":
         msg = f"Foto van preset {body.get('n')} " + ("verwijderd" if body.get("delete") else "vernieuwd")
     elif path == "/api/config":
@@ -990,28 +997,217 @@ def _track_status(cam_id, **kw):
     broadcast(dict(st))
 
 
-def start_tracking(cam):
+def get_detector():
     global _DETECTOR
+    with TRACK_LOCK:
+        if _DETECTOR is None:
+            _DETECTOR = _tracker.Detector(person_model_dirs())
+        return _DETECTOR
+
+
+def track_frame(cam):
+    return _tracker.norm_frame(cam.get("track_frame") or _tracker.DEFAULT_FRAME)
+
+
+class PanReader:
+    """Panpositie via VISCA met één blijvende verbinding (opnieuw verbinden na een fout)."""
+
+    def __init__(self, cam):
+        self.cam = cam
+        self.sock = None
+
+    def __call__(self):
+        try:
+            if self.sock is None:
+                self.sock = _backup.visca_session(self.cam)
+            return _backup.read_pan(self.sock)
+        except Exception:
+            self.close()
+            raise
+
+    def close(self):
+        if self.sock:
+            try:
+                self.sock.close()
+            except OSError:
+                pass
+        self.sock = None
+
+
+def read_pan_once(cam):
+    with _backup.visca_session(cam) as sock:
+        return _backup.read_pan(sock)
+
+
+def start_tracking(cam, pick=None):
+    """pick = (cx, kleurhistogram) van een aangeklikte persoon, of None = automatisch de grootste."""
     err = tracking_error()
     if err:
         raise RuntimeError(err)
     if osd_is_open(cam["id"]):
         raise RuntimeError("Het OSD-menu staat open op deze camera: sluit het eerst.")
     stop_tracking(cam["id"], halt=True, quiet=True)
+    det = get_detector()
     with TRACK_LOCK:
-        if _DETECTOR is None:
-            _DETECTOR = _tracker.Detector(person_model_dirs())
         settings = {"max_speed": clamp(cam.get("track_speed") or 6, 1, 24),
                     "invert": bool(cam.get("track_invert")),
-                    "deadzone": 0.10}
+                    "frame": track_frame(cam),
+                    "pick": pick}
+        limits = _tracker.norm_limits(cam.get("track_limits"))
+        if limits:
+            settings["limits"], settings["read_pan"] = limits, PanReader(cam)
         t = _tracker.CameraTracker(
-            cam, stream_url(cam), _DETECTOR,
+            cam, stream_url(cam), det,
             send=lambda a, args, c=cam: run_command(c, a, args),
             on_status=lambda st, cid=cam["id"]: _track_status(cid, **st),
             settings=settings)
         TRACKERS[cam["id"]] = t
         t.start()
-    _track_status(cam["id"], on=True, status="starten…", detector=_DETECTOR.kind)
+    _track_status(cam["id"], on=True, status="starten…", detector=det.kind, picked=bool(pick))
+
+
+# ---- volgbeeld: één beeld met de gevonden personen, om er een aan te klikken (geen live preview)
+LOOKS = {}   # cam_id -> {"t", "jpeg", "people": [(cx, cy, w, h, score, hist)]}
+
+
+def track_look(cam):
+    """Haal één beeld (van de lopende tracker, anders /snapshot.jpg), zoek personen en onthoud ze voor /api/track/pick."""
+    err = tracking_error()
+    if err:
+        raise RuntimeError(err)
+    cv2 = _tracker.cv2
+    frame, source = None, "snapshot"
+    t = TRACKERS.get(cam["id"])
+    if t:
+        f, ts = t.grabber.latest()
+        if f is not None and time.time() - ts < 1.5:
+            frame, source = f.copy(), "volgbeeld"
+    if frame is None:
+        try:
+            data, _ = http_get(cam, "/snapshot.jpg", binary=True)
+        except Exception as e:  # noqa: BLE001
+            raise RuntimeError(f"Geen beeld van de camera: {e}") from e
+        frame = cv2.imdecode(_tracker.np.frombuffer(data, _tracker.np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise RuntimeError("Geen beeld van de camera (geen geldige JPEG)")
+    people = get_detector().detect(frame)
+    people = [p for p in people if p[3] > _tracker.CameraTracker.MIN_HEIGHT]
+    people.sort(key=lambda p: p[0])
+    hists = [_tracker.appearance(frame, p) for p in people]
+    target = None
+    tb = t.target_box() if t else None
+    if tb and people:
+        i = min(range(len(people)), key=lambda k: abs(people[k][0] - tb[0]))
+        if abs(people[i][0] - tb[0]) < 0.15:
+            target = i
+    h, w = frame.shape[:2]
+    if w > 960:
+        frame = cv2.resize(frame, (960, int(h * 960 / w)))
+    ok, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    now = time.time()
+    LOOKS[cam["id"]] = {"t": now, "jpeg": jpg.tobytes() if ok else b"",
+                        "people": [tuple(p[:5]) + (hh,) for p, hh in zip(people, hists)]}
+    return {"ok": True, "source": source, "t": now, "aspect": round(w / h, 4) if h else 1.7778,
+            "img": f"/api/track/look.jpg?cam={urllib.parse.quote(cam['id'])}&t={int(now * 1000)}",
+            "people": [{"i": i, "cx": round(p[0], 4), "cy": round(p[1], 4), "w": round(p[2], 4), "h": round(p[3], 4),
+                        "target": i == target} for i, p in enumerate(people)],
+            "frame": track_frame(cam), "tracking": bool(t), "picked": bool(t and t.picked), **track_limit_info(cam)}
+
+
+def track_limit_info(cam):
+    """Ingestelde pan-grenzen + huidige panpositie (als VISCA lukt) voor het venster."""
+    lim = cam.get("track_limits") or {}
+    info = {"limits": {k: lim[k] for k in ("left", "right") if isinstance(lim.get(k), int)}, "pan": None, "pan_error": ""}
+    t = TRACKERS.get(cam["id"])
+    if t and t.guard and t.guard.pan is not None:
+        info["pan"] = t.guard.pan
+    elif time.time() - PAN_FAIL.get(cam["id"], (0, ""))[0] < 60:
+        info["pan_error"] = PAN_FAIL[cam["id"]][1]    # net mislukt: niet bij elk beeld 2 s wachten
+    else:
+        try:
+            info["pan"] = read_pan_once(cam)
+            PAN_FAIL.pop(cam["id"], None)
+        except Exception as e:  # noqa: BLE001
+            info["pan_error"] = f"Panpositie niet te lezen via VISCA (poort {cam.get('visca_port') or 5678}): {e}"
+            PAN_FAIL[cam["id"]] = (time.time(), info["pan_error"])
+    return info
+
+
+PAN_FAIL = {}   # cam_id -> (tijd, fout) van de laatste mislukte VISCA-positie
+
+
+def set_track_limit(cam, side):
+    """side = left/right: de huidige panpositie als grens, of clear = beide weg."""
+    if side not in ("left", "right", "clear"):
+        raise ValueError("Onbekende grens")
+    pan = None
+    PAN_FAIL.pop(cam["id"], None)
+    if side != "clear":
+        try:
+            pan = read_pan_once(cam)
+        except Exception as e:  # noqa: BLE001
+            raise ValueError(f"Panpositie niet te lezen via VISCA (poort {cam.get('visca_port') or 5678}): {e}") from None
+    with LOCK:
+        cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+        for c in cfg.get("cameras", []):
+            if c.get("id") == cam["id"]:
+                if side == "clear":
+                    c.pop("track_limits", None)
+                else:
+                    c.setdefault("track_limits", {})[side] = pan
+                lim = c.get("track_limits")
+        _write(cfg)
+    t = TRACKERS.get(cam["id"])
+    if t:
+        if t.guard:
+            t.set_limits(lim)
+        elif _tracker.norm_limits(lim):
+            # tracker liep zonder grenzen: opnieuw starten met grenzen (zelfde gekozen persoon zoeken)
+            pick = (t.target, t.model) if t.picked and t.target is not None else None
+            start_tracking(find_camera(cam["id"]), pick=pick)
+    broadcast({"type": "config"})
+    return {"ok": True, **track_limit_info(find_camera(cam["id"]))}
+
+
+def track_pick(cam, i=None, auto=False):
+    """Persoon i uit het laatste volgbeeld volgen (start volgen als dat nog uit staat), of auto = de grootste."""
+    t = TRACKERS.get(cam["id"])
+    if auto:
+        if t:
+            t.release()
+            _track_status(cam["id"], picked=False)
+        return {"ok": True, "on": bool(t)}
+    look = LOOKS.get(cam["id"])
+    if not look or time.time() - look["t"] > 120:
+        raise ValueError("Maak eerst een nieuw beeld (📷) en klik dan op een persoon.")
+    try:
+        p = look["people"][int(i)]
+    except (TypeError, ValueError, IndexError):
+        raise ValueError("Onbekende persoon: maak een nieuw beeld.") from None
+    if t:
+        t.pick(p[0], p[5])
+    else:
+        start_tracking(cam, pick=(p[0], p[5]))
+    _track_status(cam["id"], picked=True)
+    return {"ok": True, "on": True}
+
+
+def set_track_frame(cam_id, frame):
+    frame = _tracker.norm_frame(frame)
+    with LOCK:
+        cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+        found = False
+        for c in cfg.get("cameras", []):
+            if c.get("id") == cam_id:
+                c["track_frame"], found = frame, True
+        if not found:
+            raise KeyError(f"Camera {cam_id} niet gevonden")
+        _write(cfg)
+    t = TRACKERS.get(cam_id)
+    if t:
+        t.set_frame(frame)
+    broadcast({"type": "config"})
+    return frame
 
 
 def stop_tracking(cam_id, halt=True, quiet=False):
@@ -1024,7 +1220,7 @@ def stop_tracking(cam_id, halt=True, quiet=False):
         t.stop(halt=halt)
         t.join(timeout=1.0)  # wacht tot de lopende detectie klaar is, zodat er geen pan meer achteraan komt
     if not quiet and (t or TRACK_STATUS.get(cam_id, {}).get("on")):
-        _track_status(cam_id, on=False, status="uit")
+        _track_status(cam_id, on=False, status="uit", picked=False)
 
 
 def follow_after_preset(cam, delay=2.5):
@@ -1817,6 +2013,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, f.read(), "image/jpeg")
             except (KeyError, OSError):
                 return self._send(404, {"error": "geen thumbnail"})
+        if u.path == "/api/track/look.jpg":
+            look = LOOKS.get(parse_qs(u.query).get("cam", [""])[0])
+            if not look or not look["jpeg"]:
+                return self._send(404, {"error": "geen volgbeeld"})
+            return self._send(200, look["jpeg"], "image/jpeg")
         if u.path == "/api/snapshot":
             cam_id = parse_qs(u.query).get("cam", [""])[0]
             try:
@@ -1991,6 +2192,10 @@ class Handler(BaseHTTPRequestHandler):
                     cam.pop(key, None)
                     if key in existing.get(cam.get("id"), {}):
                         cam[key] = existing[cam["id"]][key]
+                # volgkader: via /api/track/frame; een scherm dat hem niet meestuurt wist hem niet
+                for key in ("track_frame", "track_limits"):
+                    if key not in cam and key in existing.get(cam.get("id"), {}):
+                        cam[key] = existing[cam["id"]][key]
             save_config(body)
             broadcast({"type": "config"})
             if (body.get("youtube") or {}).get("channel", "") != old_yt:
@@ -2117,6 +2322,21 @@ class Handler(BaseHTTPRequestHandler):
                     on = not (cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS)
                 start_tracking(cam) if on else stop_tracking(cam["id"])
                 return self._send(200, {"ok": True, "on": bool(on)})
+            except KeyError as e:
+                return self._send(404, {"ok": False, "error": e.args[0]})
+            except Exception as e:  # noqa: BLE001
+                return self._send(400, {"ok": False, "error": str(e)})
+
+        if u.path in ("/api/track/look", "/api/track/pick", "/api/track/frame", "/api/track/limit"):
+            try:
+                cam = find_camera(body.get("cam"))
+                if u.path == "/api/track/look":
+                    return self._send(200, track_look(cam))
+                if u.path == "/api/track/pick":
+                    return self._send(200, track_pick(cam, body.get("i"), bool(body.get("auto"))))
+                if u.path == "/api/track/limit":
+                    return self._send(200, set_track_limit(cam, body.get("side")))
+                return self._send(200, {"ok": True, "frame": set_track_frame(cam["id"], body.get("frame"))})
             except KeyError as e:
                 return self._send(404, {"ok": False, "error": e.args[0]})
             except Exception as e:  # noqa: BLE001

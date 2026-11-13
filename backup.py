@@ -95,6 +95,13 @@ def signed(v, bits):
 
 
 # ---------------------------------------------------------------- positie
+def read_pan(sock):
+    """Alleen de panpositie (één inquiry), voor de grenzen bij volgen."""
+    pt = visca_inq(sock, "81 09 06 12 FF")
+    pn = 5 if len(pt) >= 9 else 4
+    return signed(nib(pt[:pn]), 4 * pn)
+
+
 def read_position(sock):
     pt = visca_inq(sock, "81 09 06 12 FF")
     n = len(pt)
