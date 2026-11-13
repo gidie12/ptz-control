@@ -2031,8 +2031,11 @@ function dockLayout() {
     const order = dockOrder().filter(k => avail0[k]), items = order.map(k => avail0[k]);
     dockEls = items.map((it, i) => ({ el: it.el, kind: order[i] }));
     if (!items.length) { ytReserveTop(0); return; }
+    // foutbalk/oefenbalk blijven zichtbaar: de balk met vensters begint eronder
+    const barsB = ["#practiceBar", "#alertBar"].reduce((b, s) => { const e = $(s); return e && e.offsetHeight ? Math.max(b, e.getBoundingClientRect().bottom) : b; }, 0);
+    const T = Math.round(barsB) + 10, fy = T + "px";
     const tilesH = $("#presetCard").getBoundingClientRect().height;
-    const topMax = Math.max(160, Math.floor(innerHeight - tilesH - 30));
+    const topMax = Math.max(160, Math.floor(innerHeight - tilesH - 30 - (T - 10)));
     for (const it of items) {   // natuurlijke maat per venster
       if (it.kind === "card") {
         it.collapsed = it.el.classList.contains("collapsed");
@@ -2051,14 +2054,14 @@ function dockLayout() {
     let x = 10 + Math.max(0, Math.round((avail - sum) / 2));
     for (const it of items) {
       if (it.kind === "card") {
-        it.el.style.setProperty("--fx", x + "px"); it.el.style.setProperty("--fy", "10px"); it.el.style.setProperty("--fw", it.w + "px");
+        it.el.style.setProperty("--fx", x + "px"); it.el.style.setProperty("--fy", fy); it.el.style.setProperty("--fw", it.w + "px");
         if (it.collapsed) it.el.style.removeProperty("--fh"); else it.el.style.setProperty("--fh", H + "px");
       } else if (it.kind === "yt") {
         ytReserve(0); ytResKey = null;
-        ytWin.style.left = x + "px"; ytWin.style.top = "10px"; ytWin.style.width = it.w + "px";
+        ytWin.style.left = x + "px"; ytWin.style.top = fy; ytWin.style.width = it.w + "px";
       } else {
         songWin.style.right = songWin.style.bottom = "";
-        songWin.style.left = x + "px"; songWin.style.top = "10px"; songWin.style.width = it.w + "px"; songWin.style.height = (H || 320) + "px";
+        songWin.style.left = x + "px"; songWin.style.top = fy; songWin.style.width = it.w + "px"; songWin.style.height = (H || 320) + "px";
       }
       x += it.w + gap;
     }
@@ -3604,7 +3607,10 @@ function barsTop() {
   bs.setProperty("--headh", (getComputedStyle(h).position === "sticky" ? h.offsetHeight : 0) + "px");
   bs.setProperty("--practh", $("#practiceBar").offsetHeight + "px");
 }
-if (window.ResizeObserver) { const ro = new ResizeObserver(barsTop); ro.observe($("header")); ro.observe($("#practiceBar")); }
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(barsTop); ro.observe($("header")); ro.observe($("#practiceBar"));
+  const rb = new ResizeObserver(() => { if (isWall()) dockLayout(); }); rb.observe($("#alertBar")); rb.observe($("#practiceBar"));   // vensterbalk onder fout-/oefenbalk
+}
 barsTop();
 addEventListener("resize", () => { hdrFit(); barsTop(); });
 function camLabel(n) { return /^camera\b/i.test(n || "") ? n : "Camera " + n; }   // geen "Camera Camera 1"
