@@ -62,9 +62,14 @@
 
   header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line);
     flex-wrap: wrap; position: sticky; top: 0; background: var(--bg); z-index: 28; }
-  header h1 { font-size: 15px; font-weight: 600; margin: 0 6px 0 0; }
-  .tabs { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-  .tab { padding: 8px 14px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0 6px 0 0; white-space: nowrap; }
+  /* 🧑 kop past zich aan elke schermbreedte aan: tabbladen in één rij (horizontaal scrollen als het echt niet past);
+     passen ze niet naast de knoppen, dan krijgen ze een eigen regel (header.stack, gezet door hdrFit()) */
+  .tabs { display: flex; gap: 6px; flex-wrap: nowrap; flex: 1 1 0; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .hdrR { display: flex; align-items: center; gap: 10px; margin-left: auto; flex: none; }
+  header.stack .tabs { order: 5; flex-basis: 100%; }
+  .tab { flex: none; white-space: nowrap; padding: 8px 14px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; }
   .tab.active { background: var(--accent); color: var(--onaccent); border-color: var(--accent); font-weight: 600; }
   .tab.all { border-style: dashed; }
   .tab.all.active { border-style: solid; }
@@ -75,6 +80,27 @@
   @media (max-width: 1200px) { main { grid-template-columns: 1fr; } aside { position: static !important;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
   @media (max-width: 700px) { aside { grid-template-columns: 1fr; } }
+  /* telefoon: knoppen in de kop alleen met icoon (tekst staat in de title), compacter */
+  @media (max-width: 700px) {
+    header .hl, header label.follow .flbl { display: none; }   /* specifieker dan de huisstijlregel verderop */
+    header label.follow { padding: 5px 7px 5px 5px; gap: 7px; }
+    #btnYt:not(.live):not(.upcoming) #ytLbl { display: none; }
+  }
+  .tab .kort { display: none; }
+  @media (max-width: 560px) {
+    header { padding: 8px 10px; gap: 6px; row-gap: 8px; }
+    .hdrR { gap: 6px; }
+    header .icon { padding: 7px 9px; }
+    header .tab { padding: 7px 10px; }
+    header .tab small { display: none; }
+    #alertBar, #practiceBar { padding: 6px 10px; font-size: 13px; gap: 8px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+  }
+  @media (max-width: 420px) { header h1 { display: none; } header .tab { padding: 6px 8px; font-size: 13px; }
+    .tab .lang { display: none; } .tab .kort { display: inline; } }
+  /* weinig hoogte (telefoon liggend): kop niet vastplakken, anders blijft er geen ruimte voor de tegels */
+  @media (max-height: 500px) { header { position: static; } }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
   .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0;
     font-weight: 600; }
@@ -783,10 +809,11 @@
   <h1>PTZ Control</h1>
   <div class="menuwrap" id="wsWrap">
     <button class="icon" id="btnWs" aria-haspopup="true" aria-expanded="false" title="Workspace: een aparte set camera's, presets en instellingen (bijv. per locatie)">
-      <svg class="ic" data-i="pin" aria-hidden="true"><use href="#i-pin"/></svg> <span id="wsLbl">Standaard</span> <svg class="ic caret" data-i="chevron-down" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
+      <svg class="ic" data-i="pin" aria-hidden="true"><use href="#i-pin"/></svg> <span id="wsLbl" class="hl">Standaard</span> <svg class="ic caret" data-i="chevron-down" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
     <div class="menu" id="wsMenu" hidden role="menu"></div>
   </div>
   <div class="tabs" id="tabs"></div>
+  <div class="hdrR">
   <label class="icon follow" id="followWrap"
     title="Meewisselen: dit scherm kiest mee als op een ander scherm of met de controller een andere camera gekozen wordt. Het bolletje is groen als de verbinding met de app goed is.">
     <span class="ftile"><svg class="ic fon" aria-hidden="true"><use href="#i-link"/></svg><svg class="ic foff" aria-hidden="true"><use href="#i-link-off"/></svg><span id="liveDot"></span></span>
@@ -794,7 +821,7 @@
     <input type="checkbox" id="chkFollow" class="fsw" role="switch" checked aria-label="Remote control: meewisselen">
   </label>
   <button class="icon" id="btnLock" hidden title="Pincode / alleen kijken"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg></button>
-  <button class="icon" id="btnSongBar" hidden title="Liederenvenster tonen/verbergen (L)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg><span class="sbl" id="songBarLbl">Liederen</span></button>
+  <button class="icon" id="btnSongBar" hidden title="Liederenvenster tonen/verbergen (L)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg><span class="sbl hl" id="songBarLbl">Liederen</span></button>
   <div class="menuwrap" id="ytWrap">
     <button class="icon" id="btnYt" aria-haspopup="true" aria-expanded="false"><span class="ytdot"></span><span id="ytLbl">YouTube</span> <svg class="ic caret" data-i="chevron-down" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
     <div class="menu" id="ytMenu" hidden role="menu"></div>
@@ -822,6 +849,7 @@
       <div class="msep"></div>
       <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)"><svg class="ic" data-i="power" aria-hidden="true"><use href="#i-power"/></svg> PTZ Control afsluiten</button>
     </div>
+  </div>
   </div>
 </header>
 <div id="practiceBar" role="status"><svg class="ic" data-i="cone" aria-hidden="true"><use href="#i-cone"/></svg> OEFENSTAND: de echte camera's bewegen niet en de videomixer is losgekoppeld. Wijzigingen worden niet bewaard.
@@ -1451,6 +1479,13 @@ async function saveConfig() {
 /* ================= render ================= */
 function render() { renderTabs(); renderPresets(); renderSide(); }
 
+// kop: passen de tabbladen niet naast titel/workspace/knoppen, dan gaan ze naar een eigen regel
+function hdrFit() {
+  const h = $("header"), t = $("#tabs");
+  if (!h || !t) return;
+  h.classList.remove("stack");
+  if (t.scrollWidth > t.clientWidth + 1 || t.clientWidth < 120) h.classList.add("stack");
+}
 function renderTabs() {
   renderTabBar();
   const tabs = $("#tabs"); tabs.innerHTML = "";
@@ -1464,9 +1499,15 @@ function renderTabs() {
   if (cfg.cameras.length > 1) {
     const a = document.createElement("button");
     a.className = "tab all" + (view === ALL ? " active" : "");
-    a.textContent = "Alle camera's";
+    a.innerHTML = `<span class="lang">Alle camera's</span><span class="kort">Alle</span>`;
     a.onclick = () => setView(ALL);
     tabs.appendChild(a);
+  }
+  hdrFit();
+  const act = tabs.querySelector(".tab.active");     // actieve tab in beeld schuiven (alleen de tabbalk, niet de pagina)
+  if (act && tabs.scrollWidth > tabs.clientWidth) {
+    if (act.offsetLeft < tabs.scrollLeft) tabs.scrollLeft = act.offsetLeft - 8;
+    else if (act.offsetLeft + act.offsetWidth > tabs.scrollLeft + tabs.clientWidth) tabs.scrollLeft = act.offsetLeft + act.offsetWidth - tabs.clientWidth + 8;
   }
 }
 
@@ -3438,12 +3479,13 @@ function alertCheck() {
 }
 // foutbalk en oefenbalk plakken onder de kop (die is sticky en kan meerdere regels hoog zijn; op volledig scherm verborgen = 0)
 function barsTop() {
-  const bs = document.body.style;
-  bs.setProperty("--headh", $("header").offsetHeight + "px");
+  const bs = document.body.style, h = $("header");
+  bs.setProperty("--headh", (getComputedStyle(h).position === "sticky" ? h.offsetHeight : 0) + "px");
   bs.setProperty("--practh", $("#practiceBar").offsetHeight + "px");
 }
 if (window.ResizeObserver) { const ro = new ResizeObserver(barsTop); ro.observe($("header")); ro.observe($("#practiceBar")); }
 barsTop();
+addEventListener("resize", () => { hdrFit(); barsTop(); });
 function camLabel(n) { return /^camera\b/i.test(n || "") ? n : "Camera " + n; }   // geen "Camera Camera 1"
 $("#alertHide").onclick = () => { alertHidden = new Set(alertPrev.keys()); $("#alertBar").classList.remove("show"); };
 $("#alertLog").onclick = () => $("#btnLog").click();
@@ -4078,7 +4120,15 @@ function tourPlace() {
     card.style.left = Math.max(m, (vw - cw) / 2) + "px"; card.style.top = Math.max(m, (vh - ch) / 2.4) + "px";
     return;
   }
-  const pad = st.pad ?? 4, r = el.getBoundingClientRect();
+  const pad = st.pad ?? 4;
+  let r = el.getBoundingClientRect();
+  // past de kaart nergens naast het doel (klein scherm), schuif de pagina dan zo ver op dat hij eronder past
+  if (!st.menu && r.bottom + pad + m + ch > vh && r.top - pad - m - ch < 0) {
+    const need = Math.ceil(r.bottom + pad + m + ch - vh) + 1, h = $("header");
+    const hb = getComputedStyle(h).position === "sticky" ? h.getBoundingClientRect().bottom : 0;
+    const room = document.documentElement.scrollHeight - innerHeight - scrollY;
+    if (r.top - need >= hb + pad && room >= need) { scrollBy(0, need); r = el.getBoundingClientRect(); }
+  }
   spot.classList.remove("none");
   Object.assign(spot.style, { left: r.left - pad + "px", top: r.top - pad + "px", width: r.width + pad * 2 + "px", height: r.height + pad * 2 + "px" });
   // kaart onder, boven, rechts of links van het doel; anders midden onderin
