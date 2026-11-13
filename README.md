@@ -58,7 +58,7 @@ Later nog eens bekijken: **Menu → Rondleiding**.
 ## Meerdere camera's tegelijk
 Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de LIVE-preset en alle presettegels.
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
-Met **Volg selectie** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt.
+Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
 
 **Volledig scherm** (in het menu rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel).
 Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **Xbox-controller** (toets **X**), **YouTube** (toets **Y**) en **liederen** (toets **L**). Elke toets toont of verbergt zijn venster; **✕** in de titelbalk verbergt het ook. Alle vier zien er hetzelfde uit: titelbalk met badge en knoppen. Open vensters staan **altijd naast elkaar bovenaan**: tegen de bovenrand, even hoog als het hoogste venster, en de camera's schuiven eronder (zo ver omlaag als nodig, maar nooit uit beeld; de inhoud van de bediening- en Xbox-kaart wordt zo nodig kleiner of groter geschaald). Losmaken kan niet. **Van plek wisselen**: sleep een venster aan zijn titelbalk op een ander venster; het neemt die plek in en de vensters ertussen schuiven één plek op (elk scherm onthoudt de volgorde). Ingeklapt (pijltje) blijft van een venster alleen de titelbalk over. Buiten volledig scherm staan de bediening en de Xbox-controller gewoon in de zijbalk; daar klap je ze in en uit door op de titel te klikken, of met **C** en **X**. Elk scherm onthoudt welke vensters open zijn. Alle toetsen zijn aan te passen in **Sneltoetsen**.
@@ -208,7 +208,14 @@ Gebruik:
 - **volgen** in de kolomkop (of de knop in de bediening, of toets **T**) zet volgen aan/uit. De status staat erbij: *volgt*, *zoekt persoon*, *geen beeld*.
 - In het preset-venster (✎): **Na oproepen automatisch volgen**. Bijv. "Preekstoel": camera gaat naar het shot en begint na 2,5 s te volgen.
 - Handbediening, home of een andere preset op die camera zet volgen direct uit. Zoom en focus mogen tijdens het volgen.
-- Bij meerdere mensen in beeld kiest hij de grootste (meestal de spreker vooraan) en blijft daarna bij diezelfde persoon.
+- Bij meerdere mensen in beeld kiest hij de grootste (meestal de spreker vooraan) en blijft daarna bij diezelfde persoon. Hij herkent die persoon aan de **kleur van de kleding** (bovenlijf), dus als iemand anders voorbij loopt of even voor de spreker langs gaat, blijft hij bij de spreker.
+- **Kader…** (naast de volgknop) opent het venster *Volgen instellen* met één beeld van de camera (geen live beeld; *Nieuw beeld* haalt een nieuw beeld):
+  - **Kader**: sleep de twee **oranje lijnen**. Zolang de persoon (helemaal) tussen die lijnen staat, staat de camera stil; loopt hij eruit, dan draait de camera tot hij weer op de **witte stippellijn** (doel) staat. Die mag ook uit het midden, bijv. links in beeld voor een tekst rechts. Smal kader = strak gevolgd, breed kader = rustig beeld. Loopt iemand sneller dan de camera bijhoudt, dan versnelt de camera tot de max. volgsnelheid. Het kader geldt per camera, voor alle schermen, en meteen (ook tijdens het volgen). Pijltjestoetsen op een lijn verschuiven hem ook.
+  - **Grenzen links en rechts**: hoe ver de camera mag draaien tijdens het volgen, bijv. niet verder dan de rand van het podium. Draai de camera met de **pijlen** (vasthouden) naar het verste punt links en klik **Grens links = hier**, daarna hetzelfde voor rechts. De balk eronder toont de grenzen (groen) en waar de camera nu staat. Bij een grens stopt de camera en mag de persoon uit beeld lopen; komt hij terug, dan volgt de camera weer. Handbediening en presets mogen wel verder. Werkt alleen als de camera zijn positie via VISCA (poort 5678) doorgeeft; anders staat er een melding.
+  - **Persoon aanklikken**: elke gevonden persoon krijgt een kader *Volg 1, 2…*. Klik erop en de camera volgt precies die persoon (volgen gaat dan ook aan). Gaat de gekozen persoon even uit beeld, dan stopt de camera en wacht hij tot dezelfde persoon terug is, in plaats van iemand anders te pakken. **Automatisch (grootste persoon)** zet dat weer los.
+
+<img src="docs/screenshots/volgen-instellen.png" width="720" alt="Volgen instellen: kader en persoon kiezen">
+- Volgen kost alleen rekenkracht zolang het aan staat: de detector bekijkt hooguit **8 beelden per seconde** per camera (genoeg voor een lopende spreker; instelbaar met de omgevingsvariabele `PTZ_TRACK_FPS`). YOLO gebruikt de GPU van de Apple-chip, YOLOX in de losse app de processor.
 - Camera's per camera: **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
 
 ![Preset bewerken](docs/screenshots/preset-bewerken.png)
@@ -233,7 +240,7 @@ Sticks en triggers liggen vast. De knoppen stel je per knop in via **Knoppeninde
 | A · B · X · Y | Preset 1–4 · met LB (Shift) ingedrukt: 5–8 |
 | ☰ Menu + A/B/X/Y | Huidige positie opslaan als preset (trilt ter bevestiging) |
 | D-pad ←/→ | Vorige / volgende camera · ↓ home (↑ vrij) |
-| RB | Volgen (pan) aan/uit · View = alles stoppen |
+| RB | Persoon volgen aan/uit · View = alles stoppen |
 
 Elke knop kan ook worden: een vaste camera, een andere preset, home, volgen, autofocus, fijn-modus, alles stoppen, of niets.
 **Shift** telt bij presets een instelbaar getal op (standaard 4); **Opslaan** vasthouden + presetknop slaat de huidige positie op.
@@ -273,7 +280,7 @@ De koppeling geldt voor alle schermen en wordt per workspace en in de back-up be
 ![Videomixer](docs/screenshots/videomixer.png)
 
 ## Liederen (ProPresenter en Voordienst app)
-Met Menu → **Liederen (ProPresenter)** ziet PTZ Control welke nummers er gezongen worden. Elk nummer komt in het **Activiteitenlog** (filter *Liederen*), met de plek in de playlist en het nummer uit de Voordienst app. De camera's bewegen hierdoor niet.
+Met Menu → **Liederen** ziet PTZ Control welke nummers er gezongen worden. Elk nummer komt in het **Activiteitenlog** (filter *Liederen*), met de plek in de playlist en het nummer uit de Voordienst app. De camera's bewegen hierdoor niet.
 
 - **ProPresenter**: zet in ProPresenter *Instellingen → Netwerk* → **Netwerk inschakelen** aan. Vul in PTZ Control het IP-adres van die computer en de poort in (staan in hetzelfde ProPresenter-scherm; `127.0.0.1` als ProPresenter op dezelfde computer draait). PTZ Control kijkt elke 2 seconden welke presentatie op het scherm staat en welke playlist actief is. In het log: *Playlist: Zondag 10:00 (7 items): …* en per nummer *▶ Opwekking 733 – … (2 van 7 in Zondag 10:00, voordienst nr. 1)*. Hetzelfde nummer na een leeg scherm komt er niet twee keer in. Werkt met ProPresenter 7.9 en nieuwer; PTZ Control vraagt alleen informatie op en wijzigt niets in ProPresenter.
 - **Voordienst app**: vul het **API-adres** van de liederen in (`https://…`) en het **API-token** dat je in de Voordienst app aanmaakt. PTZ Control stuurt het mee als `Authorization: Bearer <token>` en leest de lijst opnieuw met de ingestelde **ophaalfrequentie** (standaard elke 10 seconden, instelbaar van 2 tot 600). Het token wordt na het opslaan nooit meer getoond (ook niet aan andere schermen) en zit niet in een back-up zonder wachtwoorden; met **Wissen** haal je het weg. Bij een nieuwe of gewijzigde lijst komt *Liederen geladen: … (n liederen): …* in het log; een ongeldig of verlopen token geeft een fout (*HTTP 401*). Verwacht formaat:
