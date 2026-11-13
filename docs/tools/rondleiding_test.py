@@ -23,7 +23,7 @@ with sync_playwright() as p:
         print(vw, "steps", n, "open na einde:", pg.is_visible("#tour"), "tourDone:", pg.evaluate("localStorage.tourDone"), "cmds:", len(cmds), "errs:", errs)
         for x in probs: print("  PROBLEEM", x)
         pg.reload(); pg.wait_for_timeout(1500); print("  na herladen tour zichtbaar:", pg.is_visible("#tour"))
-        pg.click("#btnPad"); pg.click("#btnTour"); pg.wait_for_timeout(400); print("  via menu gestart:", pg.is_visible("#tourCard"), pg.text_content("#tourCount"))
+        pg.click("#btnPad"); pg.click("#miHelp"); pg.click("#btnTour"); pg.wait_for_timeout(400); print("  via menu gestart:", pg.is_visible("#tourCard"), pg.text_content("#tourCount"))
         pg.keyboard.press("Escape"); pg.wait_for_timeout(200); print("  Esc sluit:", not pg.is_visible("#tour"))
         pg.close()
     b.close()
