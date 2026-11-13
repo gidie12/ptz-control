@@ -61,6 +61,10 @@ Noteer per stap welke ingang op het programmabeeld staat. `v1hd.txt` terugsturen
 3. **Automatisch kiezen**: na een wissel de camera kiezen die net van program af is.
 4. **Mixer bedienen vanuit de app** (ingang kiezen via program change).
 
+## USB direct
+
+Naast de MIDI-poort kan de app de mixer ook **rechtstreeks via USB** aanspreken (`v1hd_usb.py`, pyusb + libusb-package): zelfde MIDI-berichten, verpakt in USB-MIDI-pakketten van 4 bytes. Handig als de computer geen MIDI-poort van de V-1HD ziet (geen driver). ⚠️ Product-ID en pakketformaat niet gecontroleerd op de echte mixer: bij de eerste test de *Verkenning* draaien met *USB direct* en vergelijken met MIDI.
+
 ## Code
 
 - `roland_v1hd.py`: berichten opbouwen (RQ1/DT1, checksum) en ontleden (`V1HDState`), alleen standaard-Python.

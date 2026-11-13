@@ -23,11 +23,18 @@ if not os.path.isfile(MODEL):
 ICO = os.path.join(ROOT, "app", "ptz.ico")
 ICNS = os.path.join(ROOT, "PTZ Control.app", "Contents", "Resources", "AppIcon.icns")
 
+# USB direct naar de videomixer: libusb-bibliotheek uit libusb-package meenemen (zit als package-data in het pakket)
+try:
+    from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+    USB_DATAS = collect_data_files("libusb_package") + collect_dynamic_libs("libusb_package")
+except Exception:  # noqa: BLE001
+    USB_DATAS = []
+
 a = Analysis(  # noqa: F821
     [os.path.join(ROOT, "ptz_control.py")],
     pathex=[ROOT],
-    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, "."), (MODEL, "models")],
-    hiddenimports=["backup", "youtube", "updater", "wininstall", "tracker", "midi", "roland_v1hd", "actlog", "oefen", "liederen", "mido", "mido.backends.rtmidi", "rtmidi", "certifi", "pystray", "PIL.Image"]
+    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, "."), (MODEL, "models")] + USB_DATAS,
+    hiddenimports=["backup", "youtube", "updater", "wininstall", "tracker", "midi", "roland_v1hd", "v1hd_usb", "usb", "usb.core", "usb.util", "usb.backend.libusb1", "libusb_package", "actlog", "oefen", "liederen", "mido", "mido.backends.rtmidi", "rtmidi", "certifi", "pystray", "PIL.Image"]
     + (["pystray._win32"] if sys.platform == "win32" else ["pystray._darwin", "AppKit", "Foundation"] if sys.platform == "darwin" else []),
     # YOLO/torch is te groot voor de losse app: volgen gebruikt daar YOLOX (ONNX) via OpenCV (cv2.dnn)
     excludes=["ultralytics", "torch", "torchvision", "matplotlib", "tkinter", "pandas", "scipy", "IPython", "pytest"],

@@ -5,6 +5,8 @@ Gedrag (zoals uit de Remote Control Guide, ⚠️ lampjes-codering verzonnen):
 - antwoordt op RQ1 voor 71 00 00 (fader + video sel A/B) en 73 02 00 (lampjes) met DT1.
 
 Gebruik in de server: omgevingsvariabele PTZ_MIDI_FAKE=<begin-ingang A-rij>, bv. PTZ_MIDI_FAKE=2.
+Werkt voor beide verbindingssoorten: MIDI (FakeBackend) en USB direct (FakeUsbDev, met echte
+USB-MIDI-pakketten zodat v1hd_usb het ontleden test).
 """
 import collections
 import os
@@ -13,6 +15,7 @@ import threading
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 import roland_v1hd as rv  # noqa: E402
+import v1hd_usb  # noqa: E402
 
 GREEN, RED = 0x01, 0x02   # ⚠️ verzonnen waarden
 
@@ -80,6 +83,39 @@ class _Port:
         with self.dev.lock:
             self.dev.sent.append(list(data))
             self.dev.answer(data)
+
+    def close(self):
+        pass
+
+
+class FakeUsbDev:
+    """Nep-USB-apparaat voor v1hd_usb.UsbBackend(finder=...): spreekt USB-MIDI-pakketten."""
+
+    vid, pid = v1hd_usb.ROLAND_VID, 0x0FFF   # ⚠️ product-ID verzonnen
+
+    def __init__(self, dev):
+        self.dev = dev
+        self.name = dev.name
+        self.parser = v1hd_usb.UsbMidiParser()
+
+    def open(self):
+        pass
+
+    def read(self, timeout_ms=5):
+        with self.dev.lock:
+            if not self.dev.q:
+                return b""
+            _, raw = self.dev.q.popleft()
+        if raw[0] == 0xF0:
+            return v1hd_usb.sysex_packets(raw[1:-1])
+        return v1hd_usb.short_packet(raw)
+
+    def write(self, data):
+        for d, _raw in self.parser.feed(data):
+            if d.get("type") == "sysex":
+                with self.dev.lock:
+                    self.dev.sent.append(list(d["data"]))
+                    self.dev.answer(d["data"])
 
     def close(self):
         pass

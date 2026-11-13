@@ -243,11 +243,11 @@ def _observe(ev):
         _OBS["midi"] = cur
         if not prev:
             if cur["connected"]:
-                syslog(f"Videomixer verbonden ({ev.get('port') or 'MIDI'})")
+                syslog(f"Videomixer verbonden ({ev.get('port') or 'MIDI'}{', USB direct' if ev.get('conn') == 'usb' else ''})")
             return
         if cur["connected"] != prev.get("connected"):
             if cur["connected"]:
-                syslog(f"Videomixer verbonden ({ev.get('port') or 'MIDI'})")
+                syslog(f"Videomixer verbonden ({ev.get('port') or 'MIDI'}{', USB direct' if ev.get('conn') == 'usb' else ''})")
             elif ev.get("enabled"):
                 syslog("Videomixer niet meer verbonden" + (f": {cur['error']}" if cur["error"] else ""), "fout")
         if cur["connected"] and cur["live"] != prev.get("live"):
@@ -352,6 +352,8 @@ def describe_request(path, body, code, resp):
         msg = "Bijwerken gestart"
     elif path == "/api/midi/config":
         msg = "Videomixer-instellingen gewijzigd"
+        if body.get("conn") in ("midi", "usb"):
+            msg += " (verbinding: " + ("USB direct" if body["conn"] == "usb" else "MIDI") + ")"
     elif path == "/api/liederen/config":
         msg = "Liederen-instellingen gewijzigd"
     elif path == "/api/midi/record":
@@ -399,7 +401,7 @@ def _yt_channel():
 YT = _youtube.Watcher(_yt_channel, lambda st, changed: broadcast(st))
 
 
-# ---------------------------------------------------------------- videomixer (Roland V-1HD via MIDI)
+# ---------------------------------------------------------------- videomixer (Roland V-1HD via MIDI of USB direct)
 def _midi_cfg():
     return load_config().get("midi") or {}
 

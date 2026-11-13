@@ -863,7 +863,7 @@
       <button class="mi sub" id="miSet" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-controls="subSet"><svg class="ic" data-i="settings" aria-hidden="true"><use href="#i-settings"/></svg> Instellingen<svg class="ic subcaret" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
       <div class="menu submenu" id="subSet" hidden role="menu" aria-label="Instellingen">
         <button class="mi" id="btnSettings" role="menuitem"><svg class="ic" data-i="video" aria-hidden="true"><use href="#i-video"/></svg> Camera's</button>
-        <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI): welke camera staat in beeld"><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Videomixer (MIDI)</button>
+        <button class="mi" id="btnMidi" role="menuitem" title="Koppeling met de videomixer (Roland V-1HD via MIDI of direct via USB): welke camera staat in beeld"><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Videomixer (MIDI/USB)</button>
         <button class="mi" id="btnSongs" role="menuitem" title="Welke nummers er gezongen worden, uit ProPresenter en de Voordienst app (komt in het activiteitenlog)"><svg class="ic" data-i="music" aria-hidden="true"><use href="#i-music"/></svg> Liederen</button>
         <button class="mi" id="btnKeys" role="menuitem" title="Sneltoetsen van het toetsenbord, o.a. om een camera te kiezen"><svg class="ic" data-i="keyboard" aria-hidden="true"><use href="#i-keyboard"/></svg> Sneltoetsen</button>
         <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Toegang (pincode)</button>
@@ -1218,6 +1218,10 @@
   <p class="small">Via een USB-kabel van de V-1HD naar deze computer ziet PTZ Control welke ingang op de mixer gekozen is (rode knop).
     De camera die daarbij hoort, krijgt in de app een rode rand met <b>IN BEELD</b>.</p>
   <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="midiOn"> Koppeling met de videomixer aan</label>
+  <div class="row small" id="midiConnRow">Verbinding:
+    <label title="Via de MIDI-poort van het systeem (Roland-driver of class-compliant USB-MIDI)"><input type="radio" name="midiConn" value="midi"> MIDI-poort</label>
+    <label title="Rechtstreeks via USB, zonder MIDI-driver (libusb)"><input type="radio" name="midiConn" value="usb"> USB direct</label>
+    <span class="muted" id="midiConnHint"></span></div>
   <div class="mixstat off" id="midiStat"></div>
   <div class="bsec">
     <h4>Knoppen koppelen aan camera's</h4>
@@ -1229,14 +1233,14 @@
       <label><input type="radio" name="midiBus" value="B"> B</label>
       <span class="muted" id="midiSel"></span></div>
     <details class="small" style="margin-top:10px"><summary>Geavanceerd</summary>
-      <div class="row">MIDI-poort bevat <input type="text" id="midiPort" maxlength="80" style="width:140px">
+      <div class="row"><span id="midiPortLbl">MIDI-poort bevat</span> <input type="text" id="midiPort" maxlength="80" style="width:140px">
         SysEx device-ID <input type="number" id="midiDev" min="0" max="31" style="width:64px"> <span class="muted">(standaard 16 = 17 in het menu)</span></div>
       <div class="muted" id="midiPorts" style="margin-top:6px"></div>
     </details>
   </div>
   <div class="bsec">
     <h4>Verkenning</h4>
-    <div class="small">Legt alles vast wat de mixer via MIDI stuurt, om de koppeling te controleren of te verbeteren.
+    <div class="small">Legt alles vast wat de mixer stuurt (MIDI-berichten, ook bij USB direct), om de koppeling te controleren of te verbeteren.
       Start, druk op de mixer op de knoppen van beide rijen en kies een memory, en download dan de log.</div>
     <div class="row"><button class="icon" id="midiRec"><svg class="ic" data-i="play" aria-hidden="true"><use href="#i-play"/></svg> Verkenning starten</button>
       <a class="icon" id="midiDl" href="/api/midi/log.txt" download style="text-decoration:none"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Log downloaden</a>
@@ -3845,9 +3849,13 @@ function midiRender() {
   if (!midiCfg) return;
   $("#midiOn").checked = midiCfg.enabled;
   const st = $("#midiStat");
-  if (!midi.available) { st.className = "mixstat err"; st.textContent = midi.error || "MIDI niet beschikbaar"; }
+  const usb = midiCfg.conn === "usb";
+  $$("input[name=midiConn]").forEach(r => r.checked = r.value === midiCfg.conn);
+  $("#midiConnHint").textContent = usb ? "zonder MIDI-driver" : "";
+  $("#midiPortLbl").textContent = usb ? "USB-apparaat bevat (naam of vid:pid)" : "MIDI-poort bevat";
+  if (!midi.available) { st.className = "mixstat err"; st.textContent = midi.error || (usb ? "USB direct niet beschikbaar" : "MIDI niet beschikbaar"); }
   else if (!midiCfg.enabled) { st.className = "mixstat off"; st.textContent = "Uit. Vink aan om te verbinden."; }
-  else if (midi.connected) { st.className = "mixstat ok"; st.textContent = "● Verbonden met " + midi.port + (midi.error ? " · " + midi.error : ""); }
+  else if (midi.connected) { st.className = "mixstat ok"; st.textContent = "● Verbonden met " + midi.port + (usb ? " (USB direct)" : "") + (midi.error ? " · " + midi.error : ""); }
   else { st.className = "mixstat err"; st.textContent = midi.error || "Verbinden…"; }
   const row = $("#mixRow");
   if (!row.children.length) {
@@ -3884,7 +3892,8 @@ function midiRender() {
   $("#midiSel").textContent = "";
   if (document.activeElement !== $("#midiPort")) $("#midiPort").value = midiCfg.port;
   if (document.activeElement !== $("#midiDev")) $("#midiDev").value = midiCfg.dev;
-  $("#midiPorts").textContent = midi.ports?.length ? "Gevonden MIDI-poorten: " + midi.ports.join(", ") : "Geen MIDI-poorten gevonden.";
+  $("#midiPorts").textContent = midi.ports?.length ? (usb ? "Gevonden Roland-apparaten (USB): " : "Gevonden MIDI-poorten: ") + midi.ports.join(", ")
+    : (usb ? "Geen Roland-apparaten via USB gevonden." : "Geen MIDI-poorten gevonden.");
   $("#midiRec").innerHTML = midi.recording ? ic("stop") + " Verkenning stoppen" : ic("play") + " Verkenning starten";
   $("#midiRecInfo").textContent = midi.recording ? "Bezig: druk nu op de knoppen van de mixer." : "";
 }
@@ -3907,6 +3916,7 @@ $("#dlgMidi").addEventListener("close", () => clearInterval(midiPoll));
 $("#midiClose").onclick = () => $("#dlgMidi").close();
 $("#midiOn").onchange = (e) => midiSave({ enabled: e.target.checked });
 $$("input[name=midiBus]").forEach(r => r.onchange = () => midiSave({ live_bus: r.value }));
+$$("input[name=midiConn]").forEach(r => r.onchange = () => midiSave({ conn: r.value }));
 $("#midiPort").onchange = (e) => midiSave({ port: e.target.value });
 $("#midiDev").onchange = (e) => midiSave({ dev: +e.target.value });
 $("#midiRec").onclick = async () => {
@@ -4211,7 +4221,7 @@ const TOUR_STEPS = [
   { target: ["#btnPractice"], menu: "main", title: ic("cone") + " Oefenstand", text: () => `<p>Oefenen zonder dat er iets beweegt in de kerk: PTZ Control schakelt over op <b>nagebootste camera's</b> met dezelfde camera's, presets en foto's. Handig voor nieuwe vrijwilligers.</p><p>Geldt voor <b>alle schermen</b> (oranje balk en rand), de videomixer wordt losgekoppeld en wat je verandert wordt niet bewaard. Stoppen via de balk of hier. <b>Niet tijdens een dienst.</b></p>` },
   { target: ["#miSet"], menu: "main", sub: "subSet", title: ic("settings") + " Instellingen", text: () => `<p>Alles om de app in te richten: camera's, videomixer, liederen, sneltoetsen, pincode, back-up en het presetaantal testen. Wijs het aan met de muis of tik erop; op een smal scherm klapt de lijst onder het item open.</p>` },
   { target: ["#btnSettings"], menu: "main", title: ic("video") + " Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
-  { target: ["#btnMidi"], menu: "main", title: ic("sliders") + " Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
+  { target: ["#btnMidi"], menu: "main", title: ic("sliders") + " Videomixer (MIDI/USB)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel: via de <b>MIDI-poort</b> (met driver) of <b>USB direct</b> (zonder driver). Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
   { target: ["#btnSongs"], menu: "main", title: ic("music") + " Liederen", text: () => `<p>Koppel <b>ProPresenter</b> (via het netwerk) en/of de <b>Voordienst app</b> (API-adres met token). PTZ Control ziet dan welk nummer er op het scherm staat en zet elk nummer in het <b>activiteitenlog</b>, met de plek in de playlist en het nummer uit de Voordienst app.</p><p>Zo zie je na de dienst precies wat er gezongen is. De camera's bewegen hierdoor niet.</p>` },
   { target: ["#btnKeys"], menu: "main", title: ic("keyboard") + " Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
   { target: ["#btnAccess"], menu: "main", title: ic("lock") + " Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>${ic("lock")} Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
