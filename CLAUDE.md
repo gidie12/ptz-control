@@ -317,6 +317,7 @@ Legenda: ✅ geverifieerd (getest of in officiële docs gevonden) · ⚠️ aann
   bash -n "Start PTZ Control.command" && bash -n "PTZ Control.app/Contents/MacOS/PTZ Control"
   ```
 - **Testen zonder hardware:** gebruik nep-camera's (kleine `ThreadingHTTPServer` die `ptzctrl.cgi`-aanroepen logt en een JPEG op `/snapshot.jpg` geeft), voor back-ups een nep-VISCA-TCP-camera met toestand (posities, presets, beeld, geleidelijke beweging), en voor volgen een `SimGrabber` + `FakeDetector` die `tracker.FrameGrabber` / `_DETECTOR` vervangen. Xbox testen door `navigator.getGamepads` te vervangen in Playwright.
+- 🧑 **Branch opruimen na de merge** (op verzoek, 15 nov 2026): is een PR gemerged in `main`, verwijder dan meteen de branch, op GitHub (`git push origin --delete <branch>`) én lokaal (`git branch -d <branch>`; `-d`, niet `-D`, zodat alleen echt gemergede branches weg kunnen). Controleer vooraf met `git fetch --prune origin && git branch -r --merged origin/main`. Niet verwijderen: `main`, branches met een open PR of niet-gemergede commits, en lokale branches die in een worktree uitgecheckt staan (`git worktree list`; die worktree hoort bij een andere sessie).
 - Wijzig je camera-commando's, controleer dan beide paden (HTTP-CGI én VISCA) en dat `do_action()` tracking correct stopt.
 - Eerst zonder echte hardware getest; **alles met ⚠️ hierboven moet bij de eerste repetitie in de kerk gecontroleerd worden**.
 
