@@ -8,13 +8,13 @@ Eigen webbediening voor PTZOptics-camera's, te bedienen met muis/touch, toetsenb
 
 **Eén bestand, één klik:** *Start PTZ Control* installeert waar nodig en start daarna de app. De eerste keer maakt hij de `.venv` (een paar minuten); na een update met gewijzigde `requirements.txt` werkt hij de packages vanzelf bij. Daarna opent de bediening in een eigen venster, zonder adresbalk en tabbladen (app-venster van Chrome of Edge; is geen van beide er, dan een gewoon tabblad in je standaardbrowser). Liever een gewoon tabblad: start met `--tab` of zet `PTZ_BROWSER=tab`.
 
-| | Mac | Windows |
+| | Windows | Mac |
 |---|---|---|
-| Starten | dubbelklik **PTZ Control.app** (of *Start PTZ Control.command*) | dubbelklik **Start PTZ Control.bat**, daarna de snelkoppeling **PTZ Control** |
-| In Dock / taakbalk | sleep **PTZ Control.app** naar het Dock | rechtsklik op **PTZ Control** in het Startmenu → *Aan taakbalk vastmaken* |
-| Opnieuw installeren afdwingen | in Terminal: `bash "Start PTZ Control.command" --installeer` | in cmd: `"Start PTZ Control.bat" /installeer` |
-| Snelkoppeling opnieuw maken | | in cmd: `"Start PTZ Control.bat" /snelkoppeling` |
-| Vereist | Python 3.9+ (python.org of `brew install python`) | Python 3.9+ (python.org, vink *Add python.exe to PATH* aan, of `winget install -e --id Python.Python.3.12`) |
+| Starten | dubbelklik **Start PTZ Control.bat**, daarna de snelkoppeling **PTZ Control** | dubbelklik **PTZ Control.app** (of *Start PTZ Control.command*) |
+| In Dock / taakbalk | rechtsklik op **PTZ Control** in het Startmenu → *Aan taakbalk vastmaken* | sleep **PTZ Control.app** naar het Dock |
+| Opnieuw installeren afdwingen | in cmd: `"Start PTZ Control.bat" /installeer` | in Terminal: `bash "Start PTZ Control.command" --installeer` |
+| Snelkoppeling opnieuw maken | in cmd: `"Start PTZ Control.bat" /snelkoppeling` | |
+| Vereist | Python 3.9+ (python.org, vink *Add python.exe to PATH* aan, of `winget install -e --id Python.Python.3.12`) | Python 3.9+ (python.org of `brew install python`) |
 
 - **Mac – app-icoon:** *PTZ Control.app* moet in de map van PTZ Control blijven staan (hij start de starter uit die map). Sleep hem naar het Dock; dat maakt alleen een verwijzing. Draait de app al, dan opent een klik alleen de bediening (als app-venster). Anders opent Terminal met het logboek; dat venster sluiten = stoppen.
 - **Mac:** meldt macOS "onbekende ontwikkelaar", rechtsklik → **Open** (eenmalig).
@@ -32,7 +32,7 @@ python3 -m venv .venv
 .venv/bin/python ptz_control.py --open     # poort 8080 (andere poort: --port 9000)
 # Windows: .venv\Scripts\python.exe ptz_control.py --open
 ```
-Open `http://localhost:8080`, of op een tablet `http://<ip-van-deze-pc>:8080` (het adres staat in de console).
+Open `http://localhost:8080`, of op een tablet `http://<ip-van-deze-pc>:8080` (het adres staat in de console). Is poort 8080 al bezet door een ander programma, dan kiest PTZ Control zelf de volgende vrije poort (8081, 8082, …), opent de bediening op dat adres en meldt het (melding en activiteitenlog). Een tweede start, ook via de Dock-app, vindt PTZ Control daar terug.
 Voor de bediening zijn geen extra packages nodig, alleen Python 3.8 of nieuwer (volgen: zie hieronder). Instellingen komen in `cameras.json`.
 
 ## Eerste keer
@@ -60,7 +60,7 @@ Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom 
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Instellingen → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
 Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
 
-**Volledig scherm** (in het menu rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel). Omdat menu en sneltoetsuitleg daar verborgen zijn, opent **?** een hulpvenster met alle ingestelde sneltoetsen, wat de muis doet (klik op een tegel = oproepen; potlood of rechtsklik = bewerken) en een knop *Sneltoetsen aanpassen* (werkt ook buiten volledig scherm; de toets is aan te passen bij Sneltoetsen).
+**Volledig scherm** (in het menu rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel). Omdat het menu daar verborgen is, opent **?** een hulpvenster met alle ingestelde sneltoetsen, wat de muis doet (klik op een tegel = oproepen; potlood of rechtsklik = bewerken) en een knop *Sneltoetsen aanpassen* (werkt ook buiten volledig scherm; de toets is aan te passen bij Sneltoetsen).
 
 ![Hulpvenster (toets ?) op volledig scherm](docs/screenshots/hulp.png)
 Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **Xbox-controller** (toets **X**), **YouTube** (toets **Y**) en **liederen** (toets **L**). Elke toets toont of verbergt zijn venster; **✕** in de titelbalk verbergt het ook. Alle vier zien er hetzelfde uit: titelbalk met badge en knoppen. Open vensters staan **altijd naast elkaar bovenaan**: tegen de bovenrand, even hoog als het hoogste venster, en de camera's schuiven eronder (zo ver omlaag als nodig, maar nooit uit beeld; de inhoud van de bediening- en Xbox-kaart wordt zo nodig kleiner of groter geschaald). Losmaken kan niet. **Van plek wisselen**: sleep een venster aan zijn titelbalk op een ander venster; het neemt die plek in en de vensters ertussen schuiven één plek op (elk scherm onthoudt de volgorde). Ingeklapt (pijltje) blijft van een venster alleen de titelbalk over. Buiten volledig scherm staan de bediening en de Xbox-controller gewoon in de zijbalk; daar klap je ze in en uit door op de titel te klikken, of met **C** en **X**. Elk scherm onthoudt welke vensters open zijn. Alle toetsen zijn aan te passen in **Sneltoetsen**.
@@ -163,7 +163,7 @@ Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op **alle schermen**
 
 - een **camera niet bereikbaar** (gecontroleerd elke 10 seconden en bij elk commando);
 - de **videomixer niet verbonden** (alleen als de koppeling aan staat);
-- **geen verbinding met PTZ Control** zelf (bijvoorbeeld als de Mac uit of in slaap is).
+- **geen verbinding met PTZ Control** zelf (bijvoorbeeld als de computer met PTZ Control uit of in slaap is).
 
 Is alles weer in orde, dan wordt de balk even groen en verdwijnt hij. **Verbergen** haalt hem weg op dit scherm, tot er een nieuwe fout bij komt. **Bekijk log** opent het activiteitenlog.
 
@@ -228,7 +228,7 @@ Gebruik:
 ![Camera's instellen](docs/screenshots/cameras.png)
 
 ## Xbox-controller
-Verbind de controller via Bluetooth of USB met de Mac (of iPad/tablet) waarop de bediening open staat en druk op een knop.
+Verbind de controller via Bluetooth of USB met de computer (of iPad/tablet) waarop de bediening open staat en druk op een knop.
 De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). Het **Menu** rechtsboven bevat Sneltoetsen, Volledig scherm, Back-up, Camera's, Videomixer (MIDI), Presetaantal testen, OSD-menu camera, Oefenstand, Activiteitenlog, Toegang (pincode), Tabletweergave, thema, Rondleiding, Op updates controleren en afsluiten. Zachte beweging, tilt omkeren en max. snelheid staan in de zijbalk onder de camerabediening.
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
@@ -326,7 +326,7 @@ Klik op **Standaard** (met het locatiepictogram) naast de titel. Een workspace i
 
 ## Sneltoetsen
 Standaard: pijltjes = bewegen · Q/A = zoom · W/S = focus · 1–9 = preset · Shift+1–9 = camera kiezen · H = home · T = volgen · F = volledig scherm · C = camerabediening · X = Xbox-instellingen · Y = YouTube-venster · L = liederenvenster · Spatie = stop · Esc = volledig scherm/opslaan-modus verlaten.
-**Alle toetsen zijn aan te passen** via Menu → Instellingen → Sneltoetsen (of *aanpassen* onder de bediening): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
+**Alle toetsen zijn aan te passen** via Menu → Instellingen → Sneltoetsen (of de knop *Sneltoetsen aanpassen* in het hulpvenster, toets **?**): klik in een veld en druk de nieuwe toets of combinatie. Backspace = standaard, Delete = uitzetten. Esc blijft vast. De instelling geldt voor alle schermen.
 
 ![Sneltoetsen](docs/screenshots/sneltoetsen.png)
 
@@ -353,7 +353,7 @@ Download ze bij **Releases** op GitHub (of onder *Actions → Losse app bouwen �
 - **Windows:** dubbelklik op de .exe. De eerste keer: SmartScreen → *Meer informatie* → *Toch uitvoeren*, en bij de firewall *Privénetwerken* toestaan (anders kunnen andere schermen niet meedoen). Er verschijnt een camera-icoon in het systeemvak (rechtsonder, eventueel onder ^).
 - **Windows – installeren:** draait de .exe nog niet vanaf de vaste plek (bijv. uit *Downloads*), dan vraagt hij één keer of hij geïnstalleerd mag worden. Bij **Ja** zet hij zichzelf in `%LOCALAPPDATA%\Programs\PTZ Control` (geen beheerdersrechten nodig), maakt hij een snelkoppeling **PTZ Control** in het Startmenu en op het bureaublad (kan aan de taakbalk) en start hij vanaf daar; het gedownloade bestand mag je daarna weggooien. Bij **Nee** draait hij vanaf de huidige plek; later alsnog installeren kan via het icoon in het systeemvak (*Installeren op deze computer…*). Zet hem niet in *Program Files*: daar kan hij zichzelf niet bijwerken. Draagbaar gebruik (een `cameras.json` naast de .exe) vraagt niets.
 - **macOS:** pak de zip uit en zet **PTZ Control.app** in *Programma's*. De app is niet door Apple gecontroleerd: de eerste keer weigert macOS hem. Ga dan naar *Systeeminstellingen → Privacy en beveiliging* en klik bij PTZ Control op *Toch openen* (of in Terminal: `xattr -dr com.apple.quarantine "/Applications/PTZ Control.app"`). Sta daarna *Lokaal netwerk* toe, anders bereikt hij de camera's niet. De app heeft geen Dock-icoon maar een icoon in de **menubalk** (rechtsboven).
-- Via het icoon: *Bediening openen*, het adres voor andere schermen, *Map met instellingen openen* en *Afsluiten*. Afsluiten kan ook in de bediening: Menu → **PTZ Control afsluiten**. Nog een keer op de app klikken terwijl hij draait opent alleen de bediening.
+- Via het icoon: *Bediening openen*, het adres voor andere schermen, *Map met instellingen openen* en *Afsluiten*. Afsluiten kan ook in de bediening: Menu → **PTZ Control afsluiten**. Bij afsluiten (menu, icoon, Ctrl+C of het Terminal-/consolevenster sluiten) zet PTZ Control eerst camera's die nog bewegen of volgen stil en sluit een open OSD-menu; het app-venster van de bediening gaat daarna vanzelf dicht. Nog een keer op de app klikken terwijl hij draait opent alleen de bediening.
 - **Instellingen en foto's** staan bij de losse app in een eigen map: Windows `%APPDATA%\PTZ Control`, Mac `~/Library/Application Support/PTZ Control`. Overstappen vanaf de Python-versie: maak daar een **Back-up** (met wachtwoorden) en zet die terug in de app, of kopieer `cameras.json` en de map `thumbs` naar die map.
 - **Persoon volgen** werkt in de losse app met de ingebouwde YOLOX-detector (via OpenCV, zonder torch); die herkent ook een half silhouet. De Python-versie (`Start PTZ Control`) gebruikt YOLOv8 op de Apple-chip.
 - Een nieuwe versie maken: GitHub → *Actions* → **Losse app bouwen** → *Run workflow* → vink **Release maken** aan en vul de versie in (bv. `1.1.0`). GitHub maakt dan zelf de tag, bouwt beide apps en zet ze bij Releases. Zonder vinkje wordt alleen gebouwd (downloads onder *Artifacts*).

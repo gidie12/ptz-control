@@ -16,7 +16,7 @@ Je bouwt aan PTZ Control: eigen webbediening voor PTZOptics-camera's in een kerk
 ## Regels bij het bouwen
 
 - **Kern = alleen stdlib**, Python **3.9** (geen `match`, geen `X | Y`-types). numpy/opencv/ultralytics alleen in `tracker.py`.
-- `index.html` = vanilla JS, geen build, geen CDN (Mac mini kan offline zijn; alleen het Inter-lettertype via Google Fonts, niet-blokkerend).
+- `index.html` = vanilla JS, geen build, geen CDN (de kerk-pc (Windows) kan offline zijn; alleen het Inter-lettertype via Google Fonts, niet-blokkerend).
 - **Geen emoji in de UI**: iconen als `<symbol id="i-…">` in de sprite, gebruik `<svg class="ic"><use href="#i-…"/></svg>` of `ic(naam)`. Nieuw icoon in een menu/dialoogkop → kleur in blok *iconstijl D*. Icoon-knoppen krijgen `aria-label`.
 - **Kleuren alleen als CSS-variabele**, nieuw → in **beide** `:root`-blokken (donker en licht). Huisstijlregels in het blok *huisstijl*.
 - Nieuw menu-item bij voorkeur in een submenu (`#subSet` / `#subHelp`), niet bovenaan.

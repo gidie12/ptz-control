@@ -81,6 +81,13 @@ class Log:
             except OSError:
                 pass
 
+    def flush(self):
+        """Bij afsluiten: een uitgestelde herschrijving (samengevoegde regels) meteen doen."""
+        t = self._timer
+        if t is not None:
+            t.cancel()
+            self._flush()
+
     # -------------------------------------------------------------- schrijven
     def add(self, msg, kind="actie", who="", ip="", cam="", now=None):
         if kind not in KINDS:
