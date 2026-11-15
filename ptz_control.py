@@ -672,6 +672,9 @@ def _store_thumb(cam, n, data):
     broadcast({"type": "thumb", "cam": cam["id"], "n": int(n)})
 
 
+HAND_MOVING = set()    # {(cam_id, "move"|"zoom"|"focus")}: laatste commando was een doorlopende beweging
+
+
 def do_action(cam, action, args, info=None):
     """Voer een commando uit en houd alle schermen (en thumbnails) bij.
     Bij preset_set komt in info["thumb_error"] waarom de thumbnail niet lukte ("" = gelukt)."""
@@ -695,6 +698,14 @@ def do_action(cam, action, args, info=None):
         camstatus_set(cam["id"], False, str(e))
         raise
     camstatus_set(cam["id"], True)
+    if action in ("move", "zoom", "focus"):   # doorlopende beweging: bij afsluiten stoppen (shutdown)
+        key = (cam["id"], "move" if action == "move" else action)
+        if action == "move" or args.get("dir") != "stop":
+            HAND_MOVING.add(key)
+        else:
+            HAND_MOVING.discard(key)
+    elif action in ("stop", "home", "preset_call", "preset_set"):
+        HAND_MOVING.discard((cam["id"], "move"))
     if action == "preset_call":
         n = clamp(args.get("n"), 0, 254)
         broadcast({"type": "preset", "cam": cam["id"], "n": n})
@@ -2222,7 +2233,7 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/quit":
             # 🧑 app afsluiten vanuit het menu (de losse Mac-app heeft geen venster om te sluiten)
             self._send(200, {"ok": True})
-            threading.Timer(0.3, lambda: (osd_close_all(), os._exit(0))).start()   # OSD-menu niet open laten staan
+            threading.Timer(0.3, shutdown).start()   # na het antwoord; volgen/beweging stoppen, OSD-menu dicht
             return None
 
         if u.path == "/api/update/check":
@@ -2468,7 +2479,7 @@ def open_bediening(url):
                 kw["creationflags"] = 0x00000008 | 0x00000200   # DETACHED_PROCESS | NEW_PROCESS_GROUP
             else:
                 kw["start_new_session"] = True
-            subprocess.Popen([exe, f"--app={url}"], **kw)  # noqa: S603
+            subprocess.Popen([exe, f"--app={url.rstrip('/')}/?app"], **kw)  # noqa: S603  # ?app: na Afsluiten sluit de pagina het venster
             return
         except OSError:
             pass
@@ -2544,8 +2555,8 @@ def _tray(url, lan_url):
             subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", DATA_DIR])
 
     def stoppen(icon, _item=None):
-        icon.stop()
-        os._exit(0)
+        syslog("PTZ Control afgesloten (via het icoon)")
+        shutdown()
 
     img = Image.open(os.path.join(RES_DIR, "icon.png"))
     def installeren(icon, _item=None):
@@ -2561,8 +2572,143 @@ def _tray(url, lan_url):
     if sys.platform == "win32" and not _wininstall.is_installed(os.path.abspath(sys.executable)):
         items.append(pystray.MenuItem("Installeren op deze computer…", installeren))
     items += [pystray.Menu.SEPARATOR, pystray.MenuItem("PTZ Control afsluiten", stoppen)]
-    pystray.Icon("PTZ Control", img, "PTZ Control", pystray.Menu(*items)).run()
+    global TRAY
+    TRAY = pystray.Icon("PTZ Control", img, "PTZ Control", pystray.Menu(*items))
+    TRAY.run()
     return True
+
+
+# 🧑 Netjes afsluiten (15 nov 2026): menu Afsluiten, systeemvak-icoon, Ctrl+C, Terminal-/consolevenster sluiten.
+# Alle threads zijn daemon en de nep-camera's van de oefenstand draaien in dit proces, dus os._exit stopt alles;
+# vooraf wel de camera's stilzetten (volgen stuurt doorlopende pan-commando's) en het OSD-menu sluiten.
+SHUTTING = threading.Event()
+TRAY = None
+_CONSOLE_HANDLER = None
+
+
+def shutdown(code=0):
+    if SHUTTING.is_set():
+        return
+    SHUTTING.set()
+
+    def opruimen():
+        for cid in list(TRACKERS) + list(FOLLOW_TIMERS):
+            try:
+                stop_tracking(cid, halt=True, quiet=True)   # tracker stuurt zelf nog ptzstop
+            except Exception:  # noqa: BLE001
+                pass
+        for cid, what in list(HAND_MOVING):
+            cam = find_camera(cid)
+            if not cam:
+                continue
+            try:
+                if what == "move":
+                    run_command(cam, "stop", {})
+                else:
+                    run_command(cam, what, {"dir": "stop"})
+            except Exception:  # noqa: BLE001
+                pass
+        osd_close_all()
+        ACTLOG.flush()
+
+    t = threading.Thread(target=opruimen, daemon=True, name="afsluiten")
+    t.start()
+    t.join(6)   # camera niet bereikbaar: niet eindeloos wachten
+    if TRAY is not None:
+        try:
+            TRAY.stop()   # anders blijft op Windows een spookicoon in het systeemvak staan
+        except Exception:  # noqa: BLE001
+            pass
+    os._exit(code)
+
+
+def _signalen():
+    """SIGTERM (kill, uitloggen), SIGHUP (Terminal-venster op de Mac dicht) en SIGBREAK (consolevenster op Windows
+    dicht of Ctrl+Break) → netjes afsluiten. Ctrl+C komt als KeyboardInterrupt in main()."""
+    import signal  # noqa: PLC0415
+
+    waarom = {"SIGTERM": "gestopt door het systeem", "SIGHUP": "venster gesloten", "SIGBREAK": "venster gesloten"}
+
+    def handler(signum, _frame):
+        naam = signal.Signals(signum).name
+        print(f"\nAfsluiten ({naam})…")
+        syslog(f"PTZ Control afgesloten ({waarom.get(naam, naam)})")
+        shutdown()
+    for name in ("SIGTERM", "SIGHUP", "SIGBREAK"):
+        sig = getattr(signal, name, None)
+        if sig is not None:
+            try:
+                signal.signal(sig, handler)
+            except (ValueError, OSError):
+                pass
+    if sys.platform == "win32":
+        # consolevenster dicht (X), uitloggen, Windows afsluiten: komt niet als signaal binnen. Windows geeft ~5 s.
+        try:
+            import ctypes  # noqa: PLC0415
+            proto = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)
+
+            def console(evt):
+                if evt in (2, 5, 6):   # CTRL_CLOSE_EVENT, CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT
+                    syslog("PTZ Control afgesloten (venster gesloten of Windows sluit af)")
+                    shutdown()
+                return False           # Ctrl+C/Ctrl+Break: gewone afhandeling
+            global _CONSOLE_HANDLER
+            _CONSOLE_HANDLER = proto(console)   # verwijzing bewaren, anders ruimt Python hem op
+            ctypes.windll.kernel32.SetConsoleCtrlHandler(_CONSOLE_HANDLER, True)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+class PTZServer(ThreadingHTTPServer):
+    """Op Windows laat SO_REUSEADDR een tweede programma op dezelfde poort binden (dan merken we niet dat hij bezet
+    is): daar exclusief binden. Op Mac/Linux blijft SO_REUSEADDR (snel herstarten na een update)."""
+    if sys.platform == "win32":
+        allow_reuse_address = False
+
+        def server_bind(self):
+            try:
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            except (AttributeError, OSError):
+                pass
+            super().server_bind()
+
+
+PORT_TRIES = 20   # 🧑 poort bezet door een ander programma: de volgende vrije poort nemen (8080 → 8081 … 8099)
+
+
+def _is_ptz(port):
+    """Draait PTZ Control op deze poort? (herkend aan de Server-kop, niet alleen 'er antwoordt iets')"""
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/state", timeout=2) as r:
+            return r.headers.get("Server", "").startswith("PTZControl")
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _kies_poort(bind, port):
+    """(server, poort, draait_al): de eerste poort vanaf `port` die vrij is, tenzij PTZ Control daar al draait."""
+    for p in range(port, port + PORT_TRIES):
+        try:
+            return PTZServer((bind, p), Handler), p, False
+        except OSError:
+            if _is_ptz(p):
+                return None, p, True
+    return None, port, False
+
+
+def _poort_gewijzigd(wanted, port):
+    """Andere poort gekozen: melden (log, console, melding zonder te wachten) en onthouden voor een herstart na een update."""
+    tekst = (f"Poort {wanted} is bezet door een ander programma. PTZ Control draait nu op poort {port}: "
+             f"http://{local_ip()}:{port}")
+    STATE["port_moved"] = {"wanted": wanted, "port": port}
+    syslog(tekst)
+    # herstart na een update (os.execv / wininstall) gebruikt sys.argv: dan dezelfde poort houden
+    if "--port" in sys.argv:
+        i = sys.argv.index("--port")
+        sys.argv[i + 1:i + 2] = [str(port)]
+    else:
+        sys.argv += ["--port", str(port)]
+    threading.Thread(target=_melding, args=(tekst,), daemon=True, name="poortmelding").start()
 
 
 def main():
@@ -2582,34 +2728,33 @@ def main():
         os.environ["PTZ_BROWSER"] = "tab"
     if FROZEN and not args.no_open:
         args.open = True   # dubbelklik op de app = bediening openen
-    url = f"http://localhost:{args.port}"
     srv = None
     if args.wacht_poort:   # vorige versie stopt net; poort is zo vrij (max. ~20 s)
         for _ in range(40):
             try:
-                srv = ThreadingHTTPServer((args.bind, args.port), Handler)
+                srv = PTZServer((args.bind, args.port), Handler)
                 break
             except OSError:
                 time.sleep(0.5)
-    try:
-        if srv is None:
-            srv = ThreadingHTTPServer((args.bind, args.port), Handler)
-    except OSError:
-        # poort bezet: draait PTZ Control al? Dan alleen de bediening openen.
-        try:
-            urllib.request.urlopen(url + "/api/state", timeout=2).read()
+    wanted = args.port
+    if srv is None:
+        srv, port, running = _kies_poort(args.bind, args.port)
+        if running:   # PTZ Control draait al: alleen de bediening openen
+            url = f"http://localhost:{port}"
             print(f"PTZ Control draait al op {url}")
             if args.open:
                 open_bediening(url)
             return
-        except Exception:  # noqa: BLE001
-            _melding(f"Poort {args.port} is bezet door een ander programma. PTZ Control kan niet starten.")
+        if srv is None:
+            _melding(f"Poort {wanted} tot en met {wanted + PORT_TRIES - 1} zijn bezet door andere programma's. PTZ Control kan niet starten.")
             raise SystemExit(1)
+        args.port = port
+    url = f"http://localhost:{args.port}"
     if _win_install_wanted(args):
         srv.server_close()
         if win_install():
             return
-        srv = ThreadingHTTPServer((args.bind, args.port), Handler)
+        srv = PTZServer((args.bind, args.port), Handler)
     if args.workspace:
         want = args.workspace.strip().lower()
         w = next((w for w in WS["list"] if w["id"] == want or w["name"].lower() == want), None)
@@ -2622,6 +2767,8 @@ def main():
     STATE["server"] = f"{local_ip()}:{args.port}"
     STATE["app"] = {"frozen": FROZEN, "data_dir": DATA_DIR}
     syslog(f"PTZ Control gestart (versie {UPD.snapshot().get('current') or 'onbekend'}, workspace {_ws_name(WS['active'])})")
+    if args.port != wanted:
+        _poort_gewijzigd(wanted, args.port)
     YT.start()
     UPD.start()
     MIDI.start()
@@ -2630,6 +2777,7 @@ def main():
     if os.environ.get("PTZ_AUTOBK", "").lower() not in ("0", "uit", "off"):
         threading.Thread(target=autobackup_loop, daemon=True, name="autobackup").start()
     srv.daemon_threads = True
+    _signalen()
     print(f"PTZ Control draait op {url}  en  {lan_url}")
     print(f"Instellingen en foto's: {DATA_DIR}  (workspace: {WS['active']})")
     print("Stoppen met Ctrl+C (of dit venster sluiten)")
@@ -2644,6 +2792,8 @@ def main():
         srv.serve_forever()
     except KeyboardInterrupt:
         print("\nGestopt.")
+        syslog("PTZ Control afgesloten (Ctrl+C)")
+        shutdown()
 
 
 if __name__ == "__main__":

@@ -348,7 +348,7 @@
   body.tablet #tabBar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
     background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px var(--shadow); overflow-x: auto; }
   body.tablet.wall #tabBar { display: none; }
-  body.tablet #keyHints, body.tablet .tile .tkey { display: none; }
+  body.tablet .tile .tkey { display: none; }
   #tabBar button { flex: 1 0 140px; min-height: 60px; border-radius: 12px; border: 2px solid var(--line); background: var(--panel2); color: var(--text);
     font: inherit; font-size: 17px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; }
   #tabBar button.active { border-color: var(--accent); background: var(--accent); color: var(--onaccent); }
@@ -507,7 +507,6 @@
   /* volledig scherm: bediening, Xbox, YouTube en liederen zijn vensters, altijd naast elkaar in de balk bovenaan (dockLayout);
      niet los te maken; aan de titelbalk slepen = van plek wisselen (dockOrder) */
   body.wall aside { display: block; position: fixed !important; inset: 0; z-index: 26; pointer-events: none; overflow: visible; }
-  body.wall #keyHints { display: none; }
   .wbadge, .wclose, .wgrip { display: none; }
   body.wall aside .foldcard { position: fixed; left: var(--fx, 10px); top: var(--fy, 10px); width: var(--fw, 340px); height: var(--fh, auto);
     max-height: calc(100vh - 20px); overflow: hidden auto; overscroll-behavior: contain; pointer-events: auto; margin: 0;
@@ -1038,7 +1037,6 @@
       <button class="icon" id="btnMap2" style="margin-top:6px"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling instellen…</button>
       </div>
     </div>
-    <div class="small" style="padding:0 4px" id="keyHints"></div>
   </aside>
 </main>
 
@@ -2249,21 +2247,13 @@ $("#keysSave").onclick = async () => {
   if (Object.keys(km).length) cfg.keymap = km; else delete cfg.keymap;
   $("#dlgKeys").close(); await saveConfig(); render(); renderKeyHints(); toast("Sneltoetsen opgeslagen", true);
 };
-// toetsen in de uitleg onder de zijbalk, het menu en het YouTube-menu volgen de instellingen
+// toets van Volledig scherm in het menu volgt de instellingen (de uitleg onder de zijbalk is weg: alles staat in het hulpvenster ?)
 function renderKeyHints() {
-  const k = (a) => `<kbd>${esc(keyLabel(keyOf(a)))}</kbd>`;
-  const p1 = keyOf("preset_1"), p9 = keyOf("preset_9");
-  const presets = p1 === "Digit1" && p9 === "Digit9" ? "<kbd>1</kbd>–<kbd>9</kbd>" : `${k("preset_1")}…${k("preset_9")}`;
-  $("#keyHints").innerHTML = `${presets} preset · ${cfg.cameras.slice(0, 3).map((c, i) => `<kbd>${esc(keyLabel(camHotkey(c, i)))}</kbd>`).join(" ")} camera ·
-    ${k("left")}${k("up")}${k("right")}${k("down")} bewegen · ${k("zoom_in")}/${k("zoom_out")} zoom · ${k("focus_far")}/${k("focus_near")} focus ·
-    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("ctrl")} camerabediening · ${k("pad")} Xbox-instellingen · ${k("stop")} stop · ${k("help")} hulp ·
-    <a href="#" id="keyHintsEdit">aanpassen</a> · rechtsklik op een preset = bewerken`;
-  $("#keyHintsEdit").onclick = (e) => { e.preventDefault(); $("#btnKeys").click(); };
   const wk = $("#btnWall kbd"); if (wk) wk.textContent = keyLabel(keyOf("wall"));
   $("#btnWall").title = `Alle camera's op het volledige scherm (toets ${keyLabel(keyOf("wall"))})`;
 }
 
-/* ---- hulpvenster (toets ?), vooral voor volledig scherm: daar zijn menu en sneltoetsuitleg verborgen ---- */
+/* ---- hulpvenster (toets ?), overzicht van alle sneltoetsen, ook op volledig scherm (menu verborgen) ---- */
 function helpOpen() {
   const k = (a) => `<kbd>${esc(keyLabel(keyOf(a)))}</kbd>`;
   const groups = {};
@@ -3354,6 +3344,8 @@ $("#btnQuit").onclick = async () => {
   d.style.cssText = "position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);font:16px system-ui;color:var(--muted);text-align:center";
   d.innerHTML = '<div>' + ic("power", "xl") + '<p>PTZ Control is afgesloten.</p><p>Start de app opnieuw om verder te gaan.</p></div>';
   document.body.appendChild(d);
+  // app-venster (Chrome/Edge --app, URL met ?app): na de melding het venster zelf sluiten; een gewoon tabblad blijft staan
+  if (new URLSearchParams(location.search).has("app")) setTimeout(() => { try { window.close(); } catch {} }, 2000);
 };
 $("#prefsCancel").onclick = () => $("#dlgPrefs").close();
 $("#prefsSave").onclick = async () => {
@@ -4315,7 +4307,6 @@ const TOUR_STEPS = [
   { target: ["#padPanOnly"], title: ic("width") + " Pan only", text: () => `<p>Klik om <b>Pan only</b> aan of uit te zetten; aan = knop indigo met <b>AAN</b>. De linker stick draait de camera dan alleen <b>links en rechts</b>, voor <b>alle camera's</b>; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt voor dit scherm. Je kunt het ook op een controllerknop zetten (<i>Pan only aan/uit</i> in de knoppenindeling).</p>` },
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
-  { target: ["#keyHints"], title: "Sneltoetsen", text: () => `<p>Dit overzicht toont de toetsen zoals ze nu zijn ingesteld. Met <b>aanpassen</b> (of Menu → Instellingen → ${ic("keyboard")} Sneltoetsen) kies je zelf andere toetsen.</p>` },
   { target: ["#followWrap"], title: ic("link") + " Remote control: meewisselen", text: () => `<p>Staat de schakelaar aan (tegel indigo), dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
       <p>Het bolletje is <b>groen</b> zolang de verbinding met de app goed is.</p>` },
   { target: ["#ytWrap"], title: ic("tv") + " YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
@@ -4328,7 +4319,7 @@ const TOUR_STEPS = [
   { target: ["#btnWall"], menu: "main", title: ic("maximize") + " Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
     <p>Op volledig scherm zijn de <b>camerabediening</b> (toets <kbd>${esc(keyLabel(keyOf("ctrl")) || "C")}</kbd>), de <b>Xbox-instellingen</b> (<kbd>${esc(keyLabel(keyOf("pad")) || "X")}</kbd>), <b>YouTube</b> (<kbd>${esc(keyLabel(keyOf("youtube")) || "Y")}</kbd>) en de <b>liederen</b> (<kbd>${esc(keyLabel(keyOf("songs")) || "L")}</kbd>) vensters.
       Ze staan altijd <b>naast elkaar in de balk bovenaan</b>, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. <b>Sleep een venster aan de titelbalk op een ander venster</b> om van plek te wisselen: het neemt die plek in en de andere schuiven één plek op.</p>
-    <p>Menu en sneltoetsuitleg zijn daar verborgen: druk <kbd>${esc(keyLabel(keyOf("help")) || "?")}</kbd> voor <b>hulp</b>: alle sneltoetsen op een rij, met een knop om ze aan te passen.</p>` },
+    <p>Het menu is daar verborgen: druk <kbd>${esc(keyLabel(keyOf("help")) || "?")}</kbd> voor <b>hulp</b>: alle sneltoetsen op een rij, met een knop om ze aan te passen.</p>` },
   { target: ["#btnLog"], menu: "main", title: ic("list") + " Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
   { target: ["#alertBar"], show: () => { alertDemo = true; alertCheck(); }, hide: () => { alertDemo = false; $("#alertBar").classList.remove("show"); alertPrev = new Map(); alertCheck(); },
     title: ic("alert") + " Foutmelding op alle schermen", text: () => `<p>Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op <b>alle schermen</b> een rode balk, ook op volledig scherm: een <b>camera niet bereikbaar</b>, de <b>videomixer niet verbonden</b>, of <b>geen verbinding met PTZ Control</b> zelf.</p><p>Is het opgelost, dan wordt de balk even groen en verdwijnt hij. Met <b>Verbergen</b> haal je hem weg tot er een nieuwe fout bij komt; <b>Bekijk log</b> opent het activiteitenlog.</p>` },
@@ -4338,7 +4329,7 @@ const TOUR_STEPS = [
   { target: ["#btnSettings"], menu: "main", title: ic("video") + " Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
   { target: ["#btnMidi"], menu: "main", title: ic("sliders") + " Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
   { target: ["#btnSongs"], menu: "main", title: ic("music") + " Liederen", text: () => `<p>Koppel <b>ProPresenter</b> (via het netwerk) en/of de <b>Voordienst app</b> (API-adres met token). PTZ Control ziet dan welk nummer er op het scherm staat en zet elk nummer in het <b>activiteitenlog</b>, met de plek in de playlist en het nummer uit de Voordienst app.</p><p>Zo zie je na de dienst precies wat er gezongen is. De camera's bewegen hierdoor niet.</p>` },
-  { target: ["#btnKeys"], menu: "main", title: ic("keyboard") + " Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p>` },
+  { target: ["#btnKeys"], menu: "main", title: ic("keyboard") + " Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p><p>Welke toetsen er nu zijn ingesteld, zie je altijd met <kbd>${esc(keyLabel(keyOf("help")) || "?")}</kbd> (<b>hulp</b>), ook op volledig scherm.</p>` },
   { target: ["#btnAccess"], menu: "main", title: ic("lock") + " Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>${ic("lock")} Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
   { target: ["#btnBackup"], menu: "main", title: ic("save") + " Back-up", text: () => `<p>Download een back-upbestand met alle instellingen en foto's van deze workspace (of van <i>alle workspaces</i>), of zet er een terug.</p>
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
