@@ -42,7 +42,7 @@ Bij de eerste start (nog geen camera's) opent de **wizard**: camera's zoeken in 
 
 Of met de hand:
 1. **Menu → Instellingen → Camera's** (menu rechtsboven): voeg je camera's toe (naam + IP). Gebruik HTTP-CGI; kies VISCA (TCP 5678) alleen als HTTP niet werkt.
-   Een ingevuld **wachtwoord** wordt na het opslaan nooit meer getoond (het veld zegt *opgeslagen*): leeg laten houdt het, iets nieuws typen vervangt het, de gebruikersnaam leegmaken haalt het weg.
+   Vraagt een camera om in te loggen, klik dan op **Extra** bij die camera en vul *Gebruiker* en *Wachtwoord* in. Een ingevuld **wachtwoord** wordt na het opslaan nooit meer getoond (het veld zegt *opgeslagen*): leeg laten houdt het, iets nieuws typen vervangt het, de gebruikersnaam leegmaken haalt gebruiker en wachtwoord weg.
 2. Je bestaande presets op de camera werken meteen. Rechtsklik, lang indrukken of ✎ op een tegel om een naam te geven
    en een **thumbnail** te maken van het huidige beeld.
 3. **＋ Preset opslaan** → tik op een tegel: de huidige positie wordt opgeslagen en er wordt automatisch een thumbnail gemaakt.
@@ -60,7 +60,9 @@ Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom 
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Instellingen → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
 Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
 
-**Volledig scherm** (in het menu rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel).
+**Volledig scherm** (in het menu rechtsboven, of toets **F**) toont alle camera's over het hele scherm, zonder kopbalk en zijbalk; presets blijven klikbaar en de controller werkt gewoon. Sluiten met **Esc** of de knop **✕ Volledig scherm sluiten** rechtsboven in de presetbalk (die knoppen staan nooit over een tegel). Omdat menu en sneltoetsuitleg daar verborgen zijn, opent **?** een hulpvenster met alle ingestelde sneltoetsen, wat de muis doet (klik op een tegel = oproepen; potlood of rechtsklik = bewerken) en een knop *Sneltoetsen aanpassen* (werkt ook buiten volledig scherm; de toets is aan te passen bij Sneltoetsen).
+
+![Hulpvenster (toets ?) op volledig scherm](docs/screenshots/hulp.png)
 Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **Xbox-controller** (toets **X**), **YouTube** (toets **Y**) en **liederen** (toets **L**). Elke toets toont of verbergt zijn venster; **✕** in de titelbalk verbergt het ook. Alle vier zien er hetzelfde uit: titelbalk met badge en knoppen. Open vensters staan **altijd naast elkaar bovenaan**: tegen de bovenrand, even hoog als het hoogste venster, en de camera's schuiven eronder (zo ver omlaag als nodig, maar nooit uit beeld; de inhoud van de bediening- en Xbox-kaart wordt zo nodig kleiner of groter geschaald). Losmaken kan niet. **Van plek wisselen**: sleep een venster aan zijn titelbalk op een ander venster; het neemt die plek in en de vensters ertussen schuiven één plek op (elk scherm onthoudt de volgorde). Ingeklapt (pijltje) blijft van een venster alleen de titelbalk over. Buiten volledig scherm staan de bediening en de Xbox-controller gewoon in de zijbalk; daar klap je ze in en uit door op de titel te klikken, of met **C** en **X**. Elk scherm onthoudt welke vensters open zijn. Alle toetsen zijn aan te passen in **Sneltoetsen**.
 
 ![Volledig scherm](docs/screenshots/volledig-scherm.png)
@@ -219,7 +221,7 @@ Gebruik:
 <img src="docs/screenshots/volgen-instellen.png" width="720" alt="Volgen instellen: kader en persoon kiezen">
 - Gaat er iets mis (bijvoorbeeld geen RTSP-beeld), dan wordt de knop **rood** met de reden; de volledige melding staat in de tooltip en in het activiteitenlog.
 - Volgen kost alleen rekenkracht zolang het aan staat: de detector bekijkt hooguit **8 beelden per seconde** per camera (genoeg voor een lopende spreker; instelbaar met de omgevingsvariabele `PTZ_TRACK_FPS`). YOLO gebruikt de GPU van de Apple-chip, YOLOX in de losse app de processor.
-- Camera's per camera: **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
+- Camera's per camera (knop **Extra** naast de camera klapt ze uit, samen met gebruiker/wachtwoord): **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
 
 ![Preset bewerken](docs/screenshots/preset-bewerken.png)
 
@@ -231,7 +233,11 @@ De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). He
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
+**Zachte beweging**, **Pan only** en **Tilt omkeren** zijn knoppen in de Xbox-kaart: klik om ze aan of uit te zetten; aan = indigo met *AAN*.
+
 **Zachte beweging** (standaard aan): de camera trekt geleidelijk op (ca. 1 seconde naar topsnelheid) en de stick reageert fijner rond het midden. Uitzetten geeft direct de volle snelheid.
+
+**Pan only** (knop in de Xbox-kaart, indigo met *AAN* als hij actief is): de linker stick draait dan alleen links/rechts, voor alle camera's tegelijk; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt per scherm, net als de andere Xbox-opties. In de knoppenindeling kun je er ook een controllerknop voor kiezen (*Pan only aan/uit*).
 
 Sticks en triggers liggen vast. De knoppen stel je per knop in via **Knoppenindeling instellen…** in de Xbox-kaart (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
 

@@ -160,12 +160,39 @@
   .trk.warn { background: var(--warnbg); border-color: var(--warn); color: var(--warntxt); }
   .tile .tb { position: absolute; bottom: 38px; right: 6px; background: var(--okbg); color: var(--oktxt);
     font-size: 11px; padding: 1px 6px; border-radius: 4px; }
-  .camrow2 { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
+  .camrow2 { display: grid; grid-template-columns: 1fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
     border-bottom: 1px solid var(--line); align-items: center; }
-  .camrow2 label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .camrow2 label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .camrow2 label input[type=text] { flex: 1; min-width: 0; }
+  /* 🧑 Extra per camera: zacht paneel met twee blokken (Inloggen, Persoon volgen), labels boven de velden */
+  .camrow2 .camextra { display: grid; grid-template-columns: 1fr 1.25fr; gap: 14px 22px; background: var(--panel2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; }
+  .camextra .cxsec h5 { margin: 0 0 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+    display: flex; align-items: center; gap: 6px; }
+  .camextra .cxgrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .camrow2 .camextra .cxf { display: grid; gap: 4px; white-space: normal; font-size: 12px; color: var(--muted); }
+  .camextra input[type=text], .camextra input[type=password], .camextra input[type=number] { background: var(--panel); }
+  .camextra .cxrow { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: end; margin-top: 8px; }
+  .camrow2 .camextra .cxchk { color: var(--text); font-size: 13px; white-space: normal; padding-bottom: 9px; cursor: pointer; }
+  .camextra .cxhint { margin: 6px 0 0; font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+  .camrow2 .camextra[hidden] { display: none; }
+  .camrow .camxbtn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; }
+  .camrow .camxbtn .caret { transition: transform .15s; }
+  .camrow .camxbtn.open { border-color: var(--accent); color: var(--accent); }
+  .camrow .camxbtn.open .caret { transform: rotate(180deg); }
+  @media (max-width: 760px) { .camrow2 .camextra, .camextra .cxgrid2 { grid-template-columns: 1fr; } .camrow2 label { white-space: normal; } }
   #dlgKeys { width: min(560px, 95vw); max-height: 90vh; overflow: auto; }
   .keylist { display: grid; grid-template-columns: 1fr 160px; gap: 6px 12px; align-items: center; }
   .keylist b { font-weight: 600; }
+  #dlgHelp { width: min(720px, 94vw); }
+  .helpbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .helpkeys { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 4px 18px; }
+  .helpkeys h5 { grid-column: 1 / -1; margin: 8px 0 2px; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .helpkeys div { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: 13px; }
+  .helpkeys kbd { white-space: nowrap; }
+  .helpkeys div > span + span { color: var(--muted); text-align: right; }
+  .helpkeys div.wide { grid-column: 1 / -1; justify-content: flex-start; gap: 12px; }
+  .helpkeys div.wide > span:first-child { min-width: 140px; }
   .keyfixed { grid-template-columns: 90px 1fr; font-size: 13px; }
   input.hk { width: 100%; min-width: 80px; cursor: pointer; text-align: center; caret-color: transparent; }
   input.hk:focus { border-color: var(--accent); }
@@ -198,6 +225,21 @@
   .padbadge.act { animation: badgepulse .6s ease-in-out infinite alternate; }
   @keyframes badgepulse { to { box-shadow: 0 0 8px var(--ok); } }   /* knippert zacht tijdens bewegen */
   .padset label { display: flex; gap: 6px; align-items: center; }
+  /* 🧑 Xbox-opties (Zachte beweging, Pan only, Tilt omkeren) = schakelknoppen die laten zien of ze aan staan (indigo + AAN) */
+  /* zelfde maat als de knoppen in de camerabediening (.btn.sm: 40 px, 13 px, gewicht 500, rij-afstand 5 px) */
+  .padtogs { display: grid; gap: 5px; }
+  .padtog { display: flex; align-items: center; gap: 8px; width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px;
+    background: var(--panel); color: var(--text); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: background .12s, border-color .12s; }
+  .padtog:hover { background: var(--hover); }
+  .padtog:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); border-color: var(--accent); }
+  .padtog .pstate { margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 999px; background: var(--line); color: var(--muted); }
+  .padtog.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); }
+  .padtog.on:hover { background: var(--accentdark); }
+  .padtog.on .pstate { background: rgba(255, 255, 255, .22); color: var(--onaccent); }
+  .padtog:disabled { opacity: .45; cursor: not-allowed; }
+  .padtog:disabled:hover { background: var(--panel); }
+  .padtog small { font-weight: 400; opacity: .75; }
   #dlgBackup { width: min(760px, 95vw); }
   #dlgMap { width: min(720px, 95vw); }
   #dlgMap #padMap { grid-template-columns: 120px 1fr 120px 1fr; gap: 6px 12px; font-size: 13px; }
@@ -528,9 +570,14 @@
     display: grid; place-items: center; color: var(--muted); font-size: 13px; }
   .stackbtn { display: grid; gap: 6px; margin-top: 10px; }
   .stackbtn .icon { text-align: left; color: var(--text); padding: 10px 12px; }
-  .camrow { display: grid; grid-template-columns: 1.2fr 1.3fr .9fr .7fr 1fr 1fr auto; gap: 6px; margin-bottom: 6px; }
-  .camhead { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-  @media (max-width: 640px) { .camrow { grid-template-columns: 1fr 1fr; } .camhead { display: none; } }
+  /* 🧑 venster Camera's breed genoeg dat alles op één regel past (op verzoek, 15 nov 2026) */
+  #dlg { width: min(1080px, 96vw); max-height: 92vh; overflow: auto; }
+  /* 🧑 inloggen per camera = vinkje; gebruiker/wachtwoord pas zichtbaar als het aan staat */
+  /* 🧑 inloggen (gebruiker/wachtwoord) staat onder Extra; gebruiker leeg = server wist het wachtwoord */
+  .camrow { display: grid; grid-template-columns: minmax(130px, 1.5fr) minmax(160px, 1.6fr) minmax(128px, 1fr) 90px 84px 36px;
+    gap: 6px; margin-bottom: 6px; }
+  .camhead { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+  @media (max-width: 900px) { .camrow { grid-template-columns: 1fr 1fr; } .camrow > .camdel { grid-column: 1 / -1; } .camhead { display: none; } }
   .small { font-size: 12px; color: var(--muted); line-height: 1.6; }
   kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
 
@@ -980,8 +1027,11 @@
       <p class="small" id="padInfo" style="margin:8px 0 0">Verbind de controller via Bluetooth of USB en druk op een knop.</p>
       <div class="small" id="padLive" style="margin-top:4px"></div>
       <div class="padset">
-        <label title="Camera trekt geleidelijk op en reageert fijner rond het midden van de stick"><input type="checkbox" id="padSoft"> Zachte beweging (geleidelijk optrekken)</label>
-        <label><input type="checkbox" id="padInvY"> Tilt omkeren (stick omhoog = camera omlaag)</label>
+        <div class="padtogs">
+        <button class="padtog" id="padSoft" aria-pressed="false" title="Zachte beweging: camera trekt geleidelijk op (ca. 1 s naar topsnelheid) en reageert fijner rond het midden van de stick"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg> Zachte beweging <span class="pstate">uit</span></button>
+        <button class="padtog" id="padPanOnly" aria-pressed="false" title="Pan only: linker stick draait alleen links/rechts, omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm."><svg class="ic" aria-hidden="true"><use href="#i-width"/></svg> Pan only <span class="pstate">uit</span></button>
+        <button class="padtog" id="padInvY" aria-pressed="false" title="Tilt omkeren: stick omhoog = camera omlaag. Niet beschikbaar zolang Pan only aan staat."><svg class="ic" aria-hidden="true" style="transform: rotate(90deg)"><use href="#i-swap"/></svg> Tilt omkeren <span class="pstate">uit</span></button>
+        </div>
         <label>Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
       </div>
       <label class="small padprofcard">Knoppenprofiel <select class="padprof" id="padProfCard" title="Welke knoppenindeling deze controller op dit scherm gebruikt"></select></label>
@@ -1015,12 +1065,12 @@
 <!-- Camera's -->
 <dialog id="dlg">
   <h3>Camera's</h3>
-  <div class="camrow camhead"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span>VISCA-poort</span><span>Gebruiker</span><span>Wachtwoord</span><span></span></div>
+  <div class="camrow camhead"><span>Naam</span><span>IP-adres</span><span>Protocol</span><span>VISCA-poort</span><span></span><span></span></div>
   <div id="camList"></div>
   <button class="icon" id="btnAddCam" style="margin-top:6px">+ Camera toevoegen</button>
   <button class="icon" id="btnWizard" style="margin-top:6px" title="Stap voor stap camera's zoeken, testen en presets laden"><svg class="ic" data-i="wand" aria-hidden="true"><use href="#i-wand"/></svg> Hulp bij instellen…</button>
   <p class="small">Protocol <b>HTTP-CGI</b> werkt op vrijwel alle PTZOptics-camera's (en geeft thumbnails). Kies <b>VISCA (TCP)</b> als HTTP niet reageert.
-    Gebruiker/wachtwoord alleen invullen als de camera om inloggen vraagt.</p>
+    Onder <b>Extra</b>: inloggen (alleen als de camera erom vraagt) en de instellingen voor persoon volgen.</p>
   <div class="actions">
     <label class="small" style="display:flex;gap:6px;align-items:center">Presets per camera
       <input type="number" id="presetCount" min="1" max="244" value="12" style="width:70px"></label>
@@ -1030,6 +1080,17 @@
 </dialog>
 
 
+
+<dialog id="dlgHelp">
+  <h3><svg class="ic" data-i="help" aria-hidden="true"><use href="#i-help"/></svg> Hulp</h3>
+  <div class="helpbtns">
+    <button class="icon" id="helpKeys"><svg class="ic" aria-hidden="true"><use href="#i-keyboard"/></svg> Sneltoetsen aanpassen</button>
+  </div>
+  <h4 style="margin:14px 0 6px">Sneltoetsen</h4>
+  <div id="helpKeyList" class="helpkeys"></div>
+  <p class="small" style="margin:10px 0 0"><kbd>?</kbd> opent dit venster, <kbd>Esc</kbd> sluit het.</p>
+  <div class="actions"><span></span><button class="primary" id="helpClose">Sluiten</button></div>
+</dialog>
 
 <dialog id="dlgKeys">
   <h3><svg class="ic" data-i="keyboard" aria-hidden="true"><use href="#i-keyboard"/></svg> Sneltoetsen</h3>
@@ -1057,7 +1118,7 @@
     onthoudt elk scherm zelf; de profielen zelf zijn op alle schermen beschikbaar.</p>
   <p class="small" style="margin:0">Druk op een knop van de controller om de regel te laten oplichten. Zolang dit venster open is, bestuurt de controller niets.</p>
   <div class="map">
-    <b>Linker stick</b><span>Pan / tilt: hoe verder je duwt, hoe sneller</span>
+    <b>Linker stick</b><span>Pan / tilt: hoe verder je duwt, hoe sneller (met <i>Pan only</i> in de Xbox-kaart alleen links/rechts)</span>
     <b>RT / LT</b><span>Zoom in / uit: hoe dieper je drukt, hoe sneller</span>
     <b>Rechter stick ↑ / ↓</b><span>Focus ver / dichtbij (zet autofocus uit)</span>
   </div>
@@ -1823,6 +1884,7 @@ const KEY_ACTIONS = {
   songs: ["Liederenvenster tonen/verbergen", "KeyL", "Overig"],
   ctrl: ["Camerabediening tonen/verbergen (volledig scherm) of in-/uitklappen", "KeyC", "Overig"],
   pad: ["Xbox-controller-instellingen tonen/verbergen (volledig scherm) of in-/uitklappen", "KeyX", "Overig"],
+  help: ["Hulp en sneltoetsen", "Shift+Slash", "Overig"],
   ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ["preset_" + n, ["Preset " + n, "Digit" + n, "Presets op de gekozen camera"]])),
 };
 const keyOf = (a) => { const v = (cfg.keymap || {})[a]; return v === "none" ? "" : (v || KEY_ACTIONS[a][1]); };
@@ -1837,7 +1899,7 @@ function combosOf(e) {
 }
 function keyLabel(k) {
   if (!k) return "—";
-  return String(k).replace("Alt+", IS_MAC ? "⌥+" : "Alt+")
+  return String(k).replace(/^Shift\+Slash$/, "?").replace(/Slash$/, "/").replace("Alt+", IS_MAC ? "⌥+" : "Alt+")
     .replace(/Digit(\d)$/, "$1").replace(/Key([A-Z])$/, "$1").replace(/Numpad(\d)$/, "Num $1")
     .replace(/Arrow(Up|Down|Left|Right)$/, (m, d) => ({ Up: "↑", Down: "↓", Left: "←", Right: "→" })[d])
     .replace("Space", "Spatie").replace("Escape", "Esc");
@@ -1901,7 +1963,8 @@ document.addEventListener("keydown", (e) => {
     else if (document.body.classList.contains("wall")) setWall(false);
     return;
   }
-  const a = keyAction(e); if (!a) return;
+  // "?" werkt ook op toetsenborden waar ? niet op Shift+/ zit (zolang de hulptoets niet uit staat)
+  const a = keyAction(e) || (e.key === "?" && keyOf("help") ? "help" : null); if (!a) return;
   e.preventDefault();
   if (e.repeat) return;
   if (KEY_ACTIONS[a][3]) holding.set(e.code, a);
@@ -1917,6 +1980,7 @@ document.addEventListener("keydown", (e) => {
   else if (a === "songs") songWinToggle();
   else if (a === "ctrl") toggleCard("ctrlCard");
   else if (a === "pad") toggleCard("padCard");
+  else if (a === "help") helpOpen();
   else if (a === "stop") { cmd("stop"); cmd("zoom", { dir: "stop" }); }
   else if (a.startsWith("preset_")) { if (ctrlCam) presetClick(ctrlCam, +a.slice(7)); }
 });
@@ -2072,6 +2136,9 @@ function dockLayout() {
 }
 /* Vastgezette kaarten: inhoud schalen (CSS zoom 0,5–1,3) zodat hij de hoogte precies vult zonder scrollen */
 function fitDocked() {
+  // eerst per kaart de passende zoom zoeken, daarna 🧑 overal de kleinste: anders werd de Xbox-kaart (minder inhoud)
+  // groter geschaald dan de camerabediening en waren de knoppen niet in verhouding
+  const fits = [];
   for (const card of document.querySelectorAll("aside .foldcard.docked:not(.collapsed)")) {
     const body = card.querySelector(".foldbody");
     const avail = card.clientHeight - card.querySelector(".foldbar").offsetHeight;
@@ -2084,7 +2151,11 @@ function fitDocked() {
       z = nz; body.style.zoom = z.toFixed(3);
     }
     while (card.scrollHeight > card.clientHeight + 1 && z > 0.5) { z = Math.max(0.5, z * 0.97); body.style.zoom = z.toFixed(3); }
+    fits.push([body, z]);
   }
+  if (fits.length < 2) return;
+  const zmin = Math.min(...fits.map(([, z]) => z)).toFixed(3);
+  fits.forEach(([body]) => { body.style.zoom = zmin; });
 }
 // inhoud kan veranderen (Snelheden open, controller verbonden, volgstatus): af en toe opnieuw passend maken
 setInterval(() => { if (isWall()) fitDocked(); }, 1000);
@@ -2122,17 +2193,34 @@ function camRow(c) {
     <select data-f="protocol"><option value="http" ${c.protocol !== "visca" ? "selected" : ""}>HTTP-CGI</option>
       <option value="visca" ${c.protocol === "visca" ? "selected" : ""}>VISCA (TCP)</option></select>
     <input type="number" data-f="visca_port" value="${c.visca_port || 5678}">
-    <input type="text" data-f="user" value="${esc(c.user || "")}" placeholder="optioneel" autocomplete="off">
-    <input type="password" data-f="password" value="" placeholder="${c.password_set ? "•••••• (opgeslagen)" : "optioneel"}" autocomplete="new-password"
-      title="${c.password_set ? "Leeg laten = opgeslagen wachtwoord houden. Gebruiker leegmaken = wachtwoord weg." : ""}">
-    <button class="icon" title="Verwijderen" aria-label="Verwijderen">${ic("x")}</button>`;
+    <button class="icon camxbtn" aria-expanded="false" title="Extra eigenschappen: inloggen, volg-stream, max. volgsnelheid, pan omgekeerd">Extra ${ic("chevron-down", "caret")}</button>
+    <button class="icon camdel" title="Verwijderen" aria-label="Verwijderen">${ic("x")}</button>`;
   const d2 = document.createElement("div"); d2.className = "camrow2";
   d2.innerHTML = `
-    <label>Volg-stream <input type="text" data-f="stream_url" value="${esc(c.stream_url || "")}"
-      placeholder="leeg = rtsp://IP:554/2 (substream)"></label>
-    <label>Max. volgsnelheid <input type="number" data-f="track_speed" min="1" max="24" value="${c.track_speed || 6}" style="width:64px"></label>
-    <label><input type="checkbox" data-f="track_invert" ${c.track_invert ? "checked" : ""}> Pan omgekeerd (camera ondersteboven)</label>`;
-  d.querySelector("button").onclick = () => { d.remove(); d2.remove(); };
+    <div class="camextra" hidden>
+      <section class="cxsec">
+        <h5>${ic("lock", "sm")} Inloggen</h5>
+        <div class="cxgrid2">
+          <label class="cxf"><span>Gebruiker</span><input type="text" data-f="user" value="${esc(c.user || "")}" placeholder="bijv. admin" autocomplete="off"></label>
+          <label class="cxf"><span>Wachtwoord</span><input type="password" data-f="password" value="" placeholder="${c.password_set ? "•••••• (opgeslagen)" : "wachtwoord"}" autocomplete="new-password"
+            title="${c.password_set ? "Leeg laten = opgeslagen wachtwoord houden. Gebruiker leegmaken = gebruiker en wachtwoord weg." : ""}"></label>
+        </div>
+        <p class="cxhint">Alleen invullen als de camera om inloggen vraagt. Gebruiker leegmaken wist beide.</p>
+      </section>
+      <section class="cxsec">
+        <h5>${ic("track", "sm")} Persoon volgen</h5>
+        <label class="cxf"><span>Volg-stream</span><input type="text" data-f="stream_url" value="${esc(c.stream_url || "")}"
+          placeholder="leeg = rtsp://IP:554/2 (substream)"></label>
+        <div class="cxrow">
+          <label class="cxf"><span>Max. snelheid</span><input type="number" data-f="track_speed" min="1" max="24" value="${c.track_speed || 6}"></label>
+          <label class="cxchk"><input type="checkbox" data-f="track_invert" ${c.track_invert ? "checked" : ""}> Pan omgekeerd (camera ondersteboven)</label>
+        </div>
+      </section>
+    </div>`;
+  // 🧑 alle extra eigenschappen (ook inloggen) per camera achter een uitklapknop
+  const xb = d.querySelector(".camxbtn"), xt = d2.querySelector(".camextra");
+  xb.onclick = () => { xt.hidden = !xt.hidden; xb.setAttribute("aria-expanded", xt.hidden ? "false" : "true"); xb.classList.toggle("open", !xt.hidden); };
+  d.querySelector(".camdel").onclick = () => { d.remove(); d2.remove(); };
   d._extra = d2;
   return d;
 }
@@ -2168,12 +2256,32 @@ function renderKeyHints() {
   const presets = p1 === "Digit1" && p9 === "Digit9" ? "<kbd>1</kbd>–<kbd>9</kbd>" : `${k("preset_1")}…${k("preset_9")}`;
   $("#keyHints").innerHTML = `${presets} preset · ${cfg.cameras.slice(0, 3).map((c, i) => `<kbd>${esc(keyLabel(camHotkey(c, i)))}</kbd>`).join(" ")} camera ·
     ${k("left")}${k("up")}${k("right")}${k("down")} bewegen · ${k("zoom_in")}/${k("zoom_out")} zoom · ${k("focus_far")}/${k("focus_near")} focus ·
-    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("ctrl")} camerabediening · ${k("pad")} Xbox-instellingen · ${k("stop")} stop ·
-    <a href="#" id="keyHintsEdit">aanpassen</a> · rechtsklik of lang drukken op een preset = bewerken`;
+    ${k("home")} home · ${k("track")} volgen · ${k("wall")} volledig scherm · ${k("youtube")} YouTube · ${k("songs")} liederen · ${k("ctrl")} camerabediening · ${k("pad")} Xbox-instellingen · ${k("stop")} stop · ${k("help")} hulp ·
+    <a href="#" id="keyHintsEdit">aanpassen</a> · rechtsklik op een preset = bewerken`;
   $("#keyHintsEdit").onclick = (e) => { e.preventDefault(); $("#btnKeys").click(); };
   const wk = $("#btnWall kbd"); if (wk) wk.textContent = keyLabel(keyOf("wall"));
   $("#btnWall").title = `Alle camera's op het volledige scherm (toets ${keyLabel(keyOf("wall"))})`;
 }
+
+/* ---- hulpvenster (toets ?), vooral voor volledig scherm: daar zijn menu en sneltoetsuitleg verborgen ---- */
+function helpOpen() {
+  const k = (a) => `<kbd>${esc(keyLabel(keyOf(a)))}</kbd>`;
+  const groups = {};
+  Object.entries(KEY_ACTIONS).forEach(([a, [label, , group]]) => { if (keyOf(a)) (groups[group] ||= []).push([esc(label), k(a)]); });
+  const cams = cfg.cameras.map((c, i) => [c.name, camHotkey(c, i)]).filter(([, h]) => h);
+  if (cams.length) groups["Camera kiezen"] = cams.map(([n, h]) => [esc(n), `<kbd>${esc(keyLabel(h))}</kbd>`]);
+  groups["Vast"] = [["Volledig scherm / opslaan-modus verlaten", "<kbd>Esc</kbd>"]];
+  // zelfde potlood als op de tegel (.edit)
+  const pencil = `<svg class="ic sm" viewBox="0 0 24 24" aria-label="potlood"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>`;
+  groups["Muis en aanraken"] = [["Preset oproepen", "<span>klik op de tegel</span>", true],
+    ["Preset bewerken", `<span>klik op het potlood ${pencil} of rechtsklik op de tegel</span>`, true]];
+  $("#helpKeyList").innerHTML = Object.entries(groups).map(([g, rows]) => `<h5>${esc(g)}</h5>` +
+    rows.map(([l, key, wide]) => `<div${wide ? ' class="wide"' : ""}><span>${l}</span>${key}</div>`).join("")).join("");
+  $("#helpKeys").hidden = document.body.classList.contains("viewonly");
+  $("#dlgHelp").showModal();
+}
+$("#helpClose").onclick = () => $("#dlgHelp").close();
+$("#helpKeys").onclick = () => { $("#dlgHelp").close(); setTimeout(() => $("#btnKeys").click(), 0); };
 
 $("#btnSettings").onclick = () => {
   $("#camList").innerHTML = ""; cfg.cameras.forEach(c => { const r = camRow(c); $("#camList").append(r, r._extra); });
@@ -2364,7 +2472,7 @@ $$("#trkEdgeL, #trkEdgeR, #trkAim").forEach(h => {
 /* ================= Xbox-controller (Gamepad API) ================= */
 const pad = {
   idx: null, prev: [], last: { move: null, zoom: null, focus: null }, lastSend: 0, fine: false,
-  invY: store.get("padInvY") === "1", soft: store.get("padSoft") !== "0", max: +(store.get("padMax") || 18),
+  invY: store.get("padInvY") === "1", panOnly: store.get("padPanOnly") === "1", soft: store.get("padSoft") !== "0", max: +(store.get("padMax") || 18),
 };
 const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 // Knopindeling staat in cameras.json (cfg.pad_map), zodat alle schermen dezelfde indeling hebben.
@@ -2439,7 +2547,7 @@ function padActionOptions() {
   const o = [["", "— niets —"], ["cam_prev", "Vorige camera"], ["cam_next", "Volgende camera"]];
   cfg.cameras.forEach((c, i) => o.push(["cam:" + (i + 1), "Camera: " + c.name]));
   o.push(["home", "Home"], ["track", "Persoon volgen aan/uit"], ["af", "Autofocus (one-push)"], ["fine", "Fijn-modus aan/uit"],
-         ["stopall", "Alles stoppen"]);
+         ["pan_only", "Pan only aan/uit"], ["stopall", "Alles stoppen"]);
   o.push(["shift", "Shift (vasthouden: presets +N)"], ["store", "Opslaan (vasthouden + presetknop)"]);
   const pn = presetNums(); for (let n = 1; pn.length < 8 && n <= 254; n++) if (!RESERVED(n) && !pn.includes(n)) pn.push(n);
   pn.forEach(n => o.push(["preset:" + n, `Preset ${n}`]));
@@ -2475,11 +2583,25 @@ $("#padReset").onclick = async () => {
   if (!confirm(`Standaard knopindeling terugzetten in profiel "${padProfileName()}"?`)) return;
   padSetRawMap(JSON.parse(JSON.stringify(PAD_DEFAULT))); await saveConfig(); renderPadMap(); toast("Standaard teruggezet", true);
 };
-$("#padInvY").checked = pad.invY;
-$("#padSoft").checked = pad.soft;
-$("#padSoft").onchange = () => { pad.soft = $("#padSoft").checked; store.set("padSoft", pad.soft ? "1" : "0"); };
+// schakelknop (.padtog) in de Xbox-kaart: indigo + AAN als de optie aan staat
+function padTog(id, on) {
+  const b = $(id);
+  b.classList.toggle("on", !!on); b.setAttribute("aria-pressed", on ? "true" : "false");
+  b.querySelector(".pstate").textContent = on ? "aan" : "uit";
+}
+padTog("#padSoft", pad.soft); padTog("#padInvY", pad.invY);
+$("#padSoft").onclick = () => { pad.soft = !pad.soft; store.set("padSoft", pad.soft ? "1" : "0"); padTog("#padSoft", pad.soft); };
 $("#padMax").value = pad.max; $("#padMaxV").textContent = pad.max;
-$("#padInvY").onchange = () => { pad.invY = $("#padInvY").checked; store.set("padInvY", pad.invY ? "1" : "0"); };
+$("#padInvY").onclick = () => { pad.invY = !pad.invY; store.set("padInvY", pad.invY ? "1" : "0"); padTog("#padInvY", pad.invY); };
+// Pan only: voor alle camera's, per scherm (zoals de andere Xbox-opties); schakelknop in de Xbox-kaart en controllerknop (actie pan_only)
+function setPanOnly(on, say) {
+  pad.panOnly = !!on; store.set("padPanOnly", pad.panOnly ? "1" : "0");
+  padTog("#padPanOnly", pad.panOnly);
+  $("#padInvY").disabled = pad.panOnly;
+  if (say) toast(pad.panOnly ? "Pan only aan (alle camera's)" : "Pan only uit: pannen en tilten", true);
+}
+setPanOnly(pad.panOnly);
+$("#padPanOnly").onclick = () => setPanOnly(!pad.panOnly);
 $("#padMax").oninput = () => { pad.max = +$("#padMax").value; $("#padMaxV").textContent = pad.max; store.set("padMax", pad.max); };
 function setMenu(open) {
   const m = $("#mainMenu");
@@ -2617,6 +2739,7 @@ function padAction(action, gp, mods) {
     case "track": toggleTrack(ctrlCam); break;
     case "af": cmd("onepush_af"); setAF(true); break;
     case "fine": pad.fine = !pad.fine; toast(pad.fine ? "Fijn-modus aan" : "Fijn-modus uit", true); rumble(gp, 80, 0.4); break;
+    case "pan_only": setPanOnly(!pad.panOnly, true); rumble(gp, 80, 0.4); break;
     case "stopall": padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); break;
   }
 }
@@ -2649,7 +2772,7 @@ function padLoop() {
 
     // ---- analoog: pan/tilt
     const max = pad.fine ? Math.max(2, Math.round(pad.max / 4)) : pad.max;
-    const x = curve(dz(gp.axes[0] || 0)), y = curve(dz(gp.axes[1] || 0)) * (pad.invY ? -1 : 1);
+    const x = curve(dz(gp.axes[0] || 0)), y = pad.panOnly ? 0 : curve(dz(gp.axes[1] || 0)) * (pad.invY ? -1 : 1);
     let move = null;
     if (x || y) {
       const ang = Math.atan2(-y, x) * 180 / Math.PI;          // 0 = rechts, 90 = omhoog
@@ -4165,7 +4288,7 @@ const TOUR_STEPS = [
       <p>Met het toetsenbord: <kbd>1</kbd>–<kbd>9</kbd> roept preset 1–9 op van de camera die je bedient; de toets staat klein rechtsonder op de tegel.</p>
       <p>Na het oproepen staat er <b>ONDERWEG…</b> op de tegel tot de camera stilstaat. Dan kun je veilig op de mixer overschakelen.</p>
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
-  { target: ["#presetArea .tile .edit", "#presetArea"], title: "Preset bewerken", text: () => `<p>Het potlood (of rechtsklik / lang drukken op een tegel) opent het presetvenster:</p>
+  { target: ["#presetArea .tile .edit", "#presetArea"], title: "Preset bewerken", text: () => `<p>Het potlood (of rechtsklik op een tegel) opent het presetvenster:</p>
       <ul><li>naam en <b>kleur</b> geven (een gekleurde streep bovenop de tegel, bijv. per soort shot)</li><li>oproepen of de huidige positie hier opslaan</li><li>thumbnail vernieuwen</li>
       <li>${ic("track")} <i>na oproepen automatisch volgen</i></li><li>naam en foto wissen</li></ul>` },
   { target: ["#btnStore"], title: "Preset opslaan", text: () => `<p>Zet de camera goed, klik op <b>＋ Preset opslaan</b> en tik op de tegel waar de positie moet komen. Er wordt meteen een foto gemaakt voor de tegel.</p>
@@ -4188,7 +4311,8 @@ const TOUR_STEPS = [
   { target: ["#padCard"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
       <li>D-pad ←/→ = andere camera, ↓ = home, RB = volgen</li><li>View = alles stoppen</li></ul>
-      <p>Is de controller verbonden, dan staat er een groen <b>● Verbonden</b> in de titel. Hier zet je ook zachte beweging, tilt omkeren en de maximale snelheid (per apparaat).</p>` },
+      <p>Is de controller verbonden, dan staat er een groen <b>● Verbonden</b> in de titel. Hier zet je ook <b>Zachte beweging</b>, <b>Pan only</b> en <b>Tilt omkeren</b> aan of uit (knop indigo met <b>AAN</b> = aan) en de maximale snelheid (per apparaat).</p>` },
+  { target: ["#padPanOnly"], title: ic("width") + " Pan only", text: () => `<p>Klik om <b>Pan only</b> aan of uit te zetten; aan = knop indigo met <b>AAN</b>. De linker stick draait de camera dan alleen <b>links en rechts</b>, voor <b>alle camera's</b>; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt voor dit scherm. Je kunt het ook op een controllerknop zetten (<i>Pan only aan/uit</i> in de knoppenindeling).</p>` },
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
   { target: ["#keyHints"], title: "Sneltoetsen", text: () => `<p>Dit overzicht toont de toetsen zoals ze nu zijn ingesteld. Met <b>aanpassen</b> (of Menu → Instellingen → ${ic("keyboard")} Sneltoetsen) kies je zelf andere toetsen.</p>` },
@@ -4203,7 +4327,8 @@ const TOUR_STEPS = [
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. Bovenaan staat wat je <b>tijdens de dienst</b> gebruikt; het inrichten zit onder <b>Instellingen</b> en de uitleg onder <b>Hulp</b>. We lopen ze kort langs.</p>` },
   { target: ["#btnWall"], menu: "main", title: ic("maximize") + " Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
     <p>Op volledig scherm zijn de <b>camerabediening</b> (toets <kbd>${esc(keyLabel(keyOf("ctrl")) || "C")}</kbd>), de <b>Xbox-instellingen</b> (<kbd>${esc(keyLabel(keyOf("pad")) || "X")}</kbd>), <b>YouTube</b> (<kbd>${esc(keyLabel(keyOf("youtube")) || "Y")}</kbd>) en de <b>liederen</b> (<kbd>${esc(keyLabel(keyOf("songs")) || "L")}</kbd>) vensters.
-      Ze staan altijd <b>naast elkaar in de balk bovenaan</b>, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. <b>Sleep een venster aan de titelbalk op een ander venster</b> om van plek te wisselen: het neemt die plek in en de andere schuiven één plek op.</p>` },
+      Ze staan altijd <b>naast elkaar in de balk bovenaan</b>, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. <b>Sleep een venster aan de titelbalk op een ander venster</b> om van plek te wisselen: het neemt die plek in en de andere schuiven één plek op.</p>
+    <p>Menu en sneltoetsuitleg zijn daar verborgen: druk <kbd>${esc(keyLabel(keyOf("help")) || "?")}</kbd> voor <b>hulp</b>: alle sneltoetsen op een rij, met een knop om ze aan te passen.</p>` },
   { target: ["#btnLog"], menu: "main", title: ic("list") + " Activiteitenlog", text: () => `<p>Hier zie je achteraf <b>wie wat deed</b> en vanaf welk apparaat: presets oproepen en opslaan, handbediening, instellingen, back-ups, pincode. Ook <b>fouten</b> (camera niet bereikbaar, mixer weg) en welke camera op de mixer <b>in beeld</b> stond.</p><p>Geef elk apparaat een naam (bijv. <i>iPad regie</i>), dan staat die in het log. Nieuwe fouten zie je als rood getal in het menu. Filteren, zoeken en downloaden kan ook.</p>` },
   { target: ["#alertBar"], show: () => { alertDemo = true; alertCheck(); }, hide: () => { alertDemo = false; $("#alertBar").classList.remove("show"); alertPrev = new Map(); alertCheck(); },
     title: ic("alert") + " Foutmelding op alle schermen", text: () => `<p>Valt er tijdens de dienst iets weg, dan verschijnt bovenaan op <b>alle schermen</b> een rode balk, ook op volledig scherm: een <b>camera niet bereikbaar</b>, de <b>videomixer niet verbonden</b>, of <b>geen verbinding met PTZ Control</b> zelf.</p><p>Is het opgelost, dan wordt de balk even groen en verdwijnt hij. Met <b>Verbergen</b> haal je hem weg tot er een nieuwe fout bij komt; <b>Bekijk log</b> opent het activiteitenlog.</p>` },
