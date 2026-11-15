@@ -101,6 +101,7 @@ with sync_playwright() as p:
     pg.click("#btnMap2"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/knoppenindeling.png"); pg.click("#btnMapClose")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnBackup"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/back-up.png"); pg.keyboard.press("Escape")
     pg.evaluate("setWall(true)"); pg.wait_for_timeout(600); pg.screenshot(path=f"{OUT}/volledig-scherm.png")
+    pg.keyboard.press("Shift+Slash"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/hulp.png"); pg.click("#helpClose")
     pg.evaluate("ytShow(true); setCardShown('ctrlCard', true); setCardShown('padCard', true)"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-bediening.png")
     pg.evaluate("songWinShow(true); dockLayout()"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-bediening-boven.png")
     pg.evaluate("store.set('dockOrder', JSON.stringify(['yt', 'song', 'ctrl', 'pad'])); dockLayout()")

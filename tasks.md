@@ -1,0 +1,8 @@
+# Taken
+
+- [x] **Hulp bij `?`-sneltoets**: de `?`-sneltoets (op te roepen in de volledig-schermweergave) uitbreiden met hulpopties. *(15 nov 2026: `#dlgHelp`, sneltoetsen + rondleiding/log/updates/verlaten)*
+- [x] **Pan-only voor alle camera's**: in het Xbox-venster een optie om pan-only (alleen pannen, geen tilt) voor alle camera's tegelijk aan te zetten. *(15 nov 2026: `#padPanOnly` + knopactie `pan_only`)*
+- [ ] **Sneltoetsuitleg onder de zijbalk weghalen** (`#keyHints`: "1–9 preset · Shift+1 … camera · … · ? hulp · aanpassen · rechtsklik of lang drukken op een preset = bewerken"). Staat nu in het hulpvenster (`?`). Let op: rondleidingstap *Sneltoetsen* (`#keyHints`) en `renderKeyHints()` aanpassen; de link *aanpassen* zit al als knop in het hulpvenster.
+- [ ] **Netjes afsluiten controleren**: nagaan of na het stoppen of sluiten van het venster alle processen van PTZ Control netjes eindigen (server, tracker-/RTSP-threads, MIDI, liederen-watcher, oefenstand-nepcamera's, app-venster van Chrome/Edge, systeemvak-icoon; Mac en Windows).
+- [ ] **Andere poort als 8080 bezet is**: is de poort van PTZ Control bezet door een ander programma, automatisch een vrije poort kiezen en dat laten weten (melding/log, juiste adres openen, ook in de Dock-app en de Windows-starter). Let op: draait PTZ Control zelf al op die poort, dan blijft het huidige gedrag (alleen de bediening openen). Nu geeft het in dat geval alleen een melding (MessageBox / `osascript`) en stopt.
+- [x] **Venster "alle camera's aanpassen" groter**: het venster om alle camera's aan te passen vergroten zodat alles goed past. *(15 nov 2026: `#dlg` 1080 px, kolommen met minimale breedte, telefoon onder elkaar)*
