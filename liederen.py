@@ -19,6 +19,7 @@ JSON: een lijst (tekst of objecten) of een object met ``liederen``/``nummers``/`
 titel uit ``titel``/``title``/``naam``/``dienst``; optioneel huidig nummer in ``huidig``/``current`` (index vanaf 1 of naam).
 Objecten met een ``type``/``soort``: alleen lied/song/zang/nummer tellen, als die er zijn. Tekst: één nummer per regel.
 """
+import datetime
 import json
 import os
 import re
@@ -41,9 +42,11 @@ WHO = "Voordienst app"
 LIST_KEYS = ("liederen", "nummers", "songs", "items", "playlist", "lijst", "lied")
 TITLE_KEYS = ("titel", "title", "naam", "name", "dienst", "datum", "date")
 NAME_KEYS = ("titel", "title", "naam", "name", "lied", "song", "nummer", "tekst", "text")
-CUR_KEYS = ("huidig", "current", "actief", "active", "nu", "now")
+CUR_KEYS = ("huidig", "current", "actief", "active", "nu", "now", "live")
 FLAG_TRUE = ("true", "1", "ja", "yes", "actief", "active", "huidig", "current", "nu", "now", "bezig", "live", "playing", "gezongen")
-SONG_TYPES = ("lied", "liederen", "song", "zang", "nummer", "worship", "aanbidding")
+SONG_TYPES = ("lied", "liederen", "song", "zang", "nummer", "worship", "aanbidding", "praise", "lofprijs", "lofzang")
+KIND_KEYS = ("service_type", "dienst_type", "soort_dienst", "type")   # soort dienst, voor de titel bij een lijst met diensten
+DATE_KEYS = ("date", "datum", "start", "starts_at", "datetime")
 
 
 def norm_cfg(m):
@@ -138,6 +141,43 @@ def reason(e):
 
 
 # ---------------------------------------------------------------- Voordienst app
+def _service_date(d):
+    """Datum/tijd van een dienst (ISO, bijv. 2026-11-15T10:00:00) of None."""
+    for k in DATE_KEYS:
+        v = d.get(k)
+        if isinstance(v, str) and v.strip():
+            try:
+                return datetime.datetime.fromisoformat(v.strip().replace("Z", "+00:00")[:25]).replace(tzinfo=None)
+            except ValueError:
+                pass
+    return None
+
+
+def _pick_service(services, now=None):
+    """Uit een lijst met diensten (elk met een liederenlijst): die van vandaag, anders de eerstvolgende, anders de laatste."""
+    now = now or datetime.datetime.now()
+    dated = [(_service_date(d), d) for d in services]
+    if not any(t for t, _ in dated):
+        return services[0]
+    today = [(t, d) for t, d in dated if t and t.date() == now.date()]
+    if today:
+        # meer diensten vandaag: de laatste die al begonnen is (of de eerste als er nog geen begonnen is)
+        today.sort(key=lambda x: x[0])
+        started = [x for x in today if x[0] <= now + datetime.timedelta(minutes=30)]
+        return (started[-1] if started else today[0])[1]
+    later = sorted((x for x in dated if x[0] and x[0] > now), key=lambda x: x[0])
+    if later:
+        return later[0][1]
+    return max((x for x in dated if x[0]), key=lambda x: x[0])[1]
+
+
+def _service_title(d):
+    kind = next((d[k].strip() for k in KIND_KEYS if isinstance(d.get(k), str) and d[k].strip()), "")
+    t = _service_date(d)
+    when = t.strftime("%d-%m-%Y") + (t.strftime(" %H:%M") if (t.hour, t.minute) != (0, 0) else "") if t else ""
+    return " ".join(x for x in (kind, when) if x)
+
+
 def _item_name(x):
     if isinstance(x, str):
         return x.strip()
@@ -163,6 +203,14 @@ def parse_voordienst(text, field=""):
         except ValueError as e:
             raise ValueError(f"geen geldige JSON ({e})") from None
     title, cur, raw = "", None, None
+    # lijst met diensten, elk met een eigen liederenlijst (bijv. [{"service_type": …, "date": …, "songs": [...]}])
+    if isinstance(data, list) and data and all(isinstance(x, dict) for x in data) \
+            and all(any(isinstance(x.get(k), list) for k in LIST_KEYS) for x in data):
+        data = _pick_service(data)
+    # één dienst: titel = soort dienst + datum als er geen echte titel is
+    if isinstance(data, dict) and any(isinstance(data.get(k), list) for k in LIST_KEYS) \
+            and not any(isinstance(data.get(k), str) and data[k].strip() for k in TITLE_KEYS if k not in ("datum", "date")):
+        title = _service_title(data)
     if data is None:
         raw = []
         for line in text.splitlines():
@@ -176,6 +224,8 @@ def parse_voordienst(text, field=""):
         raw = data
     elif isinstance(data, dict):
         for k in TITLE_KEYS:
+            if title:
+                break
             if isinstance(data.get(k), str) and not isinstance(data.get(k), (list, dict)):
                 title = data[k].strip()
                 break
@@ -192,6 +242,11 @@ def parse_voordienst(text, field=""):
             raise ValueError("geen lijst met liederen gevonden (verwacht bijv. \"liederen\": [...])")
     else:
         raise ValueError("onbekend formaat")
+    # volgorde volgens "position"/"positie"/"volgorde" als elk lied die heeft
+    for pk in ("position", "positie", "volgorde", "order"):
+        if raw and all(isinstance(x, dict) and isinstance(x.get(pk), (int, float)) for x in raw):
+            raw = sorted(raw, key=lambda x: x[pk])
+            break
     typed = [x for x in raw if isinstance(x, dict) and (x.get("type") or x.get("soort"))]
     if typed and any(str(x.get("type") or x.get("soort")).lower() in SONG_TYPES for x in typed):
         raw = [x for x in raw if not isinstance(x, dict) or str(x.get("type") or x.get("soort") or "lied").lower() in SONG_TYPES]
@@ -212,9 +267,33 @@ def parse_voordienst(text, field=""):
     if isinstance(cur, int) or (isinstance(cur, str) and cur.strip().isdigit()):
         n = int(cur)
         idx = n - 1 if 1 <= n <= len(items) else None
-    elif isinstance(cur, (str, dict)):
-        idx = match(_item_name(cur), items)
+    elif isinstance(cur, str):
+        idx = match(cur.strip(), items)
+    elif isinstance(cur, dict):
+        idx = _cur_from_dict(cur, kept, items)
     return {"title": title[:120], "items": items, "current": idx}
+
+
+def _cur_from_dict(cur, kept, items):
+    """Huidig lied uit een blok als ``"live": {"position": 2, "song": {"title": …, "position": 2}}``:
+    eerst op titel (van ``song`` of het blok zelf), anders op ``position`` (zelfde telling als bij de liederen, dus vanaf 0)."""
+    song = cur.get("song") if isinstance(cur.get("song"), dict) else None
+    for x in (song, cur):
+        name = _item_name(x) if isinstance(x, dict) else ""
+        if name:
+            i = match(name, items)
+            if i is not None:
+                return i
+    for x in (cur, song):
+        if not isinstance(x, dict):
+            continue
+        for pk in ("position", "positie", "volgorde", "order"):
+            pos = x.get(pk)
+            if isinstance(pos, (int, float)) and not isinstance(pos, bool):
+                for i, it in enumerate(kept):
+                    if isinstance(it, dict) and it.get(pk) == pos:
+                        return i
+    return None
 
 
 def read_source(src, token=None):
