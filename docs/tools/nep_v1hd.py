@@ -21,6 +21,7 @@ class FakeV1HD:
     def __init__(self, a=1, b=1, name="V-1HD"):
         self.name = name
         self.sel = {"A": a, "B": b}
+        self.fad = 0            # faderstand 0..127 (0 = A live, 127 = B live)
         self.q = collections.deque()
         self.lock = threading.Lock()
         self.sent = []
@@ -32,6 +33,12 @@ class FakeV1HD:
             self.q.append(({"type": "control_change", "channel": 0, "control": 0, "value": msb}, [0xB0, 0, msb]))
             self.q.append(({"type": "control_change", "channel": 0, "control": 32, "value": 0}, [0xB0, 32, 0]))
             self.q.append(({"type": "program_change", "channel": 0, "program": n - 1}, [0xC0, n - 1]))
+
+    def fader(self, v):
+        """Fader bewegen: CC17 zoals de echte mixer stuurt."""
+        with self.lock:
+            self.fad = max(0, min(127, int(v)))
+            self.q.append(({"type": "control_change", "channel": 0, "control": 17, "value": self.fad}, [0xB0, 17, self.fad]))
 
     def leds(self):
         led = [0] * rv.LED_SIZE
@@ -46,7 +53,8 @@ class FakeV1HD:
             return
         addr = tuple(d[7:10])
         if addr == rv.ADDR_VIDEO:
-            vals = [0, 0] + [0] * 6 + [self.sel["A"] - 1, self.sel["B"] - 1]
+            f14 = round(self.fad * 16383 / 127)   # ⚠️ aangenomen: 14-bit als 2× 7 bits (MSB, LSB)
+            vals = [f14 >> 7, f14 & 0x7F] + [0] * 6 + [self.sel["A"] - 1, self.sel["B"] - 1]
         elif addr == rv.ADDR_LED:
             vals = self.leds()
         else:

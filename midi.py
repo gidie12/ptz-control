@@ -5,10 +5,10 @@ zonder die packages start de server gewoon en meldt de status waarom MIDI niet w
 
 Config (per workspace, in cameras.json): cfg.midi = {
     enabled: bool, port: "V-1HD" (deel van de poortnaam), dev: 16 (SysEx device-ID),
-    live_bus: "A" | "B" (rij aan de kant waar de fader staat), map: {"1": camid, ... "4": camid},
+    live_bus: "A" | "B" (live rij zolang de faderstand nog onbekend is), map: {"1": camid, ... "4": camid},
     lock: [camid, ...] (presets vergrendeld zolang die camera in beeld is)
 }
-🧑 De fader wordt nooit gebruikt; op de mixer is de gekozen ingang rood (= live).
+🧑 Fader (CC17): 0 = A live, 127 = B live, ertussen = beide live. Onbekend → live_bus.
 ⚠️ Niet getest op de echte mixer; de lampjes (73 02 xx) worden alleen gelogd,
 live wordt bepaald uit de knopdrukken (program change) en video sel A/B (71 00 08/09).
 """
@@ -208,9 +208,10 @@ class Watcher:
 
     def _snapshot(self):
         cfg = self._cfg()
-        # 🧑 fader wordt niet gebruikt: alleen de ingestelde rij telt (faderstand negeren, kant is onbekend)
-        sel = self.state.sel.get(cfg["live_bus"]) if self.port else None
-        live = [sel] if sel else []
+        # 🧑 fader 0 = A, 127 = B, ertussen beide live; faderstand onbekend → ingestelde rij
+        buses = self.state.live_buses(cfg["live_bus"]) if self.port else []
+        live = (self.state.live(cfg["live_bus"]) or []) if self.port else []
+        pos = self.state.fader_pos() if self.port else None
         cams = self._cache[2] if self._cache else set()
         live_cams = [cfg["map"][str(i)] for i in live if cfg["map"].get(str(i)) in cams]
         return {
@@ -223,6 +224,8 @@ class Watcher:
             "ports": self.ports,
             "sel": dict(self.state.sel),
             "live": live,
+            "live_buses": buses,
+            "fader": None if pos is None else round(pos, 3),
             "live_cams": live_cams,
             "pressed": self.pressed if time.time() - self.pressed_at < 1.5 else None,
             "recording": self.recording,
@@ -233,6 +236,7 @@ class Watcher:
         with self.lock:
             snap = self._snapshot()
         key = (snap["connected"], snap["port"], snap["error"], tuple(snap["live"]), tuple(snap["live_cams"]),
+               tuple(snap["live_buses"]), snap["fader"],
                snap["sel"].get("A"), snap["sel"].get("B"), snap["pressed"], snap["recording"], tuple(snap["ports"]),
                snap["enabled"])
         if force or key != self._last_key:
@@ -303,7 +307,10 @@ class Watcher:
         self._log("%-40s %s" % (hexs(raw), uitleg or d.get("type")))
         if uitleg and d.get("type") == "program_change":
             cfg = self._cfg()
-            self._log("  → live (rij %s): %s" % (cfg["live_bus"], st.sel.get(cfg["live_bus"]) or "-"))
+            self._log("  → live (rij %s): %s" % ("+".join(st.live_buses(cfg["live_bus"])), st.live(cfg["live_bus"]) or "-"))
+        elif d.get("type") == "control_change" and d.get("control") == 17:
+            cfg = self._cfg()
+            self._log("  → live rij: %s, ingang %s" % ("+".join(st.live_buses(cfg["live_bus"])), st.live(cfg["live_bus"]) or "-"))
 
     def _run(self):
         last_poll = 0

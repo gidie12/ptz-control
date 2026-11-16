@@ -288,8 +288,9 @@ Sluit de V-1HD met een **USB-kabel** aan op de computer waar PTZ Control draait 
 - Vink **Koppeling met de videomixer aan** aan. Bovenin staat of de mixer gevonden is.
 - Het venster toont beide rijen van de mixer (A en B, elk knop 1–4). Beide rijen kiezen uit dezelfde vier HDMI-ingangen, dus je kiest per ingang één keer welke camera erop zit. Druk je op de mixer op een knop, dan licht hij in het venster op; de gekozen ingang op de live rij is rood, net als op de mixer.
 - De camera die op de mixer gekozen is, krijgt in de app een **rode rand** en **IN BEELD** (in de kolom en op het tabblad). Zo zie je meteen welke camera je niet moet verplaatsen.
+- **Slot** kan alleen voor een camera die aan een ingang van de mixer hangt; anders is het slotje grijs.
 - **Slot**: zet je een camera op slot (het **slotje** in de kolomkop, of *Slot* per ingang in dit venster), dan kan er **geen preset en geen home** worden gekozen zolang die camera in beeld is: niet met een klik op een tegel, niet met de toetsen 1–9 en niet met de presetknoppen van de Xbox-controller. **Bijsturen met de controller** (stick, zoom, focus) en het toetsenbord kan wel. De kolom krijgt dan een oranje **SLOT** en de tegels worden grijs. Zodra je op de mixer naar een andere camera schakelt, werkt alles weer. Presets *opslaan* kan op slot wel. Het slot geldt voor alle schermen (de server weigert de opdracht ook).
-- **Live rij**: de rij aan de kant waar de fader staat (de fader wordt niet gebruikt). Standaard A.
+- **Fader**: helemaal naar **A** (0) = rij A live, helemaal naar **B** (127) = rij B live, **ertussen = beide rijen live** (beide camera's krijgen IN BEELD, en een slot geldt dan voor allebei). In het venster zie je de faderstand. De mixer meldt de stand pas als de fader beweegt; tot dan geldt de ingestelde **live rij** (standaard A).
 - **Verkenning**: legt alles vast wat de mixer via MIDI stuurt. Start, druk op de knoppen van beide rijen en kies een memory, en klik **Log downloaden**. Handig als de koppeling niet klopt.
 - Op de mixer: SETUP → MIDI → *MIDI OUT* op **OUT** (via USB stuurt hij altijd).
 
