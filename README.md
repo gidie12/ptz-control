@@ -216,11 +216,17 @@ Gebruik:
 - **Kader…** (naast de volgknop) opent het venster *Volgen instellen* met één beeld van de camera (geen live beeld; *Nieuw beeld* haalt een nieuw beeld):
   - **Kader**: sleep de twee **oranje lijnen**. Zolang de persoon (helemaal) tussen die lijnen staat, staat de camera stil; loopt hij eruit, dan draait de camera tot hij weer op de **witte stippellijn** (doel) staat. Die mag ook uit het midden, bijv. links in beeld voor een tekst rechts. Smal kader = strak gevolgd, breed kader = rustig beeld. Loopt iemand sneller dan de camera bijhoudt, dan versnelt de camera tot de max. volgsnelheid. Het kader geldt per camera, voor alle schermen, en meteen (ook tijdens het volgen). Pijltjestoetsen op een lijn verschuiven hem ook.
   - **Grenzen links en rechts**: hoe ver de camera mag draaien tijdens het volgen, bijv. niet verder dan de rand van het podium. Draai de camera met de **pijlen** (vasthouden) naar het verste punt links en klik **Grens links = hier**, daarna hetzelfde voor rechts. De balk eronder toont de grenzen (groen) en waar de camera nu staat. Bij een grens stopt de camera en mag de persoon uit beeld lopen; komt hij terug, dan volgt de camera weer. Handbediening en presets mogen wel verder. Werkt alleen als de camera zijn positie via VISCA (poort 5678) doorgeeft; anders staat er een melding.
+  - **Afstelling (tegen heen en weer slingeren)**, per camera en meteen (ook tijdens het volgen):
+    - **Beginsnelheid** (standaard 50%): waarmee de camera begint; schiet hij voorbij, dan gaat hij vanzelf rustiger, gaat het goed, dan sneller. Slingert hij nog: lager. Loopt hij te ver achter: hoger.
+    - **Rust na een stop** (standaard 0,4 s): hoe lang hij na een stop minstens stilstaat. Langer = rustiger.
+    - **Vertraging beeld (begin)** (standaard 0,5 s): hoeveel het camerabeeld achterloopt; de app meet dat daarna zelf.
+    - **Detecties per seconde** (standaard 8): meer = iets nauwkeuriger, maar kost meer rekenkracht.
+    - **Afstelling standaard** zet alles terug.
   - **Persoon aanklikken**: elke gevonden persoon krijgt een kader *Volg 1, 2…*. Klik erop en de camera volgt precies die persoon (volgen gaat dan ook aan). Gaat de gekozen persoon even uit beeld, dan stopt de camera en wacht hij tot dezelfde persoon terug is, in plaats van iemand anders te pakken. **Automatisch (grootste persoon)** zet dat weer los.
 
 <img src="docs/screenshots/volgen-instellen.png" width="720" alt="Volgen instellen: kader en persoon kiezen">
 - Gaat er iets mis (bijvoorbeeld geen RTSP-beeld), dan wordt de knop **rood** met de reden; de volledige melding staat in de tooltip en in het activiteitenlog.
-- Volgen kost alleen rekenkracht zolang het aan staat: de detector bekijkt hooguit **8 beelden per seconde** per camera (genoeg voor een lopende spreker; instelbaar met de omgevingsvariabele `PTZ_TRACK_FPS`). YOLO gebruikt de GPU van de Apple-chip, YOLOX in de losse app de processor.
+- Volgen kost alleen rekenkracht zolang het aan staat: de detector bekijkt hooguit **8 beelden per seconde** per camera (genoeg voor een lopende spreker; instelbaar per camera onder **Kader… → Afstelling**, of voor alle camera's met de omgevingsvariabele `PTZ_TRACK_FPS`). YOLO gebruikt de GPU van de Apple-chip, YOLOX in de losse app de processor.
 - Camera's per camera (knop **Extra** naast de camera klapt ze uit, samen met gebruiker/wachtwoord): **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
 
 ![Preset bewerken](docs/screenshots/preset-bewerken.png)

@@ -457,6 +457,11 @@
   .limbar .limnow { position: absolute; top: 4px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--accent); }
   .limbar .limtxt { position: absolute; top: -6px; font-size: 11px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
   .trklim .held { outline: 3px solid var(--accent); }
+  .tunegrid { display: grid; grid-template-columns: max-content 1fr 4.5em; gap: 8px 12px; align-items: center; margin: 10px 0 4px; }
+  .tunegrid label { font-size: 13px; }
+  .tunegrid input { width: 100%; }
+  .tunegrid span { font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; }
+  @media (max-width: 560px) { .tunegrid { grid-template-columns: 1fr 4.5em; } .tunegrid label { grid-column: 1 / -1; margin-bottom: -6px; } }
   #btnTrackSet { height: 44px; font-size: 14px; flex: 0 0 auto; padding: 0 12px; white-space: nowrap; }
   .bsec { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
   .bsec h4 { margin: 0 0 4px; font-size: 14px; }
@@ -1461,6 +1466,19 @@
     </div>
     <div class="trkhelp" id="trkLimHelp"></div>
   </div>
+  <div class="trklim" id="trkTune">
+    <h4><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Afstelling (tegen heen en weer slingeren)</h4>
+    <div class="trkhelp" style="margin-top:4px">Slingert de camera nog heen en weer? Zet de beginsnelheid lager of laat hem langer rusten na een stop.
+      Loopt hij te ver achter de persoon aan? Zet de beginsnelheid hoger. Geldt voor deze camera, ook tijdens het volgen.</div>
+    <div class="tunegrid">
+      <label for="tuScale" title="Lager als de camera nog heen en weer gaat, hoger als hij achter de persoon aan loopt. Standaard 50%.">Beginsnelheid</label><input type="range" id="tuScale" data-k="scale0" min="0.1" max="1" step="0.05" title="Lager als de camera nog heen en weer gaat, hoger als hij achter de persoon aan loopt. Standaard 50%."><span id="tuScaleV"></span>
+      <label for="tuSettle" title="Hoe lang de camera na een stop minstens stilstaat. Langer = rustiger beeld, maar later bijdraaien. Standaard 0,4 s.">Rust na een stop</label><input type="range" id="tuSettle" data-k="settle" min="0" max="3" step="0.1" title="Hoe lang de camera na een stop minstens stilstaat. Langer = rustiger beeld, maar later bijdraaien. Standaard 0,4 s."><span id="tuSettleV"></span>
+      <label for="tuLead" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf. Hoger als hij bij de start nog doorschiet. Standaard 0,5 s.">Vertraging beeld (begin)</label><input type="range" id="tuLead" data-k="lead" min="0.1" max="1.5" step="0.1" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf. Hoger als hij bij de start nog doorschiet. Standaard 0,5 s."><span id="tuLeadV"></span>
+      <label for="tuFps" title="Hoe vaak per seconde de app naar de persoon kijkt. Meer = iets nauwkeuriger, maar kost meer rekenkracht van de computer. Standaard 8.">Detecties per seconde</label><input type="range" id="tuFps" data-k="fps" min="1" max="25" step="1" title="Hoe vaak per seconde de app naar de persoon kijkt. Meer = iets nauwkeuriger, maar kost meer rekenkracht van de computer. Standaard 8."><span id="tuFpsV"></span>
+    </div>
+    <div class="trkrow"><span class="trkhelp" id="trkTuneHelp" style="margin:0"></span><span style="flex:1"></span>
+      <button class="icon" id="trkTuneReset" title="Afstelling terug naar de standaard"><svg class="ic" data-i="reset" aria-hidden="true"><use href="#i-reset"/></svg> Afstelling standaard</button></div>
+  </div>
   <div class="actions"><span></span><button class="icon" id="trkDone">Sluiten</button></div>
 </dialog>
 <dialog id="dlgLog">
@@ -2351,6 +2369,7 @@ function trkRender() {
          : "Geen personen gevonden. Zet de camera op het podium en probeer opnieuw.")
     + (t.on && t.picked ? " · Houdt één gekozen persoon vast." : t.on ? " · Volgt automatisch de grootste persoon." : "");
   trkLimRender();
+  trkTuneRender();
 }
 let trkLim = { limits: {}, pan: null, pan_error: "" };
 function trkLimRender() {
@@ -2395,6 +2414,7 @@ async function trkLook() {
   if (!r.ok) { $("#trkEmpty").textContent = r.error || "Geen beeld"; $("#trkImg").hidden = true; trkLookData = null; return trkRender(); }
   trkLookData = r;
   trkLim = { limits: r.limits || {}, pan: r.pan ?? null, pan_error: r.pan_error || "" };
+  if (r.tune_default) trkTuneDef = { ...TUNE_DEFAULT, ...r.tune_default };
   $("#trkStage").style.aspectRatio = String(r.aspect || 16 / 9);
   const img = $("#trkImg");
   img.onload = () => { img.hidden = false; $("#trkEmpty").hidden = true; };
@@ -2417,6 +2437,37 @@ async function trkSaveFrame() {
   if (!r.ok) toast(r.error || "Kader niet opgeslagen"); else c.track_frame = r.frame;
   trkRender();
 }
+/* ---- afstelling van de regelaar (tegen slingeren), per camera in cameras.json (track_tune) */
+const TUNE_DEFAULT = { scale0: 0.5, settle: 0.4, lead: 0.5, fps: 8 };
+let trkTuneDef = { ...TUNE_DEFAULT }, trkTuneT = null;
+const TUNE_FMT = { scale0: v => Math.round(v * 100) + "%", settle: v => (+v).toFixed(1) + " s", lead: v => (+v).toFixed(1) + " s", fps: v => Math.round(v) + "/s" };
+const trkTune = () => ({ ...trkTuneDef, ...(camById(trkCamId)?.track_tune || {}) });
+function trkTuneRender() {
+  const t = trkTune();
+  $$("#trkTune input[data-k]").forEach(i => {
+    if (document.activeElement !== i) i.value = t[i.dataset.k];
+    $("#" + i.id + "V").textContent = TUNE_FMT[i.dataset.k](i.value);
+  });
+  const custom = !!camById(trkCamId)?.track_tune;
+  $("#trkTuneReset").disabled = !custom;
+  $("#trkTuneHelp").textContent = custom ? "Eigen afstelling voor deze camera." : "Standaardafstelling.";
+}
+async function trkTuneSave(reset) {
+  const c = camById(trkCamId);
+  if (!c) return;
+  const tune = {};
+  $$("#trkTune input[data-k]").forEach(i => tune[i.dataset.k] = +i.value);
+  const r = await post("/api/track/tune", reset ? { cam: trkCamId, reset: true } : { cam: trkCamId, tune });
+  if (!r.ok) return toast(r.error || "Afstelling niet opgeslagen");
+  if (reset) delete c.track_tune; else c.track_tune = r.tune;
+  trkTuneRender();
+  if (reset) toast("Afstelling terug naar standaard", true);
+}
+$$("#trkTune input[data-k]").forEach(i => i.addEventListener("input", () => {
+  $("#" + i.id + "V").textContent = TUNE_FMT[i.dataset.k](i.value);
+  clearTimeout(trkTuneT); trkTuneT = setTimeout(() => trkTuneSave(false), 400);
+}));
+$("#trkTuneReset").onclick = () => trkTuneSave(true);
 function trkMove(k, v) {
   v = Math.max(0, Math.min(1, v)); trkDirty = true;
   if (k === "l") trkF.l = Math.min(v, trkF.r - 0.1);
@@ -4299,7 +4350,8 @@ const TOUR_STEPS = [
   { target: ["#btnTrackSet"], title: ic("image") + " Kader en persoon kiezen", text: () => `<p><b>Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>
       <ul><li><b>Klik op een persoon</b> om precies die te volgen; komt iemand anders voorbij, dan blijft de camera bij jouw keuze.</li>
       <li>Sleep de <b>oranje lijnen</b> voor het kader: binnen het kader staat de camera stil, loopt de persoon eruit, dan draait hij terug naar de <b>witte stippellijn</b>.</li>
-      <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met de pijlen en klik <i>Grens … = hier</i>).</li></ul>` },
+      <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met de pijlen en klik <i>Grens … = hier</i>).</li>
+      <li><b>Afstelling</b>: slingert de camera heen en weer, zet dan de beginsnelheid lager of de rust na een stop langer; per camera.</li></ul>` },
   { target: ["#padCard"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
       <li>D-pad ←/→ = andere camera, ↓ = home, RB = volgen</li><li>View = alles stoppen</li></ul>

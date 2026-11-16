@@ -256,6 +256,39 @@ def norm_frame(f):
     return {"l": round(l, 3), "r": round(r, 3), "x": round(x, 3)}
 
 
+# ---------------------------------------------------------------- afstelling van de pan-regelaar (per camera)
+def _envf(name, default):
+    try:
+        return float(os.environ.get(name) or default)
+    except ValueError:
+        return float(default)
+
+
+# grenzen per instelling: (min, max)
+TUNE_RANGE = {"scale0": (0.1, 1.0), "settle": (0.0, 3.0), "lead": (0.1, 1.5), "fps": (1.0, 25.0)}
+DEFAULT_TUNE = {"scale0": 0.5, "settle": 0.4, "lead": 0.5, "fps": 8.0}
+for _k, _e in (("scale0", "PTZ_TRACK_SCALE0"), ("settle", "PTZ_TRACK_SETTLE"), ("lead", "PTZ_TRACK_LEAD"),
+               ("fps", "PTZ_TRACK_FPS")):
+    _lo, _hi = TUNE_RANGE[_k]
+    DEFAULT_TUNE[_k] = max(_lo, min(_hi, _envf(_e, DEFAULT_TUNE[_k])))
+
+
+def norm_tune(v, base=None):
+    """Afstelling {scale0, settle, lead, fps}: beginsnelheid (deel van de max.), rust na een stop (s),
+    beginwaarde van de vertraging (s), detecties per seconde. Ontbrekend/ongeldig → waarde uit `base`
+    (al genormaliseerd), anders de standaard (of omgeving)."""
+    out = dict(base) if base else dict(DEFAULT_TUNE)
+    if isinstance(v, dict):
+        for k, (lo, hi) in TUNE_RANGE.items():
+            try:
+                x = float(v[k])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if x == x:   # geen NaN
+                out[k] = round(max(lo, min(hi, x)), 2)
+    return out
+
+
 def norm_limits(v):
     """Pan-grenzen {left, right} als ruwe VISCA-panwaarden van de camera (beide nodig), anders None."""
     try:
@@ -335,49 +368,128 @@ class PanGuard(threading.Thread):
 class PanController:
     """Zet de afwijking van de doelpositie om in pan links/rechts/stop met evenredige snelheid.
     Hysterese: begint pas te draaien als `start` waar is (persoon buiten het kader),
-    stopt pas als de persoon weer (bijna) op de doelpositie staat."""
+    stopt pas als de persoon weer (bijna) op de doelpositie staat.
+
+    Tegen slingeren (camera schoot heen en weer, gevonden bij de gebruiker nov 2026): het beeld loopt achter
+    (RTSP-buffer, detectie, commando) en ingezoomd verschuift het beeld per snelheidsstap veel sneller, dus de
+    camera draaide door tot het (oude) beeld de persoon in het midden liet zien en was er dan al ver voorbij.
+    - `lat`: vertraging, zelf gemeten = tijd tussen het eerste draaicommando en het moment dat het beeld meeschuift;
+    - vooruitkijken: stoppen zodra de afwijking over `lat` s het doel bereikt (niet pas als het beeld het laat zien);
+    - na een stop even rust (min. `lat`), zodat de achterlopende beelden eerst binnen zijn; nooit direct omkeren;
+    - `scale`: moet hij kort na een stop de andere kant op (doorgeschoten), dan alle snelheden ×0,7, en ook als het beeld door de camera sneller schuift dan `MAX_RATE`;
+      elke beweging zonder doorschieten weer +10%. Zo past hij zich vanzelf aan zoom en vertraging aan;
+    - `boost` (inhalen) alleen als de afwijking niet kleiner wordt, dus als de persoon echt sneller loopt."""
 
     STOP_AT = 0.03
+    MAX_RATE = 0.5    # beeldbreedte/s: sneller laten we de camera het beeld niet laten inlopen
+    OVERSHOOT_S = 1.0  # s (+ lat): binnen deze tijd na een stop de andere kant op = doorgeschoten
 
-    def __init__(self, max_speed=6, min_speed=1, invert=False):
+    def __init__(self, max_speed=6, min_speed=1, invert=False, tune=None):
         self.max_speed = max_speed
         self.min_speed = min_speed
         self.invert = invert
         self.state = None  # None | ("left"|"right", speed)
-        self.boost = 0.0   # extra snelheid zolang de persoon buiten het kader blijft (inhalen bij doorlopen)
+        self.boost = 0.0   # extra snelheid zolang de persoon buiten het kader blijft en we hem niet inhalen
         self.t_last = time.time()
+        self.prev = None   # vorige afwijking
+        self.vel = 0.0     # gladgestreken snelheid van de afwijking in het beeld (beeldbreedte/s)
+        self.hold_until = 0.0
+        self.set_tune(tune)
+        self.t_move = None      # begin van de huidige beweging (vanuit stilstand)
+        self.vel0 = 0.0         # snelheid van de afwijking bij die start
+        self.lat_done = True
+        self.last_dir = None    # richting van de vorige beweging
+        self.t_stop = 0.0       # wanneer die stopte
+
+    def set_tune(self, tune):
+        """Afstelling (norm_tune) zetten; vertraging en snelheid beginnen opnieuw bij de beginwaarden."""
+        t = norm_tune(tune)
+        self.SETTLE = t["settle"]                # s rust na een stop (minimaal)
+        self.lat = t["lead"]                     # s, beginwaarde van de vertraging (wordt gemeten)
+        self.scale = t["scale0"]                 # rustig beginnen, groeit als het goed gaat
+
+    def reset(self, settle=False):
+        """Stilstand van buitenaf (grens, halt): toestand wissen, eventueel even rust."""
+        now = time.time()
+        if self.state is not None:
+            self.last_dir, self.t_stop = self.state[0], now
+        self.state, self.boost, self.t_move = None, 0.0, None
+        if settle:
+            self.hold_until = now + max(self.SETTLE, self.lat)
+
+    def _stop(self, now):
+        self.reset()
+        self.hold_until = now + max(self.SETTLE, self.lat + 0.1)
+        return ("stop", 0)
 
     def update(self, err, start, urgent=False):
         """err = persoon_x - doel_x (positief = staat rechts van het doel). start = persoon buiten het kader.
-        urgent = persoon raakt de beeldrand: meteen topsnelheid. Geeft nieuw commando of None (geen wijziging)."""
+        urgent = persoon raakt de beeldrand: meteen (zo goed als) topsnelheid. Geeft nieuw commando of None."""
         if self.invert:
             err = -err
         a = abs(err)
         now = time.time()
-        dt, self.t_last = min(0.3, now - self.t_last), now
-        if self.state is None and not start:
-            return None
-        if self.state is not None and a <= self.STOP_AT:
-            self.state, self.boost = None, 0.0
-            return ("stop", 0)
+        raw_dt = now - self.t_last
+        dt, self.t_last = min(0.3, raw_dt), now
+        if self.prev is not None and 0 < raw_dt < 1.0:
+            self.vel = 0.5 * self.vel + 0.5 * (err - self.prev) / raw_dt
+        else:
+            self.vel = 0.0
+        self.prev = err
         direction = "right" if err > 0 else "left"
-        if self.state is not None and self.state[0] != direction:
-            self.boost = 0.0
-        # blijft hij buiten het kader terwijl we al draaien, dan loopt hij sneller dan wij: snelheid laten oplopen
-        # per seconde, zodat het niet afhangt van het aantal detecties per seconde
-        self.boost = min(float(self.max_speed), self.boost + 12.0 * dt) if start and self.state is not None \
-            else max(0.0, self.boost - 12.0 * dt)
+        sgn = 1 if err > 0 else -1
+        # vertraging meten: eerste moment na de start dat de afwijking duidelijk kleiner gaat worden
+        if not self.lat_done and self.state is not None and self.t_move is not None:
+            if (self.vel - self.vel0) * sgn < -0.04:
+                m = now - self.t_move   # omhoog snel, omlaag langzaam: een te korte meting is gevaarlijker
+                w = 0.5 if m > self.lat else 0.2
+                self.lat = min(1.5, max(0.1, (1 - w) * self.lat + w * m))
+                self.lat_done = True
+            elif now - self.t_move > 2.0:
+                self.lat_done = True
+        if self.state is None:
+            if not start or (now < self.hold_until and not urgent):
+                return None
+        else:
+            # schuift het beeld door ons harder dan MAX_RATE (ingezoomd, hoge snelheid)? Dan meteen rustiger:
+            # met de vertraging erbij schiet hij anders altijd door
+            rate = -(self.vel - self.vel0) * sgn
+            if now - (self.t_move or now) > self.lat and rate > self.MAX_RATE:
+                self.scale = max(0.1, self.scale * max(0.5, self.MAX_RATE / rate))
+            if a <= self.STOP_AT or self.state[0] != direction:
+                return self._stop(now)
+            # waar staat de persoon over `lat` s als het zo doorgaat? Dan nu al stoppen.
+            pred = err + self.vel * self.lat
+            if not urgent and ((pred > 0) != (err > 0) or abs(pred) <= self.STOP_AT):
+                return self._stop(now)
+        # blijft hij buiten het kader en wordt de afwijking niet kleiner, dan loopt hij sneller dan wij:
+        # snelheid laten oplopen (per seconde, zodat het niet afhangt van het aantal detecties per seconde)
+        shrinking = self.vel * sgn < -0.02
+        if start and self.state is not None and not shrinking and now - (self.t_move or now) > self.lat + 0.2:
+            self.boost = min(float(self.max_speed), self.boost + 12.0 * self.scale * dt)
+        else:
+            self.boost = max(0.0, self.boost - 12.0 * dt)
+        if self.state is None:
+            if self.last_dir and direction != self.last_dir and now - self.t_stop < self.OVERSHOOT_S + self.lat:
+                self.scale = max(0.1, self.scale * 0.7)       # doorgeschoten: voortaan rustiger
+            else:
+                self.scale = min(1.0, self.scale + 0.1)
         frac = min(1.0, a / 0.35)
-        speed = self.max_speed if urgent else round(self.min_speed + frac * (self.max_speed - self.min_speed) + self.boost)
+        speed = (self.min_speed + frac * (self.max_speed - self.min_speed) + self.boost) * self.scale
+        if urgent:
+            speed += 1
+        speed = round(speed)
         new = (direction, max(self.min_speed, min(self.max_speed, speed)))
         if new == self.state:
             return None
+        if self.state is None:
+            self.t_move, self.vel0, self.lat_done = now, self.vel, False
         self.state = new
         return new
 
     def halt(self):
         was = self.state
-        self.state, self.boost = None, 0.0
+        self.reset()
         return ("stop", 0) if was else None
 
 
@@ -390,8 +502,9 @@ class CameraTracker(threading.Thread):
     MIN_SIM = 0.45       # uiterlijk dat minstens moet lijken om hetzelfde doel te zijn (dichtbij)
     REACQ_SIM = 0.62     # na kwijtraken: alleen terugvinden als het uiterlijk duidelijk lijkt
     PICK_WAIT = 20.0     # s zoeken naar een aangeklikte persoon voor we het opgeven
-    # max. detecties per seconde (per camera): genoeg om een spreker te volgen, scheelt CPU/GPU t.o.v. elk beeld (25/s)
-    MAX_FPS = max(1.0, float(os.environ.get("PTZ_TRACK_FPS") or 8))
+    # max. detecties per seconde (per camera): standaard 8, genoeg om een spreker te volgen en scheelt CPU/GPU
+    # t.o.v. elk beeld (25/s); instelbaar per camera (tune.fps) of met PTZ_TRACK_FPS
+    MAX_FPS = DEFAULT_TUNE["fps"]
 
     def __init__(self, cam, url, detector, send, on_status, settings):
         super().__init__(daemon=True)
@@ -400,8 +513,10 @@ class CameraTracker(threading.Thread):
         self.send = send                # send(action, args) -> camera
         self.on_status = on_status      # on_status(dict)
         self.grabber = FrameGrabber(url)
+        tune = norm_tune(settings.get("tune"))
         self.ctrl = PanController(max_speed=settings.get("max_speed", 6),
-                                  invert=settings.get("invert", False))
+                                  invert=settings.get("invert", False), tune=tune)
+        self.MAX_FPS = tune["fps"]
         self.frame_cfg = norm_frame(settings.get("frame") or DEFAULT_FRAME)
         self.lock = threading.Lock()
         self.running = True
@@ -429,6 +544,12 @@ class CameraTracker(threading.Thread):
         with self.lock:
             self.frame_cfg = norm_frame(frame)
 
+    def set_tune(self, tune):
+        tune = norm_tune(tune)
+        with self.lock:
+            self.ctrl.set_tune(tune)
+            self.MAX_FPS = tune["fps"]
+
     def set_limits(self, limits):
         if self.guard:
             self.guard.set_limits(norm_limits(limits))
@@ -437,7 +558,7 @@ class CameraTracker(threading.Thread):
         """Vanuit de PanGuard: draaien we die kant op, dan nu stoppen."""
         if self.sent == direction:
             self.at_limit = direction
-            self.ctrl.state, self.ctrl.boost = None, 0.0
+            self.ctrl.reset(settle=True)
             self._cmd(("stop", 0))
 
     def pick(self, cx, hist):
@@ -478,7 +599,7 @@ class CameraTracker(threading.Thread):
         if direction != "stop" and self.guard and self.guard.blocked(direction):
             # grens: niet verder die kant op (de persoon mag dan uit het kader lopen)
             self.at_limit = direction
-            self.ctrl.state, self.ctrl.boost = None, 0.0
+            self.ctrl.reset(settle=True)
             if self.sent is None:
                 return
             direction = "stop"
