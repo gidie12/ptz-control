@@ -82,7 +82,7 @@ with sync_playwright() as p:
     pg.evaluate("osdOpen = {[osdCamId]: true}; osdRender(); renderTabs(); renderPresets()")
     pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/osd-menu.png")
     pg.evaluate("osdOpen = {}; osdRender(); renderTabs(); renderPresets()"); pg.click("#osdDone")
-    pg.set_viewport_size({"width": 1440, "height": 1150})   # venster is hoog: helemaal in beeld
+    pg.set_viewport_size({"width": 1440, "height": 1400})   # venster is hoog: helemaal in beeld
     pg.evaluate(VOLG % volg_jpeg()); pg.wait_for_timeout(500)   # 🎯 Volgen instellen (beeld en personen nagebootst)
     pg.locator("#dlgTrack").screenshot(path=f"{OUT}/volgen-instellen.png"); pg.evaluate("track = {}; $('#dlgTrack').close(); renderSide()")
     pg.set_viewport_size({"width": 1440, "height": 900})

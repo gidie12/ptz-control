@@ -9,6 +9,8 @@ bovenlijf) gaat wel door de echte code van tracker.py, net als het kader en de p
     curl http://127.0.0.1:8091/state                        # toestand van de simulatie (JSON)
 
 Aannames: beeldhoek = 1 eenheid wereld, 1 snelheidsstap = 4°/s bij 60° beeldhoek (zoals de eerdere simulaties).
+Omgeving: PTZ_SIM_LAT = vertraging van het beeld in s (RTSP-buffer; standaard 0), PTZ_SIM_STEP = beeldbreedte/s
+per snelheidsstap (standaard 4/60; ingezoomd hoger, bv. 0.27 bij 15° beeldhoek).
 """
 import json
 import math
@@ -44,7 +46,8 @@ import ptz_control  # noqa: E402
 
 W, H = 640, 360
 SKIN = (140, 170, 225)          # BGR; de detector zoekt precies deze kleur
-STEP = 4.0 / 60.0               # wereld-eenheden per seconde per snelheidsstap
+STEP = float(os.environ.get("PTZ_SIM_STEP") or 4.0 / 60.0)   # wereld-eenheden per seconde per snelheidsstap
+LAT = float(os.environ.get("PTZ_SIM_LAT") or 0)                # s vertraging van het beeld
 
 
 class Sim:
@@ -114,14 +117,18 @@ SIM = Sim()
 class SimGrabber(threading.Thread):
     def __init__(self, url):
         super().__init__(daemon=True)
-        self.frame, self.ts, self.error, self.running = None, 0.0, "", True
+        self.frame, self.ts, self.error, self.error_detail, self.running = None, 0.0, "", "", True
         self.lock = threading.Lock()
 
     def run(self):
+        buf = []
         while self.running:
-            f = SIM.render()
-            with self.lock:
-                self.frame, self.ts = f, time.time()
+            buf.append((time.time(), SIM.render()))
+            while len(buf) > 1 and buf[1][0] <= time.time() - LAT:
+                buf.pop(0)
+            if buf[0][0] <= time.time() - LAT:
+                with self.lock:
+                    self.frame, self.ts = buf[0][1], time.time()
             time.sleep(1 / 12)
 
     def latest(self):

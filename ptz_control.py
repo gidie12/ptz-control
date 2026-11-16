@@ -332,6 +332,9 @@ def describe_request(path, body, code, resp):
         msg = "Volgen: automatisch de grootste persoon" if body.get("auto") else "Volgen: persoon aangeklikt"
     elif path == "/api/track/frame":
         msg = "Volgkader ingesteld" if ok else "Volgkader"
+    elif path == "/api/track/tune":
+        msg = ("Volgen: afstelling standaard" if body.get("reset") else "Volgen: afstelling gewijzigd") if ok \
+            else "Volgen: afstelling"
     elif path == "/api/track/limit":
         msg = {"left": "Volgen: grens links ingesteld", "right": "Volgen: grens rechts ingesteld"}.get(
             body.get("side"), "Volgen: grenzen gewist")
@@ -1031,6 +1034,10 @@ def track_frame(cam):
     return _tracker.norm_frame(cam.get("track_frame") or _tracker.DEFAULT_FRAME)
 
 
+def track_tune(cam):
+    return _tracker.norm_tune(cam.get("track_tune"))
+
+
 class PanReader:
     """Panpositie via VISCA met één blijvende verbinding (opnieuw verbinden na een fout)."""
 
@@ -1074,6 +1081,7 @@ def start_tracking(cam, pick=None):
         settings = {"max_speed": clamp(cam.get("track_speed") or 6, 1, 24),
                     "invert": bool(cam.get("track_invert")),
                     "frame": track_frame(cam),
+                    "tune": track_tune(cam),
                     "pick": pick}
         limits = _tracker.norm_limits(cam.get("track_limits"))
         if limits:
@@ -1133,7 +1141,8 @@ def track_look(cam):
             "img": f"/api/track/look.jpg?cam={urllib.parse.quote(cam['id'])}&t={int(now * 1000)}",
             "people": [{"i": i, "cx": round(p[0], 4), "cy": round(p[1], 4), "w": round(p[2], 4), "h": round(p[3], 4),
                         "target": i == target} for i, p in enumerate(people)],
-            "frame": track_frame(cam), "tracking": bool(t), "picked": bool(t and t.picked), **track_limit_info(cam)}
+            "frame": track_frame(cam), "tune": track_tune(cam), "tune_default": _tracker.norm_tune(None),
+            "tracking": bool(t), "picked": bool(t and t.picked), **track_limit_info(cam)}
 
 
 def track_limit_info(cam):
@@ -1230,6 +1239,28 @@ def set_track_frame(cam_id, frame):
         t.set_frame(frame)
     broadcast({"type": "config"})
     return frame
+
+
+def set_track_tune(cam_id, tune, reset=False):
+    """Afstelling van de pan-regelaar opslaan (reset = terug naar standaard) en een lopende tracker aanpassen."""
+    with LOCK:
+        cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+        cam = next((c for c in cfg.get("cameras", []) if c.get("id") == cam_id), None)
+        if cam is None:
+            raise KeyError(f"Camera {cam_id} niet gevonden")
+        if reset:
+            cam.pop("track_tune", None)
+        else:
+            merged = dict(cam.get("track_tune") or {})
+            merged.update(tune if isinstance(tune, dict) else {})
+            cam["track_tune"] = _tracker.norm_tune(merged)
+        val = _tracker.norm_tune(cam.get("track_tune"))
+        _write(cfg)
+    t = TRACKERS.get(cam_id)
+    if t:
+        t.set_tune(val)
+    broadcast({"type": "config"})
+    return val
 
 
 def stop_tracking(cam_id, halt=True, quiet=False):
@@ -2215,7 +2246,7 @@ class Handler(BaseHTTPRequestHandler):
                     if key in existing.get(cam.get("id"), {}):
                         cam[key] = existing[cam["id"]][key]
                 # volgkader: via /api/track/frame; een scherm dat hem niet meestuurt wist hem niet
-                for key in ("track_frame", "track_limits"):
+                for key in ("track_frame", "track_limits", "track_tune"):
                     if key not in cam and key in existing.get(cam.get("id"), {}):
                         cam[key] = existing[cam["id"]][key]
             save_config(body)
@@ -2349,7 +2380,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:  # noqa: BLE001
                 return self._send(400, {"ok": False, "error": str(e)})
 
-        if u.path in ("/api/track/look", "/api/track/pick", "/api/track/frame", "/api/track/limit"):
+        if u.path in ("/api/track/look", "/api/track/pick", "/api/track/frame", "/api/track/limit", "/api/track/tune"):
             try:
                 cam = find_camera(body.get("cam"))
                 if u.path == "/api/track/look":
@@ -2358,6 +2389,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, track_pick(cam, body.get("i"), bool(body.get("auto"))))
                 if u.path == "/api/track/limit":
                     return self._send(200, set_track_limit(cam, body.get("side")))
+                if u.path == "/api/track/tune":
+                    return self._send(200, {"ok": True, "tune": set_track_tune(cam["id"], body.get("tune"),
+                                                                               bool(body.get("reset")))})
                 return self._send(200, {"ok": True, "frame": set_track_frame(cam["id"], body.get("frame"))})
             except KeyError as e:
                 return self._send(404, {"ok": False, "error": e.args[0]})
