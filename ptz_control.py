@@ -678,6 +678,26 @@ def _store_thumb(cam, n, data):
 HAND_MOVING = set()    # {(cam_id, "move"|"zoom"|"focus")}: laatste commando was een doorlopende beweging
 
 
+LOCK_ACTIONS = ("preset_call", "home")   # 🧑 springen naar een positie; handbediening (move/zoom/focus) blijft mogelijk
+
+
+def onair_locked(cam_id):
+    """True als deze camera IN BEELD is op de videomixer én bij de videomixer op slot staat."""
+    try:
+        m = _midi.norm_cfg(load_config().get("midi"))
+        if not m["enabled"] or cam_id not in m["lock"]:
+            return False
+        snap = MIDI.snapshot()
+        return bool(snap.get("connected")) and cam_id in (snap.get("live_cams") or [])
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def lock_error(cam):
+    return ValueError(f"{cam.get('name') or 'Deze camera'} is in beeld en staat op slot: presets en home zijn geblokkeerd. "
+                      "Bewegen met de controller kan wel (slot uit: slotje in de kolomkop).")
+
+
 def do_action(cam, action, args, info=None):
     """Voer een commando uit en houd alle schermen (en thumbnails) bij.
     Bij preset_set komt in info["thumb_error"] waarom de thumbnail niet lukte ("" = gelukt)."""
@@ -686,6 +706,8 @@ def do_action(cam, action, args, info=None):
         if n in _backup.RESERVED:
             raise ValueError(f"Preset {n} is gereserveerd door PTZOptics (90 = home, 95 = OSD-menu, 91–99 vast). "
                              "Gebruik 1–89 of 100–254.")
+    if action in LOCK_ACTIONS and onair_locked(cam["id"]):
+        raise lock_error(cam)
     if action not in OSD_ALLOWED and not (action in ("zoom", "focus") and args.get("dir") == "stop") \
             and osd_is_open(cam["id"]):
         raise ValueError(f"Het OSD-menu staat open op {cam.get('name') or 'deze camera'}. "
@@ -899,6 +921,8 @@ def undo_preset(cam, n):
         raise ValueError("Er loopt een taak; probeer het daarna.")
     if osd_is_open(cam["id"]):
         raise ValueError("Het OSD-menu staat open op deze camera: sluit het eerst.")
+    if onair_locked(cam["id"]):
+        raise lock_error(cam)
     UNDO.pop((cam["id"], n), None)
     if cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS:
         stop_tracking(cam["id"], halt=True)

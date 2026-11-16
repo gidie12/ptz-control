@@ -73,6 +73,8 @@ with sync_playwright() as p:
     pg.evaluate("undoOffer('Midden · Preset 3 opgeslagen', 'midden', 3)"); pg.wait_for_timeout(300)
     pg.screenshot(path=f"{OUT}/ongedaan-maken.png", clip={"x": 420, "y": 760, "width": 600, "height": 140}); pg.evaluate("$('#undoNote').hidden = true")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnMidi"); pg.wait_for_timeout(1500); pg.screenshot(path=f"{OUT}/videomixer.png"); pg.click("#midiClose")
+    pg.evaluate("toggleLock('links')"); pg.wait_for_timeout(700)   # 🧑 slot: camera in beeld + op slot
+    pg.screenshot(path=f"{OUT}/slot.png", clip={"x": 0, "y": 0, "width": 1440, "height": 560}); pg.evaluate("toggleLock('links')"); pg.wait_for_timeout(500)
     urllib.request.urlopen("http://127.0.0.1:50001/test/trigger?i=4").read(); pg.wait_for_timeout(2500)
     pg.keyboard.press("l"); pg.wait_for_timeout(600); pg.screenshot(path=f"{OUT}/liederenvenster.png"); pg.keyboard.press("l"); pg.wait_for_timeout(200)
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnSongs"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/liederen.png")
