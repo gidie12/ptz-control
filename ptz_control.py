@@ -2356,7 +2356,10 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/liederen/check":
             return self._send(200, {"ok": True, **LD.check_now()})
         if u.path == "/api/midi/fake_press" and _midi.FAKE:   # alleen met PTZ_MIDI_FAKE (tests)
-            _midi.FAKE.press("B" if body.get("bus") == "B" else "A", clamp(body.get("n", 1), 1, 4))
+            if "fader" in body:
+                _midi.FAKE.fader(clamp(body.get("fader"), 0, 127))
+            else:
+                _midi.FAKE.press("B" if body.get("bus") == "B" else "A", clamp(body.get("n", 1), 1, 4))
             return self._send(200, {"ok": True})
         if u.path == "/api/midi/record":
             MIDI.set_recording(bool(body.get("on")))

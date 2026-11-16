@@ -8,7 +8,8 @@ Aannames (⚠️ niet getest op de echte mixer):
 - Bij een druk op een ingangsknop stuurt de V-1HD (MIDI OUT = OUT, en altijd
   via USB) CC0 (bank MSB) + CC32 (LSB) + program change:
   bank 00 = A-bus ingang 1-4, bank 01 = B-bus ingang 1-4, bank 50H = memory 1-8.
-- CC17 = A/B-fader. Welke kant 0 is (A of B) is nog onbekend.
+- CC17 = A/B-fader. 🧑 0 = A live, 127 = B live, alles ertussen = beide live
+  (op verzoek, 16 nov 2026; niet op de echte mixer getest).
 - Via SysEx RQ1 op 71 00 00 (fader, 14-bit) en 71 00 08/09 (video sel A/B)
   en 73 02 00-18 (knoplampjes) is de huidige stand op te vragen.
 """
@@ -77,6 +78,7 @@ class V1HDState:
         self.sel = {"A": None, "B": None}   # ingang 1-4 per bus
         self.fader = None           # 0-127 (CC17) of 0-16383 (SysEx, zie fader14)
         self.fader14 = None
+        self.cc_fader = False       # CC17 ontvangen (gaat voor de opgevraagde fader14)
         self.memory = None
         self.leds = None            # ruwe bytes 73 02 00..18
         self.mem = {}               # adres -> waarde, voor alle SysEx-antwoorden
@@ -91,6 +93,7 @@ class V1HDState:
                 self.bank = (self.bank[0], v)
             elif c == 17:
                 self.fader = v
+                self.cc_fader = True
                 return "fader %d" % v
             elif c == 19:
                 return "overgang: %s" % {0: "WIPE", 1: "MIX", 2: "CUT"}.get(v, v)
@@ -134,26 +137,32 @@ class V1HDState:
             self.leds = leds
         return ", ".join(out) or None
 
-    def live(self, live_bus="A", a_is_zero=True):
-        """Welke ingang staat (vermoedelijk) op program.
-
-        🧑 De fader wordt in de kerk nooit gebruikt: hij staat vast aan één kant,
-        dus één rij (live_bus) is altijd program en een knop daarin = direct
-        schakelen. Is de faderstand wel bekend (SysEx/CC17), dan gaat die voor.
-        ⚠️ Fader helemaal aan één kant = die bus live; ertussen → beide.
-        a_is_zero: fader 0 = A (nog niet gecontroleerd).
-        """
+    def fader_pos(self):
+        """Faderstand 0..1 (0 = A, 1 = B) of None als onbekend.
+        CC17 (bewogen fader) gaat voor; anders de opgevraagde 14-bits waarde (⚠️ codering niet gecontroleerd)."""
+        if self.cc_fader and self.fader is not None:
+            return self.fader / 127.0
         if self.fader14 is not None:
-            pos = self.fader14 / 16383.0
-        elif self.fader is not None:
-            pos = self.fader / 127.0
-        else:
-            v = self.sel.get(live_bus)
-            return [v] if v else None
-        if not a_is_zero:
-            pos = 1 - pos
-        if pos <= 0.02:
-            return [self.sel["A"]]
-        if pos >= 0.98:
-            return [self.sel["B"]]
-        return [self.sel["A"], self.sel["B"]]
+            return self.fader14 / 16383.0
+        return None
+
+    def live_buses(self, live_bus="A"):
+        """🧑 Fader op 0 = A live, op 127 = B live, alles ertussen = beide live.
+        Faderstand onbekend → de ingestelde rij (live_bus)."""
+        pos = self.fader_pos()
+        if pos is None:
+            return [live_bus]
+        if pos <= 0.0:
+            return ["A"]
+        if pos >= 1.0:
+            return ["B"]
+        return ["A", "B"]
+
+    def live(self, live_bus="A"):
+        """Ingang(en) die op program staan (zie live_buses), zonder dubbelen."""
+        out = []
+        for bus in self.live_buses(live_bus):
+            v = self.sel.get(bus)
+            if v and v not in out:
+                out.append(v)
+        return out or None

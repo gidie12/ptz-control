@@ -408,6 +408,8 @@
   .colhead .lockbtn .ic { width: 15px; height: 15px; }
   .colhead .lockbtn:hover { border-color: var(--accent); color: var(--text); }
   .colhead .lockbtn.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); }
+  .colhead .lockbtn.na { opacity: .4; cursor: not-allowed; }
+  .colhead .lockbtn.na:hover { border-color: var(--line); color: var(--muted); }
   .colhead .locktag, .tab .locktag { background: var(--warn); color: var(--onbusy); font-size: 11px; font-weight: 700; border-radius: 4px;
     padding: 1px 6px; white-space: nowrap; flex-shrink: 0; align-self: center; display: inline-flex; gap: 3px; align-items: center; }
   .locktag .ic { width: 11px; height: 11px; }
@@ -1319,6 +1321,7 @@
   <h3><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Videomixer (Roland V-1HD)</h3>
   <p class="small">Via een USB-kabel van de V-1HD naar deze computer ziet PTZ Control welke ingang op de mixer gekozen is (rode knop).
     De camera die daarbij hoort, krijgt in de app een rode rand met <b>IN BEELD</b>.
+    De fader bepaalt welke rij live is: helemaal naar A = rij A, helemaal naar B = rij B, ertussen = beide.
     Met <b>Slot</b> kun je per camera voorkomen dat er een preset (of home) wordt gekozen zolang hij in beeld is; bewegen met de controller kan dan wel. Het slotje staat ook in de kolomkop.</p>
   <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="midiOn"> Koppeling met de videomixer aan</label>
   <div class="mixstat off" id="midiStat"></div>
@@ -1327,10 +1330,6 @@
     <div class="small">Kies per ingang welke camera erop zit. Beide rijen (A en B) kiezen uit dezelfde vier ingangen, dus de koppeling geldt voor beide.
       Druk je op de mixer op een knop, dan licht hij hier op.</div>
     <div class="mixrow" id="mixRow"></div>
-    <div class="row small">Live rij op de mixer (kant waar de fader staat):
-      <label><input type="radio" name="midiBus" value="A"> A</label>
-      <label><input type="radio" name="midiBus" value="B"> B</label>
-      <span class="muted" id="midiSel"></span></div>
     <details class="small" style="margin-top:10px"><summary>Geavanceerd</summary>
       <div class="row">MIDI-poort bevat <input type="text" id="midiPort" maxlength="80" style="width:140px">
         SysEx device-ID <input type="number" id="midiDev" min="0" max="31" style="width:64px"> <span class="muted">(standaard 16 = 17 in het menu)</span></div>
@@ -1735,7 +1734,7 @@ function renderPresets() {
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
         ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}
         ${presetLocked(c.id) ? `<span class="locktag" title="In beeld en op slot: presets en home zijn geblokkeerd, bewegen met de controller kan wel">${ic("lock")}SLOT</span>` : ""}
-        <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}" title="${lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
+        <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
         if (e.target.closest(".lockbtn")) { e.stopPropagation(); return toggleLock(c.id); }
@@ -4116,10 +4115,12 @@ $("#btnWizard").onclick = () => { $("#dlg").close(); wizardOpen(); };
 let midi = { live_cams: [] }, midiCfg = null, midiSeq = 0, midiPoll = null;
 const midiOnAir = (id) => !!(midi.enabled && midi.connected && (midi.live_cams || []).includes(id));
 // 🧑 slot per camera (cfg.midi.lock): zolang die camera IN BEELD is, kunnen presets/home niet (server weigert ook)
-const lockSet = (id) => !!(cfg.midi?.enabled && (cfg.midi.lock || []).includes(id));
+const midiMapped = (id) => Object.values(cfg.midi?.map || {}).includes(id);   // camera hangt aan een ingang van de mixer
+const lockSet = (id) => !!(cfg.midi?.enabled && midiMapped(id) && (cfg.midi.lock || []).includes(id));
 const presetLocked = (id) => lockSet(id) && midiOnAir(id);
 async function toggleLock(id) {
   if (viewOnly()) return pinPrompt();
+  if (!midiMapped(id)) return toast(`${camById(id)?.name || "Deze camera"} hangt aan geen ingang van de videomixer: koppel eerst een ingang (Menu → Instellingen → Videomixer).`);
   const cur = cfg.midi?.lock || [], on = !cur.includes(id);
   const lock = on ? [...cur, id] : cur.filter(x => x !== id);
   const j = await post("/api/midi/config", { lock });
@@ -4176,13 +4177,15 @@ function midiRender() {
     });
   }
   // 🧑 op de mixer: alles groen, de gekozen ingang rood (= live). Op de andere rij alleen een rand om de gekozen knop.
+  // 🧑 fader 0 = A live, 127 = B live, ertussen beide live (server: live_buses)
+  const liveBuses = midi.connected && midi.live_buses?.length ? midi.live_buses : [midiCfg.live_bus];
   row.querySelectorAll(".mixkey").forEach(k => {
-    const i = +k.dataset.in, bus = k.dataset.bus, isLive = bus === midiCfg.live_bus;
+    const i = +k.dataset.in, bus = k.dataset.bus, isLive = liveBuses.includes(bus);
     const chosen = midi.connected && midi.sel?.[bus] === i;
     k.className = "mixkey" + (midi.connected ? (chosen && isLive ? " red" : " green") : "")
       + (chosen && !isLive ? " sel" : "") + (midi.pressed === i && chosen ? " hit" : "");
   });
-  row.querySelectorAll("[data-buslbl]").forEach(l => l.textContent = l.dataset.buslbl === midiCfg.live_bus ? "live" : "");
+  row.querySelectorAll("[data-buslbl]").forEach(l => l.textContent = liveBuses.includes(l.dataset.buslbl) ? "live" : "");
   row.querySelectorAll("select").forEach(sel => {
     const i = sel.dataset.in, cur = midiCfg.map[i] || "";
     if (sel === document.activeElement) return;
@@ -4194,8 +4197,6 @@ function midiRender() {
     const id = midiCfg.map[cb.dataset.lockin];
     cb.disabled = !id; cb.checked = !!id && (midiCfg.lock || []).includes(id);
   });
-  $$("input[name=midiBus]").forEach(r => r.checked = r.value === midiCfg.live_bus);
-  $("#midiSel").textContent = "";
   if (document.activeElement !== $("#midiPort")) $("#midiPort").value = midiCfg.port;
   if (document.activeElement !== $("#midiDev")) $("#midiDev").value = midiCfg.dev;
   $("#midiPorts").textContent = midi.ports?.length ? "Gevonden MIDI-poorten: " + midi.ports.join(", ") : "Geen MIDI-poorten gevonden.";
@@ -4220,7 +4221,6 @@ $("#btnMidi").onclick = async () => {
 $("#dlgMidi").addEventListener("close", () => clearInterval(midiPoll));
 $("#midiClose").onclick = () => $("#dlgMidi").close();
 $("#midiOn").onchange = (e) => midiSave({ enabled: e.target.checked });
-$$("input[name=midiBus]").forEach(r => r.onchange = () => midiSave({ live_bus: r.value }));
 $("#midiPort").onchange = (e) => midiSave({ port: e.target.value });
 $("#midiDev").onchange = (e) => midiSave({ dev: +e.target.value });
 $("#midiRec").onclick = async () => {
@@ -4527,7 +4527,7 @@ const TOUR_STEPS = [
   { target: ["#btnPractice"], menu: "main", title: ic("cone") + " Oefenstand", text: () => `<p>Oefenen zonder dat er iets beweegt in de kerk: PTZ Control schakelt over op <b>nagebootste camera's</b> met dezelfde camera's, presets en foto's. Handig voor nieuwe vrijwilligers.</p><p>Geldt voor <b>alle schermen</b> (oranje balk en rand), de videomixer wordt losgekoppeld en wat je verandert wordt niet bewaard. Stoppen via de balk of hier. <b>Niet tijdens een dienst.</b></p>` },
   { target: ["#miSet"], menu: "main", sub: "subSet", title: ic("settings") + " Instellingen", text: () => `<p>Alles om de app in te richten: camera's, videomixer, liederen, sneltoetsen, pincode, back-up en het presetaantal testen. Wijs het aan met de muis of tik erop; op een smal scherm klapt de lijst onder het item open.</p>` },
   { target: ["#btnSettings"], menu: "main", title: ic("video") + " Camera's", text: () => `<p>Camera's toevoegen of wijzigen: naam, IP-adres, protocol (HTTP of VISCA), inlog, videobron en volginstellingen. Begin hier als je nog geen camera's ziet.</p><p><b>🧭 Hulp bij instellen…</b> opent de wizard: camera's zoeken in het netwerk, testen en presets ophalen.</p>` },
-  { target: ["#btnMidi"], menu: "main", title: ic("sliders") + " Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Slot</b> (ook het slotje in de kolomkop) blokkeer je presets en home zolang een camera in beeld is; bijsturen met de controller kan dan nog wel.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
+  { target: ["#btnMidi"], menu: "main", title: ic("sliders") + " Videomixer (MIDI)", text: () => `<p>Koppel de Roland V-1HD via een USB-kabel. Het venster toont beide rijen (A en B); kies per ingang (1–4) welke camera erop zit; de camera die op de mixer gekozen is (rode knop) krijgt in de app een rode rand met <b>IN BEELD</b>. De fader telt mee: helemaal A = rij A, helemaal B = rij B, ertussen = beide live. Zo zie je welke camera je niet moet bewegen.</p><p>Met <b>Slot</b> (ook het slotje in de kolomkop) blokkeer je presets en home zolang een camera in beeld is; bijsturen met de controller kan dan nog wel. Dat kan alleen bij een camera die aan een ingang van de mixer hangt; anders is het slotje grijs.</p><p>Met <b>Verkenning</b> leg je vast wat de mixer stuurt en download je de log.</p>` },
   { target: ["#btnSongs"], menu: "main", title: ic("music") + " Liederen", text: () => `<p>Koppel <b>ProPresenter</b> (via het netwerk) en/of de <b>Voordienst app</b> (API-adres met token). PTZ Control ziet dan welk nummer er op het scherm staat en zet elk nummer in het <b>activiteitenlog</b>, met de plek in de playlist en het nummer uit de Voordienst app.</p><p>Zo zie je na de dienst precies wat er gezongen is. De camera's bewegen hierdoor niet.</p>` },
   { target: ["#btnKeys"], menu: "main", title: ic("keyboard") + " Sneltoetsen", text: () => `<p>Stel voor elke actie en elke camera een eigen toets in. Dubbele toetsen worden rood gemarkeerd.</p><p>Welke toetsen er nu zijn ingesteld, zie je altijd met <kbd>${esc(keyLabel(keyOf("help")) || "?")}</kbd> (<b>hulp</b>), ook op volledig scherm.</p>` },
   { target: ["#btnAccess"], menu: "main", title: ic("lock") + " Toegang (pincode)", text: () => `<p>Stel een <b>pincode</b> in: dan kan iedereen op het netwerk meekijken, maar alleen wie de pincode invoert kan de camera's bedienen. Zonder pincode zie je rechtsboven <b>${ic("lock")} Alleen kijken</b> en een gele balk.</p><p>Op deze computer zelf is nooit een pincode nodig. Hier kun je ook een apparaat vergrendelen of alle apparaten uitloggen.</p>` },
