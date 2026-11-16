@@ -273,10 +273,11 @@ for _k, _e in (("scale0", "PTZ_TRACK_SCALE0"), ("settle", "PTZ_TRACK_SETTLE"), (
     DEFAULT_TUNE[_k] = max(_lo, min(_hi, _envf(_e, DEFAULT_TUNE[_k])))
 
 
-def norm_tune(v):
+def norm_tune(v, base=None):
     """Afstelling {scale0, settle, lead, fps}: beginsnelheid (deel van de max.), rust na een stop (s),
-    beginwaarde van de vertraging (s), detecties per seconde. Ontbrekend/ongeldig → standaard (of omgeving)."""
-    out = dict(DEFAULT_TUNE)
+    beginwaarde van de vertraging (s), detecties per seconde. Ontbrekend/ongeldig → waarde uit `base`
+    (al genormaliseerd), anders de standaard (of omgeving)."""
+    out = dict(base) if base else dict(DEFAULT_TUNE)
     if isinstance(v, dict):
         for k, (lo, hi) in TUNE_RANGE.items():
             try:

@@ -1251,9 +1251,8 @@ def set_track_tune(cam_id, tune, reset=False):
         if reset:
             cam.pop("track_tune", None)
         else:
-            merged = dict(cam.get("track_tune") or {})
-            merged.update(tune if isinstance(tune, dict) else {})
-            cam["track_tune"] = _tracker.norm_tune(merged)
+            # ongeldige waarden laten de opgeslagen waarde staan (niet terug naar de standaard)
+            cam["track_tune"] = _tracker.norm_tune(tune, _tracker.norm_tune(cam.get("track_tune")))
         val = _tracker.norm_tune(cam.get("track_tune"))
         _write(cfg)
     t = TRACKERS.get(cam_id)
