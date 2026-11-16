@@ -1708,6 +1708,7 @@ function renderPresets() {
       cols.appendChild(col);
     });
     area.appendChild(cols);
+    wallFitSoon();
     return;
   }
   const c = camById(view);
@@ -1717,6 +1718,7 @@ function renderPresets() {
   fillGrid(g, c);
   area.appendChild(g);
   const h = hiddenHint(c, nums); if (h) area.appendChild(h);
+  wallFitSoon();
 }
 
 function renderSide() {
@@ -1863,7 +1865,7 @@ function applyTile(v) {
   document.documentElement.style.setProperty("--tile", v + "px");
   document.documentElement.style.setProperty("--ctile", Math.round(v * 0.68) + "px");
 }
-$("#tileSize").oninput = () => { applyTile($("#tileSize").value); cfg.tile_size = +$("#tileSize").value; saveTilesSoon(); };
+$("#tileSize").oninput = () => { applyTile($("#tileSize").value); cfg.tile_size = +$("#tileSize").value; saveTilesSoon(); wallFitSoon(); };
 applyTile(store.get("ptzTile") || 170);   // tot de instellingen geladen zijn
 // aantal tegels; reach = optioneel presetnummer dat zichtbaar moet worden
 function setTileCount(v, reach) {
@@ -2104,16 +2106,17 @@ function dockLayout() {
       if (!wall) ["--fx", "--fy", "--fw"].forEach(v => c.style.removeProperty(v));
     }
     dockEls = [];
-    if (!wall) { ytReserveTop(0); return; }
+    if (!wall) { ytReserveTop(0); wallTileReset(); return; }
     const avail0 = { ctrl: cards[0].classList.contains("docked") && { el: cards[0], kind: "card" },
       pad: cards[1].classList.contains("docked") && { el: cards[1], kind: "card" },
       yt: !ytWin.hidden && { el: ytWin, kind: "yt" }, song: !songWin.hidden && { el: songWin, kind: "song" } };
     const order = dockOrder().filter(k => avail0[k]), items = order.map(k => avail0[k]);
     dockEls = items.map((it, i) => ({ el: it.el, kind: order[i] }));
-    if (!items.length) { ytReserveTop(0); return; }
+    if (!items.length) { ytReserveTop(0); fitWallTiles(); return; }
     // foutbalk/oefenbalk blijven zichtbaar: de balk met vensters begint eronder
     const barsB = ["#practiceBar", "#alertBar"].reduce((b, s) => { const e = $(s); return e && e.offsetHeight ? Math.max(b, e.getBoundingClientRect().bottom) : b; }, 0);
     const T = Math.round(barsB) + 10, fy = T + "px";
+    wallTileReset();   // eerst de ingestelde tegelgrootte: die bepaalt hoe hoog de balk mag worden
     const tilesH = $("#presetCard").getBoundingClientRect().height;
     const topMax = Math.max(160, Math.floor(innerHeight - tilesH - 30 - (T - 10)));
     for (const it of items) {   // natuurlijke maat per venster
@@ -2145,11 +2148,45 @@ function dockLayout() {
       }
       x += it.w + gap;
     }
-    // camera's zo ver mogelijk omlaag als er een open venster in de balk staat; alleen ingeklapte koppen → alleen die hoogte
-    ytReserveTop(open.length ? topMax : Math.max(...items.map(i => i.el.offsetHeight)));
+    // 🧑 tegels vullen de ruimte onder de balk (16 nov 2026: groot leeg vlak tussen vensters en presets); wat overblijft komt
+    // erboven, zodat de camera's onderaan blijven staan
+    const rowH = open.length ? H : Math.max(...items.map(i => i.el.offsetHeight));
+    ytReserveTop(T - 10 + rowH);
+    fitWallTiles(true);
     fitDocked();
   } catch (e) { if (!(e instanceof ReferenceError)) throw e; }   // tijdens het laden: nog niet alles bestaat
 }
+/* 🧑 Volledig scherm: tegels zo groot dat de presets de hoogte tot de onderrand vullen (nooit kleiner dan de ingestelde Grootte,
+   hooguit WALL_TILE_MAX). Bij auto-fill hangt de tegelbreedte alleen af van het aantal kolommen, dus per kolomaantal (1, 2, 3 …)
+   de grootte zetten die precies dat aantal geeft en de eerste nemen die past. Overschrijft --tile/--ctile op #presetArea. */
+const WALL_TILE_MAX = 360;
+function wallTileReset() { const a = $("#presetArea"); a.style.removeProperty("--tile"); a.style.removeProperty("--ctile"); }
+function fitWallTiles(keepBottom) {
+  wallTileReset();
+  if (!isWall()) return;
+  const area = $("#presetArea"), card = $("#presetCard"), grid = area.querySelector(".grid");
+  if (!grid || !grid.children.length) return;
+  const inCols = !!area.querySelector(".col"), prop = inCols ? "--ctile" : "--tile";
+  const base = parseFloat(getComputedStyle(grid).gridTemplateColumns) || 0;   // huidige kolombreedte = ondergrens
+  const gap = parseFloat(getComputedStyle(grid).columnGap) || 0, gw = grid.clientWidth;
+  const avail = innerHeight - card.getBoundingClientRect().top - 10;
+  const fits = () => card.getBoundingClientRect().height <= avail + 0.5;
+  if (!fits()) return;
+  for (let k = 1; k <= 24; k++) {
+    const c = Math.floor((gw + gap) / k - gap);
+    if (c <= base + 1) break;
+    if (c > WALL_TILE_MAX) continue;
+    area.style.setProperty(prop, c + "px");
+    if (fits()) break;
+    area.style.removeProperty(prop);
+  }
+  if (keepBottom) {   // ruimte die over is boven de camera's, zodat ze onderaan blijven
+    const left = avail - card.getBoundingClientRect().height;
+    if (left > 1) ytReserveTop(parseFloat(document.body.style.getPropertyValue("--ytrestop")) + left);
+  }
+}
+let wallFitRaf = 0;
+function wallFitSoon() { if (!isWall()) return; cancelAnimationFrame(wallFitRaf); wallFitRaf = requestAnimationFrame(() => dockLayout()); }
 /* Vastgezette kaarten: inhoud schalen (CSS zoom 0,5–1,3) zodat hij de hoogte precies vult zonder scrollen */
 function fitDocked() {
   // eerst per kaart de passende zoom zoeken, daarna 🧑 overal de kleinste: anders werd de Xbox-kaart (minder inhoud)
@@ -4368,7 +4405,7 @@ const TOUR_STEPS = [
   { target: ["#wsWrap"], title: ic("pin") + " Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
       <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. Bovenaan staat wat je <b>tijdens de dienst</b> gebruikt; het inrichten zit onder <b>Instellingen</b> en de uitleg onder <b>Hulp</b>. We lopen ze kort langs.</p>` },
-  { target: ["#btnWall"], menu: "main", title: ic("maximize") + " Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
+  { target: ["#btnWall"], menu: "main", title: ic("maximize") + " Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). De tegels worden vanzelf zo groot dat ze het scherm vullen. Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
     <p>Op volledig scherm zijn de <b>camerabediening</b> (toets <kbd>${esc(keyLabel(keyOf("ctrl")) || "C")}</kbd>), de <b>Xbox-instellingen</b> (<kbd>${esc(keyLabel(keyOf("pad")) || "X")}</kbd>), <b>YouTube</b> (<kbd>${esc(keyLabel(keyOf("youtube")) || "Y")}</kbd>) en de <b>liederen</b> (<kbd>${esc(keyLabel(keyOf("songs")) || "L")}</kbd>) vensters.
       Ze staan altijd <b>naast elkaar in de balk bovenaan</b>, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. <b>Sleep een venster aan de titelbalk op een ander venster</b> om van plek te wisselen: het neemt die plek in en de andere schuiven één plek op.</p>
     <p>Het menu is daar verborgen: druk <kbd>${esc(keyLabel(keyOf("help")) || "?")}</kbd> voor <b>hulp</b>: alle sneltoetsen op een rij, met een knop om ze aan te passen.</p>` },
