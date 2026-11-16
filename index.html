@@ -543,6 +543,25 @@
   body.wall #ytGrip, body.wall #songGrip, body.wall #ytAutoBtn { display: none !important; }
   /* volledig scherm = bedienen: geen presets laden of opslaan */
   body.wall #btnLoad, body.wall #btnStore, body.wall #storeHint { display: none !important; }
+  /* 🧑 sleepbare scheiding vensters ↔ presets (alleen volledig scherm, met open vensters) */
+  body.wall #presetArea.wfit .grid { grid-template-columns: repeat(auto-fill, var(--wt)); justify-content: center; }
+  #wallSplit { display: none; }
+  body.wall #wallSplit.on { display: flex; position: fixed; left: 10px; right: 10px; top: var(--splity, 0); height: 18px; z-index: 27;
+    align-items: center; justify-content: center; cursor: row-resize; touch-action: none; user-select: none; }
+  body.wall #wallSplit.on::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 2px; border-radius: 2px;
+    background: var(--line); transition: background .12s; }
+  #wallSplit .grip { position: relative; width: 64px; height: 8px; border-radius: 999px; background: var(--panel);
+    border: 1px solid var(--line); box-shadow: var(--cardshadow); transition: background .12s, border-color .12s, width .12s; }
+  #wallSplit .grip::before, #wallSplit .grip::after { content: ""; position: absolute; left: 22px; right: 22px; height: 1px; background: var(--muted); }
+  #wallSplit .grip::before { top: 2px; } #wallSplit .grip::after { bottom: 2px; }
+  #wallSplit:hover::before, #wallSplit.drag::before { background: var(--accent); }
+  #wallSplit:hover .grip, #wallSplit.drag .grip { background: var(--accent); border-color: var(--accent); width: 84px; }
+  #wallSplit:hover .grip::before, #wallSplit:hover .grip::after, #wallSplit.drag .grip::before, #wallSplit.drag .grip::after { background: var(--onaccent); }
+  #wallSplit .slbl { position: absolute; left: calc(50% + 54px); top: -1px; font-size: 11px; font-weight: 600; color: var(--accent);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; white-space: nowrap; opacity: 0;
+    transition: opacity .12s; pointer-events: none; }
+  #wallSplit:hover .slbl, #wallSplit.drag .slbl { opacity: 1; }
+  body.splitting, body.splitting * { cursor: row-resize !important; }
   .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 12px; }
   .btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; height: 48px; cursor: pointer;
     touch-action: none; display: grid; place-items: center; font-size: 18px; }
@@ -942,6 +961,9 @@
 <div id="alertBar" role="alert"><span id="alertText"></span><span class="barbtns"><button id="alertLog">Bekijk log</button><button id="alertHide">Verbergen</button></span></div>
 <div id="viewBanner"><svg class="ic" data-i="eye" aria-hidden="true"><use href="#i-eye"/></svg> Alleen kijken: bediening is vergrendeld. <a href="#" id="viewUnlock">Pincode invoeren</a></div>
 
+<!-- 🧑 volledig scherm: sleepbare scheiding tussen de vensters bovenaan en de presets -->
+<div id="wallSplit" role="separator" aria-orientation="horizontal" aria-label="Verdeling vensters en presets"
+  title="Sleep om de vensters groter of kleiner te maken (de presets passen zich aan) · dubbelklik = automatisch"><span class="grip"></span><span class="slbl" id="wallSplitLbl"></span></div>
 <main>
   <!-- PRESETS (hoofdonderdeel) -->
   <section class="card" id="presetCard">
@@ -2093,7 +2115,8 @@ function dockDrag(el, kind, bar) {
 /* Balk bovenaan (alleen volledig scherm): alle open vensters naast elkaar in de volgorde van dockOrder, bovenkant gelijk met de bovenkant van het scherm,
    allemaal even hoog als het hoogste (opengeklapte) venster, maar nooit zo hoog dat de camera's uit beeld raken.
    De camera's staan zo ver mogelijk onderaan; de ruimte erboven is voor de balk. Te breed → alles naar verhouding smaller. */
-function dockLayout() {
+function dockLayout() { dockLayoutRun(0); }
+function dockLayoutRun(extra) {   // extra = ruimte die de presets niet konden gebruiken: gaat naar de vensters
   try {
     const wall = isWall();
     const cards = ["ctrlCard", "padCard"].map(id => document.getElementById(id));
@@ -2106,13 +2129,13 @@ function dockLayout() {
       if (!wall) ["--fx", "--fy", "--fw"].forEach(v => c.style.removeProperty(v));
     }
     dockEls = [];
-    if (!wall) { ytReserveTop(0); wallTileReset(); return; }
+    if (!wall) { ytReserveTop(0); wallTileReset(); splitPlace(null); return; }
     const avail0 = { ctrl: cards[0].classList.contains("docked") && { el: cards[0], kind: "card" },
       pad: cards[1].classList.contains("docked") && { el: cards[1], kind: "card" },
       yt: !ytWin.hidden && { el: ytWin, kind: "yt" }, song: !songWin.hidden && { el: songWin, kind: "song" } };
     const order = dockOrder().filter(k => avail0[k]), items = order.map(k => avail0[k]);
     dockEls = items.map((it, i) => ({ el: it.el, kind: order[i] }));
-    if (!items.length) { ytReserveTop(0); fitWallTiles(); return; }
+    if (!items.length) { ytReserveTop(0); fitWallTiles(); splitPlace(null); return; }
     // foutbalk/oefenbalk blijven zichtbaar: de balk met vensters begint eronder
     const barsB = ["#practiceBar", "#alertBar"].reduce((b, s) => { const e = $(s); return e && e.offsetHeight ? Math.max(b, e.getBoundingClientRect().bottom) : b; }, 0);
     const T = Math.round(barsB) + 10, fy = T + "px";
@@ -2129,7 +2152,11 @@ function dockLayout() {
       else { const g = songGeom(); it.w = g.w || 300; it.h = g.h || 320; }
     }
     const open = items.filter(i => !i.collapsed);
-    const H = open.length ? Math.min(topMax, Math.max(...open.map(i => i.h))) : 0;
+    // 🧑 zelf ingestelde hoogte (scheiding gesleept) gaat voor; anders natuurlijke hoogte, begrensd door topMax
+    const split = splitH();
+    const H = !open.length ? 0 : (split ? Math.max(SPLIT_MIN, Math.min(split, innerHeight - T - SPLIT_TILES))
+      : Math.min(topMax, Math.max(...open.map(i => i.h)))) + extra;
+    dockGeom = { T, H, open: open.length };
     for (const it of items) if (it.kind === "yt" && H) it.w = Math.max(220, Math.floor((H - 31) * 16 / 9));   // speler vult de hoogte
     const gap = 10, avail = innerWidth - 20 - gap * (items.length - 1);
     let sum = items.reduce((t, i) => t + i.w, 0);
@@ -2151,35 +2178,71 @@ function dockLayout() {
     // 🧑 tegels vullen de ruimte onder de balk (16 nov 2026: groot leeg vlak tussen vensters en presets); wat overblijft komt
     // erboven, zodat de camera's onderaan blijven staan
     const rowH = open.length ? H : Math.max(...items.map(i => i.el.offsetHeight));
-    ytReserveTop(T - 10 + rowH);
-    fitWallTiles(true);
+    ytReserveTop(T - 10 + rowH + (open.length ? 8 : 0));   // 8 px extra: ruimte voor de scheiding
+    fitWallTiles(!open.length, !!split && open.length > 0);
+    // presets kunnen niet verder groeien (breedte is op): rest naar de vensters, dan staat er nergens een leeg vlak
+    const left = Math.floor(innerHeight - 10 - $("#presetCard").getBoundingClientRect().bottom);
+    if (open.length && !extra && left > 2) return dockLayoutRun(left);
+    splitPlace(open.length ? T + rowH + 1 : null, extra > 0);
     fitDocked();
   } catch (e) { if (!(e instanceof ReferenceError)) throw e; }   // tijdens het laden: nog niet alles bestaat
 }
 /* 🧑 Volledig scherm: tegels zo groot dat de presets de hoogte tot de onderrand vullen (nooit kleiner dan de ingestelde Grootte,
    hooguit WALL_TILE_MAX). Bij auto-fill hangt de tegelbreedte alleen af van het aantal kolommen, dus per kolomaantal (1, 2, 3 …)
    de grootte zetten die precies dat aantal geeft en de eerste nemen die past. Overschrijft --tile/--ctile op #presetArea. */
-const WALL_TILE_MAX = 360;
-function wallTileReset() { const a = $("#presetArea"); a.style.removeProperty("--tile"); a.style.removeProperty("--ctile"); }
-function fitWallTiles(keepBottom) {
+const WALL_TILE_MAX = 360, WALL_TILE_MIN = 80;
+/* 🧑 Sleepbare scheiding (16 nov 2026, op verzoek): hoogte van de vensterrij per scherm in store wallSplit (px, leeg = automatisch).
+   Slepen = vensters hoger/lager, de presets vullen de rest (tegels mogen dan ook kleiner dan Grootte). Dubbelklik = automatisch. */
+const SPLIT_MIN = 120, SPLIT_TILES = 170;   // min. hoogte vensters / min. ruimte voor de presets
+let dockGeom = { T: 10, H: 0, open: 0 };
+const splitH = () => { const v = parseInt(store.get("wallSplit"), 10); return v > 0 ? v : 0; };
+function splitPlace(y, maxed) {
+  const sp = $("#wallSplit"); if (!sp) return;
+  const on = y !== null && isWall() && !document.body.classList.contains("viewonly");
+  sp.classList.toggle("on", on);
+  if (!on) return;
+  sp.style.setProperty("--splity", Math.round(y) + "px");
+  $("#wallSplitLbl").textContent = maxed ? "Presets op maximale grootte" : splitH() ? "Eigen verdeling · dubbelklik = automatisch" : "Automatisch · sleep om aan te passen";
+}
+(() => {
+  const sp = $("#wallSplit"); if (!sp) return;
+  let raf = 0;
+  sp.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault(); sp.setPointerCapture(e.pointerId);
+    const y0 = e.clientY, h0 = dockGeom.H;
+    sp.classList.add("drag"); document.body.classList.add("splitting");
+    const mv = (ev) => {
+      const h = Math.max(SPLIT_MIN, Math.min(h0 + ev.clientY - y0, innerHeight - dockGeom.T - SPLIT_TILES));
+      store.set("wallSplit", String(Math.round(h)));
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(dockLayout);
+    };
+    const up = () => {
+      sp.removeEventListener("pointermove", mv); sp.removeEventListener("pointerup", up); sp.removeEventListener("pointercancel", up);
+      sp.classList.remove("drag"); document.body.classList.remove("splitting"); dockLayout();
+    };
+    sp.addEventListener("pointermove", mv); sp.addEventListener("pointerup", up); sp.addEventListener("pointercancel", up);
+  });
+  sp.addEventListener("dblclick", () => { store.set("wallSplit", ""); dockLayout(); toast("Verdeling weer automatisch", true); });
+})();
+function wallTileReset() { const a = $("#presetArea"); a.classList.remove("wfit"); a.style.removeProperty("--wt"); }
+/* Tegelbreedte traploos (niet per kolomaantal): in .wfit hebben de kolommen een vaste breedte --wt (geen 1fr) en staat het raster
+   gecentreerd. Hoogte groeit monotoon met de breedte, dus binair zoeken naar de grootste breedte die tot de onderrand past. */
+function fitWallTiles(keepBottom, free) {   // free = zelf gekozen verdeling: tegels mogen ook kleiner dan de ingestelde grootte
   wallTileReset();
   if (!isWall()) return;
   const area = $("#presetArea"), card = $("#presetCard"), grid = area.querySelector(".grid");
   if (!grid || !grid.children.length) return;
-  const inCols = !!area.querySelector(".col"), prop = inCols ? "--ctile" : "--tile";
-  const base = parseFloat(getComputedStyle(grid).gridTemplateColumns) || 0;   // huidige kolombreedte = ondergrens
-  const gap = parseFloat(getComputedStyle(grid).columnGap) || 0, gw = grid.clientWidth;
+  const base = parseFloat(getComputedStyle(grid).gridTemplateColumns) || 0;   // huidige kolombreedte
+  const gw = grid.clientWidth;
   const avail = innerHeight - card.getBoundingClientRect().top - 10;
   const fits = () => card.getBoundingClientRect().height <= avail + 0.5;
-  if (!fits()) return;
-  for (let k = 1; k <= 24; k++) {
-    const c = Math.floor((gw + gap) / k - gap);
-    if (c <= base + 1) break;
-    if (c > WALL_TILE_MAX) continue;
-    area.style.setProperty(prop, c + "px");
-    if (fits()) break;
-    area.style.removeProperty(prop);
-  }
+  const set = (w) => area.style.setProperty("--wt", w + "px");
+  let lo = free ? WALL_TILE_MIN : Math.floor(base), hi = Math.min(WALL_TILE_MAX, gw);
+  area.classList.add("wfit"); set(lo);
+  if (hi <= lo || !fits()) { if (!free) wallTileReset(); return; }   // zelfs de kleinste past niet: zoals het was
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; set(m); if (fits()) lo = m; else hi = m; }
+  set(lo);
   if (keepBottom) {   // ruimte die over is boven de camera's, zodat ze onderaan blijven
     const left = avail - card.getBoundingClientRect().height;
     if (left > 1) ytReserveTop(parseFloat(document.body.style.getPropertyValue("--ytrestop")) + left);
@@ -4405,7 +4468,7 @@ const TOUR_STEPS = [
   { target: ["#wsWrap"], title: ic("pin") + " Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
       <p>Hier wissel je van workspace (geldt voor alle schermen), maak je een nieuwe (leeg of als kopie) en beheer je ze.</p>` },
   { target: ["#btnPad"], title: "Menu", text: () => `<p>Achter deze knop zitten de overige functies. Bovenaan staat wat je <b>tijdens de dienst</b> gebruikt; het inrichten zit onder <b>Instellingen</b> en de uitleg onder <b>Hulp</b>. We lopen ze kort langs.</p>` },
-  { target: ["#btnWall"], menu: "main", title: ic("maximize") + " Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). De tegels worden vanzelf zo groot dat ze het scherm vullen. Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
+  { target: ["#btnWall"], menu: "main", title: ic("maximize") + " Volledig scherm", text: () => `<p>Alle camera's schermvullend, alleen om te bedienen (opslaan en laden zijn daar verborgen). De tegels worden vanzelf zo groot dat ze het scherm vullen. Met de schuifbalk onder de vensters sleep je de verdeling tussen vensters en presets (dubbelklik = automatisch). Toets <kbd>F</kbd>, terug met <kbd>Esc</kbd>.</p>
     <p>Op volledig scherm zijn de <b>camerabediening</b> (toets <kbd>${esc(keyLabel(keyOf("ctrl")) || "C")}</kbd>), de <b>Xbox-instellingen</b> (<kbd>${esc(keyLabel(keyOf("pad")) || "X")}</kbd>), <b>YouTube</b> (<kbd>${esc(keyLabel(keyOf("youtube")) || "Y")}</kbd>) en de <b>liederen</b> (<kbd>${esc(keyLabel(keyOf("songs")) || "L")}</kbd>) vensters.
       Ze staan altijd <b>naast elkaar in de balk bovenaan</b>, even hoog, en de camera's schuiven zo ver mogelijk naar beneden. <b>Sleep een venster aan de titelbalk op een ander venster</b> om van plek te wisselen: het neemt die plek in en de andere schuiven één plek op.</p>
     <p>Het menu is daar verborgen: druk <kbd>${esc(keyLabel(keyOf("help")) || "?")}</kbd> voor <b>hulp</b>: alle sneltoetsen op een rij, met een knop om ze aan te passen.</p>` },
