@@ -103,6 +103,8 @@ with sync_playwright() as p:
     pg.evaluate("setWall(true)"); pg.wait_for_timeout(600); pg.screenshot(path=f"{OUT}/volledig-scherm.png")
     pg.keyboard.press("Shift+Slash"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/hulp.png"); pg.click("#helpClose")
     pg.evaluate("ytShow(true); setCardShown('ctrlCard', true); setCardShown('padCard', true)"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-bediening.png")
+    g = pg.locator("#wallSplit .grip").bounding_box(); pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + 4); pg.wait_for_timeout(300)
+    pg.screenshot(path=f"{OUT}/volledig-scherm-schuifbalk.png"); pg.mouse.move(5, 5)   # 🧑 sleepbare scheiding vensters ↔ presets
     pg.evaluate("songWinShow(true); dockLayout()"); pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-bediening-boven.png")
     pg.evaluate("store.set('dockOrder', JSON.stringify(['yt', 'song', 'ctrl', 'pad'])); dockLayout()")
     pg.wait_for_timeout(800); pg.screenshot(path=f"{OUT}/volledig-scherm-wisselen.png")
