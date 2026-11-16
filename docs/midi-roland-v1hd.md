@@ -26,7 +26,7 @@ Bron: Roland *V-1HD Remote Control Guide* (versie 1.00, 2015).
 
 ## Hoe 'live' te bepalen
 
-Er bestaat geen kant-en-klaar tally-bericht. 🧑 **De fader wordt nooit gebruikt**: hij staat vast aan één kant, dus één rij is altijd live en een knop in die rij schakelt direct. Daarmee:
+Er bestaat geen kant-en-klaar tally-bericht. 🧑 **De fader telt mee** (16 nov 2026): CC17 **0 = rij A live, 127 = rij B live, alles ertussen = beide rijen live**. De app neemt de faderstand uit CC17 zodra die binnenkomt, en vraagt hem anders elke 0,5 s op via `71 00 00` (⚠️ codering van die 14-bits waarde niet gecontroleerd). Zolang er nog geen stand bekend is, geldt rij A. Per live rij telt de gekozen ingang. Daarmee:
 
 🧑 **Lampjes op de mixer: standaard groen, de gekozen (live) ingang wordt rood.** Groen betekent hier dus 'niet live', niet 'klaargezet'.
 
@@ -47,7 +47,7 @@ Makkelijkst in de app: Menu → 🎛 Videomixer (MIDI) → *Verkenning starten*,
 
 Op de mixer: `MIDI OUT` op **OUT**, device-ID noteren. Dan rustig:
 
-1. de fader laten staan zoals in de dienst;
+1. de fader helemaal naar A zetten, daarna naar B en ook eens ergens in het midden (noteer de stand);
 2. op de A-rij ingang 1, 2, 3, 4 drukken; idem op de B-rij; noteer per druk welke knop rood wordt;
 3. memory 1 en 2 kiezen;
 4. het script stoppen en opnieuw starten (dan vraagt het de beginstand op).

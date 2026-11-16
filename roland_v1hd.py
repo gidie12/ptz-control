@@ -8,7 +8,8 @@ Aannames (⚠️ niet getest op de echte mixer):
 - Bij een druk op een ingangsknop stuurt de V-1HD (MIDI OUT = OUT, en altijd
   via USB) CC0 (bank MSB) + CC32 (LSB) + program change:
   bank 00 = A-bus ingang 1-4, bank 01 = B-bus ingang 1-4, bank 50H = memory 1-8.
-- CC17 = A/B-fader. 🧑 0 = A live, 127 = B live, alles ertussen = beide live (bevestigd 16 nov 2026).
+- CC17 = A/B-fader. 🧑 0 = A live, 127 = B live, alles ertussen = beide live
+  (op verzoek, 16 nov 2026; niet op de echte mixer getest).
 - Via SysEx RQ1 op 71 00 00 (fader, 14-bit) en 71 00 08/09 (video sel A/B)
   en 73 02 00-18 (knoplampjes) is de huidige stand op te vragen.
 """
