@@ -410,11 +410,6 @@
   .colhead .lockbtn.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); }
   .colhead .lockbtn.na { opacity: .4; cursor: not-allowed; }
   .colhead .lockbtn.na:hover { border-color: var(--line); color: var(--muted); }
-  .faderrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; }
-  .faderbar { position: relative; flex: 1; max-width: 260px; height: 8px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); }
-  .faderbar i { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--accent); }
-  .faderbar.unk i { display: none; }
-  .faderrow b { min-width: 2ch; color: var(--muted); font-weight: 600; }
   .colhead .locktag, .tab .locktag { background: var(--warn); color: var(--onbusy); font-size: 11px; font-weight: 700; border-radius: 4px;
     padding: 1px 6px; white-space: nowrap; flex-shrink: 0; align-self: center; display: inline-flex; gap: 3px; align-items: center; }
   .locktag .ic { width: 11px; height: 11px; }
@@ -1335,11 +1330,6 @@
     <div class="small">Kies per ingang welke camera erop zit. Beide rijen (A en B) kiezen uit dezelfde vier ingangen, dus de koppeling geldt voor beide.
       Druk je op de mixer op een knop, dan licht hij hier op.</div>
     <div class="mixrow" id="mixRow"></div>
-    <div class="faderrow" id="midiFader"><b>A</b><div class="faderbar unk"><i></i></div><b>B</b><span id="midiFaderTxt" class="muted"></span></div>
-    <div class="row small">Live rij zolang de faderstand nog onbekend is (de mixer meldt die pas als de fader beweegt):
-      <label><input type="radio" name="midiBus" value="A"> A</label>
-      <label><input type="radio" name="midiBus" value="B"> B</label>
-      <span class="muted" id="midiSel"></span></div>
     <details class="small" style="margin-top:10px"><summary>Geavanceerd</summary>
       <div class="row">MIDI-poort bevat <input type="text" id="midiPort" maxlength="80" style="width:140px">
         SysEx device-ID <input type="number" id="midiDev" min="0" max="31" style="width:64px"> <span class="muted">(standaard 16 = 17 in het menu)</span></div>
@@ -4189,11 +4179,6 @@ function midiRender() {
   // 🧑 op de mixer: alles groen, de gekozen ingang rood (= live). Op de andere rij alleen een rand om de gekozen knop.
   // 🧑 fader 0 = A live, 127 = B live, ertussen beide live (server: live_buses)
   const liveBuses = midi.connected && midi.live_buses?.length ? midi.live_buses : [midiCfg.live_bus];
-  const fb = $("#midiFader .faderbar"), fpos = midi.connected ? midi.fader : null;
-  fb.classList.toggle("unk", fpos == null);
-  if (fpos != null) fb.querySelector("i").style.left = (fpos * 100) + "%";
-  $("#midiFaderTxt").textContent = !midi.connected ? "" : fpos == null ? `Faderstand onbekend: rij ${midiCfg.live_bus} geldt als live`
-    : liveBuses.length > 1 ? "Fader in het midden: A én B live" : `Rij ${liveBuses[0]} live`;
   row.querySelectorAll(".mixkey").forEach(k => {
     const i = +k.dataset.in, bus = k.dataset.bus, isLive = liveBuses.includes(bus);
     const chosen = midi.connected && midi.sel?.[bus] === i;
@@ -4212,8 +4197,6 @@ function midiRender() {
     const id = midiCfg.map[cb.dataset.lockin];
     cb.disabled = !id; cb.checked = !!id && (midiCfg.lock || []).includes(id);
   });
-  $$("input[name=midiBus]").forEach(r => r.checked = r.value === midiCfg.live_bus);
-  $("#midiSel").textContent = "";
   if (document.activeElement !== $("#midiPort")) $("#midiPort").value = midiCfg.port;
   if (document.activeElement !== $("#midiDev")) $("#midiDev").value = midiCfg.dev;
   $("#midiPorts").textContent = midi.ports?.length ? "Gevonden MIDI-poorten: " + midi.ports.join(", ") : "Geen MIDI-poorten gevonden.";
@@ -4238,7 +4221,6 @@ $("#btnMidi").onclick = async () => {
 $("#dlgMidi").addEventListener("close", () => clearInterval(midiPoll));
 $("#midiClose").onclick = () => $("#dlgMidi").close();
 $("#midiOn").onchange = (e) => midiSave({ enabled: e.target.checked });
-$$("input[name=midiBus]").forEach(r => r.onchange = () => midiSave({ live_bus: r.value }));
 $("#midiPort").onchange = (e) => midiSave({ port: e.target.value });
 $("#midiDev").onchange = (e) => midiSave({ dev: +e.target.value });
 $("#midiRec").onclick = async () => {
