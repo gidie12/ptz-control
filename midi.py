@@ -5,7 +5,8 @@ zonder die packages start de server gewoon en meldt de status waarom MIDI niet w
 
 Config (per workspace, in cameras.json): cfg.midi = {
     enabled: bool, port: "V-1HD" (deel van de poortnaam), dev: 16 (SysEx device-ID),
-    live_bus: "A" | "B" (rij aan de kant waar de fader staat), map: {"1": camid, ... "4": camid}
+    live_bus: "A" | "B" (rij aan de kant waar de fader staat), map: {"1": camid, ... "4": camid},
+    lock: [camid, ...] (presets vergrendeld zolang die camera in beeld is)
 }
 🧑 De fader wordt nooit gebruikt; op de mixer is de gekozen ingang rood (= live).
 ⚠️ Niet getest op de echte mixer; de lampjes (73 02 xx) worden alleen gelogd,
@@ -24,7 +25,7 @@ RETRY = 3.0         # s tussen pogingen om de poort te openen
 LOG_MAX = 5000
 FAKE = None        # nagebootste mixer bij PTZ_MIDI_FAKE (alleen tests/screenshots)
 
-DEFAULTS = {"enabled": False, "port": "V-1HD", "dev": rv.DEFAULT_DEV, "live_bus": "A", "map": {}}
+DEFAULTS = {"enabled": False, "port": "V-1HD", "dev": rv.DEFAULT_DEV, "live_bus": "A", "map": {}, "lock": []}
 
 
 def norm_cfg(m):
@@ -39,6 +40,9 @@ def norm_cfg(m):
     out["live_bus"] = "B" if str(m.get("live_bus", "A")).upper() == "B" else "A"
     mp = m.get("map") if isinstance(m.get("map"), dict) else {}
     out["map"] = {str(k): str(v) for k, v in mp.items() if str(k) in ("1", "2", "3", "4") and v}
+    # 🧑 camera's waarvan de presets vergrendeld zijn zolang ze IN BEELD zijn (bewegen met de controller mag wel)
+    lk = m.get("lock") if isinstance(m.get("lock"), list) else []
+    out["lock"] = list(dict.fromkeys(str(x)[:64] for x in lk if x))[:32]
     return out
 
 
