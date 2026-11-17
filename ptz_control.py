@@ -182,9 +182,18 @@ def find_camera(ref):
 
 
 # ---------------------------------------------------------------- live events (SSE)
-STATE = {"active": None, "last_preset": {}}
+STATE = {"active": None, "last_preset": {}, "adjusted": {}}   # adjusted: {cam_id: True} na bewegen (zie mark_adjusted)
 SUBSCRIBERS = []
 SUB_LOCK = threading.Lock()
+
+
+def mark_adjusted(cam_id):
+    """🧑 Camera is na de laatst gekozen preset bewogen (pan/tilt/home, ook door volgen): tegel AANGEPAST op alle schermen.
+    Alleen bij de overgang een SSE "preset" met adjusted: true; een nieuwe preset (oproepen/opslaan/ongedaan maken) wist het."""
+    n = STATE["last_preset"].get(cam_id)
+    if n is None or STATE["adjusted"].get(cam_id):
+        return
+    broadcast({"type": "preset", "cam": cam_id, "n": n, "adjusted": True})
 
 
 def broadcast(event):
@@ -192,6 +201,10 @@ def broadcast(event):
         STATE["active"] = event["cam"]
     elif event.get("type") == "preset":
         STATE["last_preset"][event["cam"]] = event["n"]
+        if event.get("adjusted"):
+            STATE["adjusted"][event["cam"]] = True
+        else:
+            STATE["adjusted"].pop(event["cam"], None)
     with SUB_LOCK:
         for q in list(SUBSCRIBERS):
             q.put(event)
@@ -731,6 +744,8 @@ def do_action(cam, action, args, info=None):
             HAND_MOVING.discard(key)
     elif action in ("stop", "home", "preset_call", "preset_set"):
         HAND_MOVING.discard((cam["id"], "move"))
+    if action in ("move", "home"):        # zoom/focus tellen niet als aangepast
+        mark_adjusted(cam["id"])
     if action == "preset_call":
         n = clamp(args.get("n"), 0, 254)
         broadcast({"type": "preset", "cam": cam["id"], "n": n})
@@ -1092,6 +1107,14 @@ def read_pan_once(cam):
         return _backup.read_pan(sock)
 
 
+def _track_send(cam, action, args):
+    """Commando van de tracker; een pan-beweging maakt de laatst gekozen preset AANGEPAST."""
+    res = run_command(cam, action, args)
+    if action == "move":
+        mark_adjusted(cam["id"])
+    return res
+
+
 def start_tracking(cam, pick=None):
     """pick = (cx, kleurhistogram) van een aangeklikte persoon, of None = automatisch de grootste."""
     err = tracking_error()
@@ -1112,7 +1135,7 @@ def start_tracking(cam, pick=None):
             settings["limits"], settings["read_pan"] = limits, PanReader(cam)
         t = _tracker.CameraTracker(
             cam, stream_url(cam), det,
-            send=lambda a, args, c=cam: run_command(c, a, args),
+            send=lambda a, args, c=cam: _track_send(c, a, args),
             on_status=lambda st, cid=cam["id"]: _track_status(cid, **st),
             settings=settings)
         TRACKERS[cam["id"]] = t
@@ -1423,7 +1446,7 @@ def _activate(ws_id):
         WS["active"] = ws_id
         CONFIG_PATH, THUMB_DIR = ws_paths(ws_id)
         ws_save(WS)
-    STATE.update(active=None, last_preset={})
+    STATE.update(active=None, last_preset={}, adjusted={})
     JOB.update(running=False, kind="", cams={})
     with YT._lock:   # livestream van de vorige workspace niet laten hangen
         YT.state.update(channel="", live=False, upcoming=False, video_id=None, title=None, start=None, checked=None, error=None)

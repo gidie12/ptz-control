@@ -27,7 +27,7 @@
     --bg: #0f1220; --panel: #161a2b; --panel2: #1d2236; --line: #2a3048; --hover: #262c44;
     --text: #e6e9f2; --muted: #9098ad; --accent: #6366f1; --accentdark: #4f46e5; --ring: rgba(129,140,248,.25);
     --live: #ef4444; --ok: #22c55e; --warn: #f59e0b; --busy: #f97316; --onbusy: #ffffff;
-    --img: #0b0d18; --imgtxt: #343b55; --onaccent: #ffffff;
+    --img: #0b0d18; --imgtxt: #343b55; --onaccent: #ffffff; --onwarn: #1c1206;
     --okbg: #0f2e1b; --oktxt: #86efac; --okline: #166534; --warnbg: #3a2a0c; --warntxt: #fcd34d; --errbg: #3a1416; --errline: #6b2a2c; --errtxt: #fca5a5;
     --shadow: rgba(0,0,0,.45); --backdrop: rgba(5,6,12,.6);
     --cardshadow: 0 1px 3px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
@@ -45,7 +45,7 @@
     --bg: #f4f6fb; --panel: #ffffff; --panel2: #f7f8fc; --line: #e3e7ef; --hover: #f0f2f8;
     --text: #1c2333; --muted: #6b7488; --accent: #4f46e5; --accentdark: #4338ca; --ring: rgba(79,70,229,.12);
     --live: #dc2626; --ok: #16a34a; --warn: #d97706; --busy: #ea580c; --onbusy: #ffffff;
-    --img: #e8ebf2; --imgtxt: #b4bccb; --onaccent: #ffffff;
+    --img: #e8ebf2; --imgtxt: #b4bccb; --onaccent: #ffffff; --onwarn: #1c1206;
     --okbg: #dcfce7; --oktxt: #166534; --okline: #bbf7d0; --warnbg: #fef3c7; --warntxt: #92400e; --errbg: #fee2e2; --errline: #f3c4c4; --errtxt: #991b1b;
     --shadow: rgba(20,25,45,.12); --backdrop: rgba(15,18,33,.45);
     --cardshadow: 0 1px 3px rgba(20,25,45,.08), 0 8px 24px rgba(20,25,45,.05);
@@ -145,6 +145,10 @@
     font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .02em;
     max-width: calc(100% - 42px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .col .tile.chosen::after { font-size: 10px; }   /* kleinere tegels in Alle camera's: woord past dan nog */
+  /* 🧑 na de preset met de hand of door volgen bewogen: AANGEPAST (stippelrand amber) */
+  .tile.adj::after { content: "AANGEPAST"; position: absolute; top: 6px; left: 6px; background: var(--warn); color: var(--onwarn);
+    font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .03em;
+    max-width: calc(100% - 42px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile.busy { opacity: .6; }
   .storing .tile { border-style: dashed; border-color: var(--live); }
   .storing .tile .edit { display: none; }
@@ -160,6 +164,7 @@
   .colhead .livename { margin-left: auto; font-size: 12px; color: var(--live); font-weight: 600; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; }
   .colhead .livename.chosen { color: var(--accent); }
+  .colhead .livename.adj { color: var(--warn); }
   .colhead .ctl { font-size: 11px; color: var(--accent); }
   .col .grid { --tile: var(--ctile, 115px); gap: 8px; }
   .col .tile .meta { padding: 5px 7px; }
@@ -801,6 +806,8 @@
   .tile.live::after { border-radius: 999px; padding: 2px 8px; }
   .tile.chosen { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
   .tile.chosen::after { border-radius: 999px; padding: 2px 7px; }
+  .tile.adj { border-color: transparent; outline: 2px dashed var(--warn); outline-offset: -1px; }   /* outline: tegel wordt niet groter */
+  .tile.adj::after { border-radius: 999px; padding: 2px 8px; }
   .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }   /* onderweg gaat voor LIVE */
   .chip, .trk, .icon { border-radius: 9px; }
   .chip { background: var(--panel); font-weight: 500; }
@@ -1633,6 +1640,7 @@ let view = null;            // camera-id of ALL
 let ctrlCam = null;         // camera in zijbalk (bij ALL: laatst gebruikte)
 let storeMode = false;
 let lastPreset = {};
+let adjusted = {};          // camId -> true: na de laatst gekozen preset met de hand (of door volgen) bewogen (server: STATE.adjusted)
 let thumbVer = {};          // cache-buster per cam_n
 let serverAddr = location.host;
 let track = {};             // camId -> {on, status, fps, detector}
@@ -1738,9 +1746,10 @@ function setView(id) {
 }
 
 /* 🧑 status van de laatst gekozen preset: rood LIVE alleen als de camera volgens de videomixer IN BEELD is,
-   anders (ook zonder videomixer) indigo GESELECTEERD. "" = niet de laatst gekozen preset. */
+   anders (ook zonder videomixer) indigo GESELECTEERD; daarna bewogen = AANGEPAST (amber). "" = niet de laatst gekozen preset. */
 function presetState(camId, n) {
   if (lastPreset[camId] !== n) return "";
+  if (adjusted[camId]) return "adj";             // 🧑 na de preset bewogen (handbediening of volgen): AANGEPAST
   return midiOnAir(camId) ? "live" : "chosen";
 }
 function tile(c, n) {
@@ -1801,7 +1810,7 @@ function renderPresets() {
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
         ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}
         ${presetLocked(c.id) ? `<span class="locktag" title="In beeld en op slot: presets en home zijn geblokkeerd, bewegen met de controller kan wel">${ic("lock")}SLOT</span>` : ""}
-        <span class="livename${lst ? " " + lst : ""}">${ln ? (lst === "live" ? "LIVE: " : "Geselecteerd: ") + esc(c.presets[ln] || "preset " + ln) : ""}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
+        <span class="livename${lst ? " " + lst : ""}">${!ln ? "" : lst === "adj" ? `Aangepast (was ${esc(c.presets[ln] || "preset " + ln)})` : (lst === "live" ? "LIVE: " : "Geselecteerd: ") + esc(c.presets[ln] || "preset " + ln)}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
         if (e.target.closest(".lockbtn")) { e.stopPropagation(); return toggleLock(c.id); }
@@ -1866,7 +1875,7 @@ async function presetClick(camId, n, el) {
     toast(`${camById(camId)?.name || "Camera"} is in beeld en staat op slot: geen preset. Bewegen met de controller kan wel.`);
     return;
   }
-  lastPreset[camId] = n;            // direct feedback; server bevestigt via event
+  lastPreset[camId] = n; delete adjusted[camId];   // direct feedback; server bevestigt via event
   renderPresets(); renderSide();
   await cmd("preset_call", { n }, camId);
 }
@@ -1942,11 +1951,12 @@ function hold(el, start, stop) {
   const up = () => { if (!active) return; active = false; el.classList.remove("held"); stop(); };
   ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => el.addEventListener(ev, up));
 }
-const moved = () => { if (lastPreset[ctrlCam]) { delete lastPreset[ctrlCam]; renderPresets(); } };
-$$("#dpad [data-dir]").forEach(b => hold(b, () => { moved(); cmd("move", { dir: b.dataset.dir, pan: sp("#spPan"), tilt: sp("#spTilt") }); }, () => cmd("stop")));
-$$("[data-zoom]").forEach(b => hold(b, () => { moved(); cmd("zoom", { dir: b.dataset.zoom, speed: sp("#spZoom") }); }, () => cmd("zoom", { dir: "stop" })));
+// 🧑 Bewegen na een preset (pan/tilt/home, ook volgen) maakt de tegel AANGEPAST. De server houdt dat bij
+// (STATE.adjusted, SSE "preset" met adjusted: true), zodat alle schermen hetzelfde tonen. Zoom/focus tellen niet mee.
+$$("#dpad [data-dir]").forEach(b => hold(b, () => { cmd("move", { dir: b.dataset.dir, pan: sp("#spPan"), tilt: sp("#spTilt") }); }, () => cmd("stop")));
+$$("[data-zoom]").forEach(b => hold(b, () => { cmd("zoom", { dir: b.dataset.zoom, speed: sp("#spZoom") }); }, () => cmd("zoom", { dir: "stop" })));
 $$("[data-focus]").forEach(b => hold(b, () => { setAF(false); cmd("focus", { dir: b.dataset.focus, speed: sp("#spFocus") }); }, () => cmd("focus", { dir: "stop" })));
-$("#btnHome").onclick = () => { moved(); cmd("home"); };
+$("#btnHome").onclick = () => { cmd("home"); };
 function setAF(on) { $("#afOn").classList.toggle("on", on); $("#afOff").classList.toggle("on", !on); }
 $("#afOn").onclick = async () => { if ((await cmd("autofocus", { on: true }))?.ok) setAF(true); };
 $("#afOff").onclick = async () => { if ((await cmd("autofocus", { on: false }))?.ok) setAF(false); };
@@ -2098,12 +2108,12 @@ document.addEventListener("keydown", (e) => {
   e.preventDefault();
   if (e.repeat) return;
   if (KEY_ACTIONS[a][3]) holding.set(e.code, a);
-  if (["up", "down", "left", "right"].includes(a)) { pressed.add(a); moved(); sendMove(); }
-  else if (a === "zoom_in") { moved(); cmd("zoom", { dir: "in", speed: sp("#spZoom") }); }
-  else if (a === "zoom_out") { moved(); cmd("zoom", { dir: "out", speed: sp("#spZoom") }); }
+  if (["up", "down", "left", "right"].includes(a)) { pressed.add(a); sendMove(); }
+  else if (a === "zoom_in") { cmd("zoom", { dir: "in", speed: sp("#spZoom") }); }
+  else if (a === "zoom_out") { cmd("zoom", { dir: "out", speed: sp("#spZoom") }); }
   else if (a === "focus_far") cmd("focus", { dir: "far", speed: sp("#spFocus") });
   else if (a === "focus_near") cmd("focus", { dir: "near", speed: sp("#spFocus") });
-  else if (a === "home") { moved(); cmd("home"); }
+  else if (a === "home") { cmd("home"); }
   else if (a === "track") { if (ctrlCam) toggleTrack(ctrlCam); }
   else if (a === "wall") setWall(!document.body.classList.contains("wall"));
   else if (a === "youtube") ytToggle();
@@ -2985,7 +2995,7 @@ function padAction(action, gp, mods) {
     case "cam_prev": return selectByPad(-1);
     case "cam_next": return selectByPad(+1);
     case "cam": return selectCamByPad(cfg.cameras[+arg - 1]);
-    case "home": padStopAll(); moved(); cmd("home"); break;
+    case "home": padStopAll(); cmd("home"); break;
     case "track": toggleTrack(ctrlCam); break;
     case "af": cmd("onepush_af"); setAF(true); break;
     case "fine": pad.fine = !pad.fine; toast(pad.fine ? "Fijn-modus aan" : "Fijn-modus uit", true); rumble(gp, 80, 0.4); break;
@@ -3054,11 +3064,11 @@ function padLoop() {
     const key = (o) => o ? JSON.stringify(o) : null;
     if (now - pad.lastSend > 80) {
       if (key(move) !== key(pad.last.move)) {
-        if (move) { moved(); cmd("move", move); } else cmd("stop");
+        if (move) { cmd("move", move); } else cmd("stop");
         pad.last.move = move; pad.lastSend = now;
       }
       if (key(zoom) !== key(pad.last.zoom)) {
-        if (zoom) { moved(); cmd("zoom", zoom); } else cmd("zoom", { dir: "stop" });
+        if (zoom) { cmd("zoom", zoom); } else cmd("zoom", { dir: "stop" });
         pad.last.zoom = zoom; pad.lastSend = now;
       }
       if (key(focus) !== key(pad.last.focus)) {
@@ -3733,6 +3743,7 @@ function connectEvents() {
     if (ev.type === "state") {
       if (ev.server) serverAddr = ev.server;
       Object.assign(lastPreset, ev.last_preset || {});
+      adjusted = Object.assign({}, ev.adjusted || {});
       if (ev.active && $("#chkFollow").checked && camById(ev.active)) { ctrlCam = ev.active; if (view !== ALL) view = ev.active; }
       render();
     } else if (ev.type === "select") {
@@ -3741,7 +3752,9 @@ function connectEvents() {
         render(); toast("Camera: " + camById(ev.cam).name, true);
       }
     } else if (ev.type === "preset") {
-      lastPreset[ev.cam] = ev.n; renderPresets();
+      lastPreset[ev.cam] = ev.n;
+      if (ev.adjusted) adjusted[ev.cam] = true; else delete adjusted[ev.cam];
+      renderPresets();
     } else if (ev.type === "thumb") {
       const c = camById(ev.cam); if (!c) return;
       thumbVer[ev.cam + "_" + ev.n] = Date.now();
@@ -4623,7 +4636,7 @@ const TOUR_STEPS = [
       <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → Hulp → ${ic("cap")} Rondleiding</b>.</p>` },
   { target: ["#tabs"], title: "Camera's en weergave", text: () => `<p>Kies hier één camera, of <b>Alle camera's</b> om alle presetrasters naast elkaar te zien.</p>
       <p>In <i>Alle camera's</i> kies je met de cameratoets (standaard <kbd>Shift</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>) welke camera je bedient; die kolom licht op.</p>` },
-  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>GESELECTEERD</b> (indigo); staat die camera op de videomixer <b>in beeld</b>, dan is het een rood <b>LIVE</b>.</p>
+  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>GESELECTEERD</b> (indigo); staat die camera op de videomixer <b>in beeld</b>, dan is het een rood <b>LIVE</b>. Beweeg je de camera daarna met de pijlen, toetsen, controller of home (of draait <i>persoon volgen</i> hem), dan wordt het <b>AANGEPAST</b> (amber stippelrand): de camera staat niet meer precies op de preset. Zoom en focus tellen niet mee.</p>
       <p>Met het toetsenbord: <kbd>1</kbd>–<kbd>9</kbd> roept preset 1–9 op van de camera die je bedient; de toets staat klein rechtsonder op de tegel.</p>
       <p>Na het oproepen staat er <b>ONDERWEG…</b> op de tegel tot de camera stilstaat. Dan kun je veilig op de mixer overschakelen.</p>
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
