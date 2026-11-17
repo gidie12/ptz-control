@@ -251,9 +251,11 @@ De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). He
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
-**Pan only** en **Tilt omkeren** zijn knoppen in de Xbox-kaart: klik om ze aan of uit te zetten; aan = indigo met *AAN*. **Zachte beweging** is een schuif van *Uit* tot *Extra zacht* (0–100%).
+**Gescheiden sticks**, **Pan only** en **Tilt omkeren** zijn knoppen in de Xbox-kaart: klik om ze aan of uit te zetten; aan = indigo met *AAN*. **Zachte beweging** is een schuif van *Uit* tot *Extra zacht* (0–100%).
 
 **Zachte beweging** (standaard 50%): de camera trekt geleidelijk op en de stick reageert fijner rond het midden. Op 50% duurt het ongeveer 1 seconde tot topsnelheid, op 100% (*Extra zacht*) ongeveer 2 seconden en is de stick rond het midden nog fijner; op *Uit* gaat de camera direct op volle snelheid. Daartussen werkt het traploos. Stoppen gaat altijd direct. Elk scherm onthoudt zijn eigen stand; wie eerder zachte beweging uit had staan, begint op *Uit*.
+
+**Gescheiden sticks** (knop in de Xbox-kaart, standaard uit): de **linker stick draait alleen links/rechts** (pan) en de **rechter stick alleen omhoog/omlaag** (tilt). Focus zit dan niet meer op de rechter stick. Zolang dit aan staat is *Pan only* uitgeschakeld (*n.v.t.*; je eigen stand komt terug als je Gescheiden sticks uitzet); *Tilt omkeren* werkt dan op de rechter stick. Geldt per scherm; in de knoppenindeling kun je er ook een controllerknop voor kiezen (*Gescheiden sticks aan/uit*). Het venster *Knoppenindeling* laat zien wat de sticks op dit moment doen.
 
 **Pan only** (knop in de Xbox-kaart, indigo met *AAN* als hij actief is): de linker stick draait dan alleen links/rechts, voor alle camera's tegelijk; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt per scherm, net als de andere Xbox-opties. In de knoppenindeling kun je er ook een controllerknop voor kiezen (*Pan only aan/uit*).
 
@@ -263,7 +265,7 @@ Sticks en triggers liggen vast. De knoppen stel je per knop in via **Knoppeninde
 |---|---|
 | Linker stick | Pan/tilt, snelheid naar hoe ver je duwt (indrukken = fijn-modus) |
 | RT / LT | Zoom in / uit, snelheid naar hoe diep je drukt |
-| Rechter stick ↑/↓ | Focus ver / dichtbij (indrukken = autofocus) |
+| Rechter stick ↑/↓ | Focus ver / dichtbij (indrukken = autofocus); met *Gescheiden sticks* = tilt |
 | A · B · X · Y | Preset 1–4 · met LB (Shift) ingedrukt: 5–8 |
 | ☰ Menu + A/B/X/Y | Huidige positie opslaan als preset (trilt ter bevestiging) |
 | D-pad ←/→ | Vorige / volgende camera · ↓ home (↑ vrij) |
