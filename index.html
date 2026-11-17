@@ -139,6 +139,12 @@
   .tile.live { border-color: var(--live); }
   .tile.live::after { content: "LIVE"; position: absolute; top: 6px; left: 6px; background: var(--live); color: #fff;
     font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .05em; }
+  /* 🧑 laatst gekozen preset van een camera die níet in beeld is (videomixer), of zonder videomixer: GESELECTEERD (indigo) */
+  .tile.chosen { border-color: var(--accent); }
+  .tile.chosen::after { content: "GESELECTEERD"; position: absolute; top: 6px; left: 6px; background: var(--accent); color: var(--onaccent);
+    font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .02em;
+    max-width: calc(100% - 42px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .col .tile.chosen::after { font-size: 10px; }   /* kleinere tegels in Alle camera's: woord past dan nog */
   .tile.busy { opacity: .6; }
   .storing .tile { border-style: dashed; border-color: var(--live); }
   .storing .tile .edit { display: none; }
@@ -153,6 +159,7 @@
   .colhead .key { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
   .colhead .livename { margin-left: auto; font-size: 12px; color: var(--live); font-weight: 600; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; }
+  .colhead .livename.chosen { color: var(--accent); }
   .colhead .ctl { font-size: 11px; color: var(--accent); }
   .col .grid { --tile: var(--ctile, 115px); gap: 8px; }
   .col .tile .meta { padding: 5px 7px; }
@@ -792,6 +799,8 @@
   .tile .num { background: var(--ring); color: var(--accent); border-radius: 999px; padding: 1px 8px; }
   .tile.live { border-color: var(--live); box-shadow: 0 0 0 2px var(--live); }
   .tile.live::after { border-radius: 999px; padding: 2px 8px; }
+  .tile.chosen { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .tile.chosen::after { border-radius: 999px; padding: 2px 7px; }
   .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }   /* onderweg gaat voor LIVE */
   .chip, .trk, .icon { border-radius: 9px; }
   .chip { background: var(--panel); font-weight: 500; }
@@ -1728,11 +1737,17 @@ function setView(id) {
   render();
 }
 
+/* 🧑 status van de laatst gekozen preset: rood LIVE alleen als de camera volgens de videomixer IN BEELD is,
+   anders (ook zonder videomixer) indigo GESELECTEERD. "" = niet de laatst gekozen preset. */
+function presetState(camId, n) {
+  if (lastPreset[camId] !== n) return "";
+  return midiOnAir(camId) ? "live" : "chosen";
+}
 function tile(c, n) {
   const b = document.createElement("button");
-  const live = lastPreset[c.id] === n;
   const mv = moving[c.id] && (moving[c.id].n ?? lastPreset[c.id]) === n;
-  b.className = "tile" + (live ? " live" : "") + (mv ? " moving" : "");
+  const st = mv ? "moving" : presetState(c.id, n);   // ONDERWEG… gaat voor alles
+  b.className = "tile" + (st ? " " + st : "");
   const name = c.presets[n];
   const col = (c.preset_colors || {})[n];
   const hk = c.id === ctrlCam && n <= 9 ? keyOf("preset_" + n) : "";
@@ -1782,11 +1797,11 @@ function renderPresets() {
     cols.style.setProperty("--ncol", Math.min(cfg.cameras.length, 4));
     cfg.cameras.forEach((c, i) => {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "") + (midiOnAir(c.id) ? " onair" : "") + (presetLocked(c.id) ? " locked" : "");
-      const ln = lastPreset[c.id];
+      const ln = lastPreset[c.id], lst = ln ? presetState(c.id, ln) : "";
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
         ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}
         ${presetLocked(c.id) ? `<span class="locktag" title="In beeld en op slot: presets en home zijn geblokkeerd, bewegen met de controller kan wel">${ic("lock")}SLOT</span>` : ""}
-        <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
+        <span class="livename${lst ? " " + lst : ""}">${ln ? (lst === "live" ? "LIVE: " : "Geselecteerd: ") + esc(c.presets[ln] || "preset " + ln) : ""}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
         if (e.target.closest(".lockbtn")) { e.stopPropagation(); return toggleLock(c.id); }
@@ -4608,7 +4623,7 @@ const TOUR_STEPS = [
       <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → Hulp → ${ic("cap")} Rondleiding</b>.</p>` },
   { target: ["#tabs"], title: "Camera's en weergave", text: () => `<p>Kies hier één camera, of <b>Alle camera's</b> om alle presetrasters naast elkaar te zien.</p>
       <p>In <i>Alle camera's</i> kies je met de cameratoets (standaard <kbd>Shift</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>) welke camera je bedient; die kolom licht op.</p>` },
-  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>LIVE</b>.</p>
+  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>GESELECTEERD</b> (indigo); staat die camera op de videomixer <b>in beeld</b>, dan is het een rood <b>LIVE</b>.</p>
       <p>Met het toetsenbord: <kbd>1</kbd>–<kbd>9</kbd> roept preset 1–9 op van de camera die je bedient; de toets staat klein rechtsonder op de tegel.</p>
       <p>Na het oproepen staat er <b>ONDERWEG…</b> op de tegel tot de camera stilstaat. Dan kun je veilig op de mixer overschakelen.</p>
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
