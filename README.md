@@ -268,10 +268,12 @@ Sticks en triggers liggen vast. De knoppen stel je per knop in via **Knoppeninde
 | Rechter stick ↑/↓ | Focus ver / dichtbij (indrukken = autofocus); met *Gescheiden sticks* = tilt |
 | A · B · X · Y | Preset 1–4 · met LB (Shift) ingedrukt: 5–8 |
 | ☰ Menu + A/B/X/Y | Huidige positie opslaan als preset (trilt ter bevestiging) |
-| D-pad ←/→ | Vorige / volgende camera · ↓ home (↑ vrij) |
+| D-pad ←/→ | Vorige / volgende camera |
+| D-pad ↑/↓ | Focus ver / dichtbij zolang je hem vasthoudt (zet autofocus uit) |
 | RB | Persoon volgen aan/uit · View = alles stoppen |
 
-Elke knop kan ook worden: een vaste camera, een andere preset, home, volgen, autofocus, fijn-modus, alles stoppen, of niets.
+Home heeft standaard geen controllerknop meer (wel toets **H** en het huisje in de bediening); wil je hem op de controller, kies dan *Home* bij een knop. Wie de knoppenindeling nooit heeft aangepast, krijgt deze nieuwe standaard vanzelf (vroeger was D-pad ↓ home); een eigen indeling of profiel blijft zoals het was.
+Elke knop kan ook worden: een vaste camera, een andere preset, home, focus ver/dichtbij, volgen, autofocus, fijn-modus, Pan only, Gescheiden sticks, alles stoppen, of niets.
 **Shift** telt bij presets een instelbaar getal op (standaard 4); **Opslaan** vasthouden + presetknop slaat de huidige positie op.
 
 De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller alleen door aan het actieve tabblad).

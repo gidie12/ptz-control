@@ -2837,7 +2837,7 @@ const PAD_BUTTONS = [
 ];
 const PAD_DEFAULT = {
   buttons: { A: "preset:1", B: "preset:2", X: "preset:3", Y: "preset:4", LB: "shift", RB: "track",
-             UP: "", DOWN: "home", LEFT: "cam_prev", RIGHT: "cam_next",
+             UP: "focus_far", DOWN: "focus_near", LEFT: "cam_prev", RIGHT: "cam_next",   // 🧑 17 nov 2026: D-pad ↑/↓ = focus (was ↓ home)
              L3: "fine", R3: "af", VIEW: "stopall", MENU: "store" },
   shift: 4,
 };
@@ -2899,6 +2899,7 @@ const padMap = () => {
 function padActionOptions() {
   const o = [["", "— niets —"], ["cam_prev", "Vorige camera"], ["cam_next", "Volgende camera"]];
   cfg.cameras.forEach((c, i) => o.push(["cam:" + (i + 1), "Camera: " + c.name]));
+  o.push(["focus_far", "Focus ver (vasthouden)"], ["focus_near", "Focus dichtbij (vasthouden)"]);
   o.push(["home", "Home"], ["track", "Persoon volgen aan/uit"], ["af", "Autofocus (one-push)"], ["fine", "Fijn-modus aan/uit"],
          ["pan_only", "Pan only aan/uit"], ["split", "Gescheiden sticks aan/uit"], ["stopall", "Alles stoppen"]);
   o.push(["shift", "Shift (vasthouden: presets +N)"], ["store", "Opslaan (vasthouden + presetknop)"]);
@@ -3196,7 +3197,10 @@ function padLoop() {
     }
     // ---- focus (rechter stick verticaal; niet met Gescheiden sticks, dan is die stick tilt)
     const fy = pad.split ? 0 : dz(gp.axes[3] || 0, 0.35);
-    const focus = fy ? { dir: fy < 0 ? "far" : "near", speed: Math.max(1, Math.round(Math.abs(fy) * 5)) } : null;
+    // knopacties focus_far / focus_near (standaard D-pad ↑/↓): vasthouden = focus met de ingestelde focussnelheid, loslaten = stop
+    const fb = held("focus_far") ? "far" : held("focus_near") ? "near" : "";
+    const focus = fy ? { dir: fy < 0 ? "far" : "near", speed: Math.max(1, Math.round(Math.abs(fy) * 5)) }
+      : fb ? { dir: fb, speed: sp("#spFocus") } : null;
 
     // alleen versturen bij verandering, en hooguit ~12x per seconde
     const now = performance.now();
@@ -4806,7 +4810,7 @@ const TOUR_STEPS = [
       <li><b>Afstelling</b>: slingert de camera heen en weer, zet dan de beginsnelheid lager of de rust na een stop langer; per camera.</li></ul>` },
   { target: ["#padCard"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
-      <li>D-pad ←/→ = andere camera, ↓ = home, RB = volgen</li><li>View = alles stoppen</li></ul>
+      <li>D-pad ←/→ = andere camera, ↑/↓ = focus ver/dichtbij (vasthouden), RB = volgen</li><li>View = alles stoppen</li></ul>
       <p>Verbonden = groen <b>● Verbonden</b> in de titel. Per apparaat: <b>Zachte beweging</b> (schuif), <b>Gescheiden sticks</b>, <b>Pan only</b>, <b>Tilt omkeren</b> (indigo = aan) en de max. snelheid.</p>` },
   { target: ["#padSplit"], title: ic("sticks") + " Gescheiden sticks", text: () => `<p>Met <b>Gescheiden sticks</b> (indigo = aan) draait de <b>linker stick alleen links/rechts</b> en de <b>rechter stick alleen omhoog/omlaag</b>, zoals bij veel camera- en droneregelaars. Focus zit dan niet meer op de rechter stick.</p><p>Zolang dit aan staat is <i>Pan only</i> uitgeschakeld; <i>Tilt omkeren</i> werkt dan op de rechter stick. Standaard uit, geldt voor dit scherm. Ook op een controllerknop te zetten (<i>Gescheiden sticks aan/uit</i>).</p>` },
   { target: ["#padPanOnly"], title: ic("width") + " Pan only", text: () => `<p>Klik om <b>Pan only</b> aan of uit te zetten; aan = knop indigo met <b>AAN</b>. De linker stick draait de camera dan alleen <b>links en rechts</b>, voor <b>alle camera's</b>; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt voor dit scherm. Je kunt het ook op een controllerknop zetten (<i>Pan only aan/uit</i> in de knoppenindeling).</p>` },
