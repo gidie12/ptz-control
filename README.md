@@ -323,6 +323,8 @@ De schakelaar onder *Weergave* in het menu (toont **Licht** of **Donker**) wisse
 
 De vormgeving volgt de huisstijl van de Voordienst app: lichtgrijze achtergrond met witte kaarten, één hoofdkleur (indigo) voor selectie en knoppen, een donkere kopbalk en het lettertype Inter (zonder internet valt de app terug op het systeemlettertype). Rood = LIVE/fout, groen = in orde, amber = let op, oranje = onderweg/oefenstand.
 
+De **zijbalk** met de camerabediening en de Xbox-controller is nooit hoger dan het scherm: hij blijft direct onder de kopbalk staan als je door de presets scrolt, zodat pijlen, zoom, focus en volgen altijd in beeld zijn. Past niet alles, dan scrolt de zijbalk zelf (bijvoorbeeld naar de Xbox-kaart). Tot 900 pixels breed staat de zijbalk rechts; op een smaller scherm komt hij onder de presets. In *alleen kijken* is er geen zijbalk en gebruiken de presets de hele breedte.
+
 De app past zich aan elke schermgrootte aan. Passen de cameratabbladen niet naast de knoppen in de kopbalk, dan krijgen ze een eigen regel (en schuiven ze opzij als ze ook dan niet passen). Op een smal scherm tonen de knoppen in de kop alleen hun icoon (de uitleg staat erbij als je erop wijst) en staan de onderdelen onder elkaar:
 
 <img src="docs/screenshots/telefoon.png" width="260" alt="Op een telefoon">

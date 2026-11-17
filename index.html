@@ -77,8 +77,10 @@
   .icon { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
 
   main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; padding: 16px; align-items: start; }
-  @media (max-width: 1200px) { main { grid-template-columns: 1fr; } aside { position: static !important;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+  /* 🧑 900–1200 px: zijbalk blijft rechts (smaller, één kolom kaarten); pas onder 900 px onder de presets */
+  @media (max-width: 1200px) { main { grid-template-columns: minmax(0, 1fr) 300px; } }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { position: static !important; max-height: none !important;
+    overflow: visible !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
   @media (max-width: 700px) { aside { grid-template-columns: 1fr; } }
   /* telefoon: knoppen in de kop alleen met icoon (tekst staat in de title), compacter */
   @media (max-width: 700px) {
@@ -281,6 +283,9 @@
   body.viewonly #btnStore, body.viewonly #btnLoad, body.viewonly .tile .edit, body.viewonly #ctrlCard, body.viewonly #padCard,
   body.viewonly .colhead .trk, body.viewonly #btnOrderReset, body.viewonly .tilectl, body.viewonly #btnOsd, body.viewonly #btnTrackSet { display: none !important; }
   body.viewonly .tile { cursor: default; }
+  /* alleen kijken: de zijbalk is leeg (bediening en Xbox verborgen), dus presets over de volle breedte */
+  body.viewonly main { grid-template-columns: minmax(0, 1fr); }
+  body.viewonly aside { display: none; }
   #viewBanner { display: none; background: var(--warnbg); color: var(--warntxt); border-bottom: 1px solid var(--warn); padding: 6px 16px;
     font-size: 13px; text-align: center; }
   body.viewonly #viewBanner { display: block; }
@@ -342,6 +347,7 @@
   #tabBar { display: none; }
   body.tablet #tabs { display: none; }
   body.tablet main { padding-bottom: 100px; }
+  body.tablet aside { --asideb: 100px; }
   body.tablet .grid { grid-template-columns: repeat(auto-fill, minmax(max(var(--tile, 170px), 210px), 1fr)); gap: 12px; }
   body.tablet .tile .meta { padding: 10px 12px; font-size: 16px; }
   body.tablet .tile .edit { transform: scale(1.25); transform-origin: top right; }
@@ -505,7 +511,16 @@
 
 
   /* ---- zijbalk ---- */
-  aside { display: grid; gap: 16px; position: sticky; top: 70px; }
+  /* 🧑 zijbalk is nooit hoger dan het scherm: plakt direct onder de (sticky, soms 2 regels hoge) kop en scrolt zelf,
+     zodat de bediening altijd in beeld blijft; --headh/--practh komen van barsTop() (ook de oefenbalk is sticky) */
+  /* --alerth = zichtbare foutbalk (ook sticky); --asideb = ruimte onder de zijbalk = padding-bottom van main (anders schuift hij
+     onderaan de pagina omhoog), in tabletweergave 100px voor #tabBar */
+  aside { --asidet: calc(var(--headh, 62px) + var(--practh, 0px) + var(--alerth, 0px) + 8px);
+    display: grid; gap: 16px; position: sticky; top: var(--asidet);
+    align-content: start; max-height: calc(100vh - var(--asidet) - var(--asideb, 16px)); overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--line) transparent; border-radius: 12px; }
+  aside::-webkit-scrollbar { width: 6px; }
+  aside::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
   /* inklapbare camerabediening */
   /* inklapbare kaarten (camerabediening, Xbox-controller): hele kop is klikbaar, chevron draait mee */
   .foldbar { cursor: pointer; user-select: none; margin: -6px -8px 0 !important; padding: 6px 8px; border-radius: 9px;
@@ -529,7 +544,7 @@
   #wallBtns .chip { white-space: nowrap; }
   /* volledig scherm: bediening, Xbox, YouTube en liederen zijn vensters, altijd naast elkaar in de balk bovenaan (dockLayout);
      niet los te maken; aan de titelbalk slepen = van plek wisselen (dockOrder) */
-  body.wall aside { display: block; position: fixed !important; inset: 0; z-index: 26; pointer-events: none; overflow: visible; }
+  body.wall aside { display: block; position: fixed !important; inset: 0; z-index: 26; pointer-events: none; overflow: visible; max-height: none; }
   .wbadge, .wclose, .wgrip { display: none; }
   body.wall aside .foldcard { position: fixed; left: var(--fx, 10px); top: var(--fy, 10px); width: var(--fw, 340px); height: var(--fh, auto);
     max-height: calc(100vh - 20px); overflow: hidden auto; overscroll-behavior: contain; pointer-events: auto; margin: 0;
@@ -3894,9 +3909,10 @@ function barsTop() {
   const bs = document.body.style, h = $("header");
   bs.setProperty("--headh", (getComputedStyle(h).position === "sticky" ? h.offsetHeight : 0) + "px");
   bs.setProperty("--practh", $("#practiceBar").offsetHeight + "px");
+  bs.setProperty("--alerth", $("#alertBar").offsetHeight + "px");   // zijbalk plakt onder een zichtbare foutbalk
 }
 if (window.ResizeObserver) {
-  const ro = new ResizeObserver(barsTop); ro.observe($("header")); ro.observe($("#practiceBar"));
+  const ro = new ResizeObserver(barsTop); ro.observe($("header")); ro.observe($("#practiceBar")); ro.observe($("#alertBar"));
   const rb = new ResizeObserver(() => { if (isWall()) dockLayout(); }); rb.observe($("#alertBar")); rb.observe($("#practiceBar"));   // vensterbalk onder fout-/oefenbalk
 }
 barsTop();
@@ -4492,6 +4508,7 @@ const TOUR_STEPS = [
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
   { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
   { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
+      <p>De zijbalk blijft in beeld als je door de presets scrolt; past niet alles, dan scrolt hij zelf.</p>
       <p>Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
   { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
       <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
