@@ -27,12 +27,13 @@
     --bg: #0f1220; --panel: #161a2b; --panel2: #1d2236; --line: #2a3048; --hover: #262c44;
     --text: #e6e9f2; --muted: #9098ad; --accent: #6366f1; --accentdark: #4f46e5; --ring: rgba(129,140,248,.25);
     --live: #ef4444; --ok: #22c55e; --warn: #f59e0b; --busy: #f97316; --onbusy: #ffffff;
-    --img: #0b0d18; --imgtxt: #343b55; --onaccent: #ffffff;
+    --img: #0b0d18; --imgtxt: #343b55; --onaccent: #ffffff; --onwarn: #1c1206;
     --okbg: #0f2e1b; --oktxt: #86efac; --okline: #166534; --warnbg: #3a2a0c; --warntxt: #fcd34d; --errbg: #3a1416; --errline: #6b2a2c; --errtxt: #fca5a5;
     --shadow: rgba(0,0,0,.45); --backdrop: rgba(5,6,12,.6);
     --cardshadow: 0 1px 3px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
     --modalshadow: 0 24px 64px rgba(0,0,0,.5);
     --hdr: #161a2b; --hdrtxt: #c7ccdb; --hdrbtn: rgba(255,255,255,.08); --hdrhover: rgba(255,255,255,.16); --hdrline: rgba(255,255,255,.07);
+    --tiptxt: #ffffff; --tipmuted: rgba(255,255,255,.78); --tipkbd: rgba(255,255,255,.14); --tipline: rgba(255,255,255,.16);
     --editbg: rgba(22,26,43,.85); --editfg: #e6e9f2; --editline: #2a3048;
     --mixoff: #2a3048; --mixgreen: #22c55e; --mixred: #ef4444; --mixtxt: #ffffff; --logbg: #0f1220;
     --pc-rood: #ef4444; --pc-oranje: #f97316; --pc-geel: #eab308; --pc-groen: #22c55e; --pc-blauw: #6366f1; --pc-paars: #a855f7;
@@ -44,12 +45,13 @@
     --bg: #f4f6fb; --panel: #ffffff; --panel2: #f7f8fc; --line: #e3e7ef; --hover: #f0f2f8;
     --text: #1c2333; --muted: #6b7488; --accent: #4f46e5; --accentdark: #4338ca; --ring: rgba(79,70,229,.12);
     --live: #dc2626; --ok: #16a34a; --warn: #d97706; --busy: #ea580c; --onbusy: #ffffff;
-    --img: #e8ebf2; --imgtxt: #b4bccb; --onaccent: #ffffff;
+    --img: #e8ebf2; --imgtxt: #b4bccb; --onaccent: #ffffff; --onwarn: #1c1206;
     --okbg: #dcfce7; --oktxt: #166534; --okline: #bbf7d0; --warnbg: #fef3c7; --warntxt: #92400e; --errbg: #fee2e2; --errline: #f3c4c4; --errtxt: #991b1b;
     --shadow: rgba(20,25,45,.12); --backdrop: rgba(15,18,33,.45);
     --cardshadow: 0 1px 3px rgba(20,25,45,.08), 0 8px 24px rgba(20,25,45,.05);
     --modalshadow: 0 24px 64px rgba(15,18,33,.3);
     --hdr: #161a2b; --hdrtxt: #c7ccdb; --hdrbtn: rgba(255,255,255,.08); --hdrhover: rgba(255,255,255,.16); --hdrline: rgba(255,255,255,.07);
+    --tiptxt: #ffffff; --tipmuted: rgba(255,255,255,.78); --tipkbd: rgba(255,255,255,.14); --tipline: rgba(255,255,255,.16);
     --editbg: rgba(255,255,255,.9); --editfg: #1c2333; --editline: #e3e7ef;
     --mixoff: #e3e7ef; --mixgreen: #16a34a; --mixred: #dc2626; --mixtxt: #ffffff; --logbg: #f7f8fc;
     --pc-rood: #dc2626; --pc-oranje: #ea580c; --pc-geel: #d97706; --pc-groen: #16a34a; --pc-blauw: #4f46e5; --pc-paars: #9333ea;
@@ -77,8 +79,10 @@
   .icon { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
 
   main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; padding: 16px; align-items: start; }
-  @media (max-width: 1200px) { main { grid-template-columns: 1fr; } aside { position: static !important;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+  /* 🧑 900–1200 px: zijbalk blijft rechts (smaller, één kolom kaarten); pas onder 900 px onder de presets */
+  @media (max-width: 1200px) { main { grid-template-columns: minmax(0, 1fr) 300px; } }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { position: static !important; max-height: none !important;
+    overflow: visible !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
   @media (max-width: 700px) { aside { grid-template-columns: 1fr; } }
   /* telefoon: knoppen in de kop alleen met icoon (tekst staat in de title), compacter */
   @media (max-width: 700px) {
@@ -110,7 +114,9 @@
   .chip.on { background: var(--live); border-color: var(--live); color: #fff; }
 
   /* ---- presets: hoofdonderdeel ---- */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile, 170px), 1fr)); gap: 10px; }
+  /* 🧑 tegels krijgen echt de ingestelde breedte (geen 1fr: anders verandert de schuif een tijd niets en springt dan alles);
+     min(…, 100%) zodat een grote tegel in een smalle kolom niet buiten beeld loopt */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, min(var(--tile, 170px), 100%)); gap: 10px; }
   .tile { position: relative; border-radius: 10px; overflow: hidden; background: var(--panel2);
     border: 2px solid var(--line); cursor: pointer; padding: 0; text-align: left; touch-action: manipulation;
     transition: transform .06s; }
@@ -133,6 +139,16 @@
   .tile.live { border-color: var(--live); }
   .tile.live::after { content: "LIVE"; position: absolute; top: 6px; left: 6px; background: var(--live); color: #fff;
     font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .05em; }
+  /* 🧑 laatst gekozen preset van een camera die níet in beeld is (videomixer), of zonder videomixer: GESELECTEERD (indigo) */
+  .tile.chosen { border-color: var(--accent); }
+  .tile.chosen::after { content: "GESELECTEERD"; position: absolute; top: 6px; left: 6px; background: var(--accent); color: var(--onaccent);
+    font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .02em;
+    max-width: calc(100% - 42px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .col .tile.chosen::after { font-size: 10px; }   /* kleinere tegels in Alle camera's: woord past dan nog */
+  /* 🧑 na de preset met de hand of door volgen bewogen: AANGEPAST (stippelrand amber) */
+  .tile.adj::after { content: "AANGEPAST"; position: absolute; top: 6px; left: 6px; background: var(--warn); color: var(--onwarn);
+    font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .03em;
+    max-width: calc(100% - 42px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile.busy { opacity: .6; }
   .storing .tile { border-style: dashed; border-color: var(--live); }
   .storing .tile .edit { display: none; }
@@ -147,6 +163,8 @@
   .colhead .key { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
   .colhead .livename { margin-left: auto; font-size: 12px; color: var(--live); font-weight: 600; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; }
+  .colhead .livename.chosen { color: var(--accent); }
+  .colhead .livename.adj { color: var(--warn); }
   .colhead .ctl { font-size: 11px; color: var(--accent); }
   .col .grid { --tile: var(--ctile, 115px); gap: 8px; }
   .col .tile .meta { padding: 5px 7px; }
@@ -240,6 +258,15 @@
   .padtog:disabled { opacity: .45; cursor: not-allowed; }
   .padtog:disabled:hover { background: var(--panel); }
   .padtog small { font-weight: 400; opacity: .75; }
+  /* 🧑 Zachte beweging = schuif 0–100 % (spec 5.3) in een blok met dezelfde maat/stijl als .padtog */
+  .padsoft { display: grid; gap: 4px; padding: 9px 12px 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel);
+    color: var(--text); font-size: 13px; font-weight: 500; }
+  .padsoft .psrow { display: flex; align-items: center; gap: 8px; }
+  .padsoft .pval { margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--onaccent); font-variant-numeric: tabular-nums; }
+  .padsoft .pval.off { background: var(--line); color: var(--muted); }
+  .padsoft input[type=range] { margin: 2px 0 0; }
+  .padsoft .psscale { display: flex; justify-content: space-between; font-size: 11px; font-weight: 400; color: var(--muted); }
   #dlgBackup { width: min(760px, 95vw); }
   #dlgMap { width: min(720px, 95vw); }
   #dlgMap #padMap { grid-template-columns: 120px 1fr 120px 1fr; gap: 6px 12px; font-size: 13px; }
@@ -250,6 +277,37 @@
   .padprofcard select { flex: 1; }
   #dlgMap .padset { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
   #padMap .hit { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+  .padbtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  /* 🧑 Sticks afstellen (#dlgCal) */
+  #dlgCal { width: min(640px, 95vw); }
+  .caltabs { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .caltabs button { border: 0; background: var(--panel); color: var(--text); padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .caltabs button + button { border-left: 1px solid var(--line); }
+  .caltabs button[aria-selected="true"] { background: var(--accent); color: var(--onaccent); }
+  .calgrid { display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: start; margin-bottom: 8px; }
+  @media (max-width: 560px) { .calgrid { grid-template-columns: 1fr; } .calstick { max-width: 180px; margin: 0 auto; } }
+  .calstick { text-align: center; }
+  .calstick svg { width: 100%; max-width: 160px; display: block; margin: 0 auto 4px; }
+  .cl-ring { fill: var(--panel2); stroke: var(--line); stroke-width: 2; }
+  .cl-axis { stroke: var(--line); stroke-width: 1; fill: none; }
+  .cl-dz { fill: none; stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .cl-dot { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+  .calmodes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .calmode { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 9px; padding: 6px 11px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .calmode:hover { background: var(--hover); }
+  .calmode.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--ring), 0 0 0 1px var(--accent) inset; color: var(--accent); }
+  #calGraph { width: 100%; display: block; background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; touch-action: none; }
+  #calGraph .cg-axis { stroke: var(--line); stroke-width: 1; fill: none; }
+  #calGraph .cg-dz { fill: var(--warnbg); }
+  #calGraph .cg-dzl { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  #calGraph .cg-lin { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; fill: none; }
+  #calGraph .cg-curve { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linejoin: round; }
+  #calGraph .cg-soft { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 2 3; fill: none; opacity: .75; }
+  #calGraph .cg-pt { fill: var(--panel); stroke: var(--accent); stroke-width: 2.5; cursor: grab; }
+  #calGraph .cg-pt:focus { outline: none; stroke-width: 3.5; fill: var(--ring); }
+  #calGraph .cg-live { fill: var(--accent); }
+  #calGraph text { fill: var(--muted); font-size: 7px; font-family: inherit; }
+  label.calsl { grid-template-columns: 86px 1fr 40px; }
   /* onderweg naar een preset, status per camera, kleurlabels, verslepen, sneltoets, ongedaan maken */
   .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }
   .tile.moving::after { content: "ONDERWEG…"; position: absolute; top: 6px; left: 6px; background: var(--busy); color: var(--onbusy);
@@ -281,6 +339,9 @@
   body.viewonly #btnStore, body.viewonly #btnLoad, body.viewonly .tile .edit, body.viewonly #ctrlCard, body.viewonly #padCard,
   body.viewonly .colhead .trk, body.viewonly #btnOrderReset, body.viewonly .tilectl, body.viewonly #btnOsd, body.viewonly #btnTrackSet { display: none !important; }
   body.viewonly .tile { cursor: default; }
+  /* alleen kijken: de zijbalk is leeg (bediening en Xbox verborgen), dus presets over de volle breedte */
+  body.viewonly main { grid-template-columns: minmax(0, 1fr); }
+  body.viewonly aside { display: none; }
   #viewBanner { display: none; background: var(--warnbg); color: var(--warntxt); border-bottom: 1px solid var(--warn); padding: 6px 16px;
     font-size: 13px; text-align: center; }
   body.viewonly #viewBanner { display: block; }
@@ -342,7 +403,8 @@
   #tabBar { display: none; }
   body.tablet #tabs { display: none; }
   body.tablet main { padding-bottom: 100px; }
-  body.tablet .grid { grid-template-columns: repeat(auto-fill, minmax(max(var(--tile, 170px), 210px), 1fr)); gap: 12px; }
+  body.tablet aside { --asideb: 100px; }
+  body.tablet .grid { grid-template-columns: repeat(auto-fill, min(max(var(--tile, 170px), 210px), 100%)); gap: 12px; }
   body.tablet .tile .meta { padding: 10px 12px; font-size: 16px; }
   body.tablet .tile .edit { transform: scale(1.25); transform-origin: top right; }
   body.tablet #tabBar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
@@ -505,7 +567,16 @@
 
 
   /* ---- zijbalk ---- */
-  aside { display: grid; gap: 16px; position: sticky; top: 70px; }
+  /* 🧑 zijbalk is nooit hoger dan het scherm: plakt direct onder de (sticky, soms 2 regels hoge) kop en scrolt zelf,
+     zodat de bediening altijd in beeld blijft; --headh/--practh komen van barsTop() (ook de oefenbalk is sticky) */
+  /* --alerth = zichtbare foutbalk (ook sticky); --asideb = ruimte onder de zijbalk = padding-bottom van main (anders schuift hij
+     onderaan de pagina omhoog), in tabletweergave 100px voor #tabBar */
+  aside { --asidet: calc(var(--headh, 62px) + var(--practh, 0px) + var(--alerth, 0px) + 8px);
+    display: grid; gap: 16px; position: sticky; top: var(--asidet);
+    align-content: start; max-height: calc(100vh - var(--asidet) - var(--asideb, 16px)); overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--line) transparent; border-radius: 12px; }
+  aside::-webkit-scrollbar { width: 6px; }
+  aside::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
   /* inklapbare camerabediening */
   /* inklapbare kaarten (camerabediening, Xbox-controller): hele kop is klikbaar, chevron draait mee */
   .foldbar { cursor: pointer; user-select: none; margin: -6px -8px 0 !important; padding: 6px 8px; border-radius: 9px;
@@ -529,13 +600,15 @@
   #wallBtns .chip { white-space: nowrap; }
   /* volledig scherm: bediening, Xbox, YouTube en liederen zijn vensters, altijd naast elkaar in de balk bovenaan (dockLayout);
      niet los te maken; aan de titelbalk slepen = van plek wisselen (dockOrder) */
-  body.wall aside { display: block; position: fixed !important; inset: 0; z-index: 26; pointer-events: none; overflow: visible; }
+  body.wall aside { display: block; position: fixed !important; inset: 0; z-index: 26; pointer-events: none; overflow: visible; max-height: none; }
   .wbadge, .wclose, .wgrip { display: none; }
   body.wall aside .foldcard { position: fixed; left: var(--fx, 10px); top: var(--fy, 10px); width: var(--fw, 340px); height: var(--fh, auto);
     max-height: calc(100vh - 20px); overflow: hidden auto; overscroll-behavior: contain; pointer-events: auto; margin: 0;
     padding: 0; border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); border-color: var(--line); }
   body.wall aside .foldcard.whide { display: none; }
   body.wall aside .foldcard.docked:not(.collapsed) { overflow: hidden; }
+  /* past de inhoud ook bij de kleinste zoom (0,5) niet (bijv. Snelheden open op 1366×768): dan scrollt de kaart (fitDocked) */
+  body.wall aside .foldcard.docked.wscroll:not(.collapsed) { overflow: hidden auto; }
   body.wall aside .foldbar { margin: 0 !important; padding: 5px 6px 5px 10px; border-radius: 0; gap: 6px; font-size: 12px; cursor: grab;
     border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 1; background: var(--panel); }
   body.wall aside .foldbar:hover { background: var(--panel); }
@@ -590,8 +663,12 @@
   .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 5px; }
   details { margin-top: 10px; }
   summary { cursor: pointer; color: var(--muted); font-size: 13px; }
-  label.sl { display: grid; grid-template-columns: 50px 1fr 24px; gap: 8px; align-items: center; font-size: 13px;
-    color: var(--muted); margin: 6px 0; }
+  label.sl { display: grid; grid-template-columns: 76px 1fr 34px; gap: 8px; align-items: center; font-size: 13px;
+    color: var(--muted); margin: 6px 0; }   /* 76 px: "Acceleratie" past; 34 px: "100%" */
+  label.slchk { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); margin: 2px 0 6px; cursor: pointer; }
+  label.slchk input { margin: 0; accent-color: var(--accent); }
+  label.slchk:has(input:disabled) { opacity: .5; cursor: default; }
+  .zsinfo { margin: 4px 0 2px; line-height: 1.35; }
   input[type=range] { width: 100%; accent-color: var(--accent); }
 
   /* ---- dialogs ---- */
@@ -621,6 +698,16 @@
   @media (max-width: 900px) { .camrow { grid-template-columns: 1fr 1fr; } .camrow > .camdel { grid-column: 1 / -1; } .camhead { display: none; } }
   .small { font-size: 12px; color: var(--muted); line-height: 1.6; }
   kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
+  /* 🧑 eigen tooltip (spec 2.3): verschijnt als de muis 2 s stilstaat op een element met data-tipk (tipInit) */
+  #tip { position: fixed; z-index: 60; max-width: 260px; padding: 9px 12px; border-radius: 9px; background: var(--hdr); color: var(--tiptxt);
+    border: 1px solid var(--tipline); box-shadow: 0 10px 28px var(--shadow); font-size: 13px; line-height: 1.45; pointer-events: none; }
+  #tip b { display: block; font-weight: 600; margin-bottom: 2px; }
+  #tip .tipd { color: var(--tipmuted); }
+  #tip .tipk { margin-top: 5px; color: var(--tipmuted); }
+  #tip kbd { background: var(--tipkbd); border-color: var(--tipline); color: var(--tiptxt); font-size: 12px; }
+  #tip::before { content: ""; position: absolute; left: var(--ax, 50%); top: -6px; width: 10px; height: 10px; margin-left: -5px;
+    background: var(--hdr); border-left: 1px solid var(--tipline); border-top: 1px solid var(--tipline); transform: rotate(45deg); }
+  #tip.up::before { top: auto; bottom: -6px; transform: rotate(225deg); }
 
   #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--errbg); color: var(--text); z-index: 20;
     border: 1px solid var(--live); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0;
@@ -696,6 +783,9 @@
   #songWinList { flex: 1; overflow: auto; margin: 0; border: 0; border-radius: 0; max-height: none; }
   #songWinSrc { font-size: 11px; color: var(--muted); padding: 4px 12px 6px; border-top: 1px solid var(--line); }
   #dlgPrefs { width: min(560px, 95vw); }
+  #dlgPrefs .ytfind { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; }
+  #dlgPrefs .ytfind .icon { flex: none; white-space: nowrap; font-size: 13px; padding: 6px 10px; }
+  #dlgPrefs .ytfind .muted { flex: 1 1 220px; font-size: 12px; }
   #dlgPrefs label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
   #toast.good { background: var(--okbg); border-color: var(--ok); }
   /* ---- Updatemelding (rechtsonder) ---- */
@@ -751,6 +841,10 @@
   .tile .num { background: var(--ring); color: var(--accent); border-radius: 999px; padding: 1px 8px; }
   .tile.live { border-color: var(--live); box-shadow: 0 0 0 2px var(--live); }
   .tile.live::after { border-radius: 999px; padding: 2px 8px; }
+  .tile.chosen { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .tile.chosen::after { border-radius: 999px; padding: 2px 7px; }
+  .tile.adj { border-color: transparent; outline: 2px dashed var(--warn); outline-offset: -1px; }   /* outline: tegel wordt niet groter */
+  .tile.adj::after { border-radius: 999px; padding: 2px 8px; }
   .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }   /* onderweg gaat voor LIVE */
   .chip, .trk, .icon { border-radius: 9px; }
   .chip { background: var(--panel); font-weight: 500; }
@@ -797,7 +891,7 @@
   dialog h3, #tourTitle { display: flex; align-items: center; gap: 10px; }
   dialog h3 > .ic:first-child, #tourTitle > .ic:first-child { width: 30px; height: 30px; padding: 6px; border-radius: 8px; }
   .card h2 > .ic:first-child, .card h2 > .lblpre > .ic:first-child { width: 22px; height: 22px; padding: 4px; border-radius: 6px; margin-right: 4px; }
-  .ic:is([data-i="keyboard"], [data-i="gamepad"], [data-i="settings"], [data-i="plus"], [data-i="external"], [data-i="x"]) { --tile: #64748b; }
+  .ic:is([data-i="keyboard"], [data-i="gamepad"], [data-i="sticks"], [data-i="settings"], [data-i="plus"], [data-i="external"], [data-i="x"]) { --tile: #64748b; }
   .ic:is([data-i="maximize"], [data-i="tablet"], [data-i="osd"], [data-i="locate"], [data-i="panel-top"]) { --tile: #2563eb; }
   .ic:is([data-i="save"], [data-i="download"], [data-i="upload"]) { --tile: #0891b2; }
   .ic:is([data-i="video"], [data-i="camera"], [data-i="wand"], [data-i="pin"], [data-i="link"]) { --tile: #4f46e5; }
@@ -848,6 +942,8 @@
   .dpad .btn .ic { width: 22px; height: 22px; stroke-width: 2.4; }
   .osdpad .icon .ic { width: 20px; height: 20px; stroke-width: 2.4; }
   .tilectl > .ic { opacity: .7; }
+  #tileSize { width: 170px; }
+  #tileSizeV { min-width: 46px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   #presetSearch { padding-left: 30px; background-repeat: no-repeat; background-position: 9px 50%; background-size: 15px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a7' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E"); }
 </style>
@@ -909,6 +1005,7 @@
   <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
   <symbol id="i-locate" viewBox="0 0 24 24"><path d="M2 12h3M19 12h3M12 2v3M12 19v3"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-sticks" viewBox="0 0 24 24"><circle cx="6" cy="12" r="4.5"/><circle cx="18" cy="12" r="4.5"/><path d="M3.8 12h4.4M18 9.8v4.4"/></symbol>
   <symbol id="i-width" viewBox="0 0 24 24"><path d="m18 8 4 4-4 4M6 8l-4 4 4 4M2 12h20"/></symbol>
   <symbol id="i-panel-top" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></symbol>
   <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></symbol>
@@ -996,7 +1093,7 @@
           <button class="icon tbtn" id="tilePlus" aria-label="Meer tegels">+</button>
         </div>
         <label class="tilectl" title="Tegelgrootte (wordt automatisch opgeslagen)">
-          <span>Grootte</span> <svg class="ic sm" data-i="image" aria-hidden="true"><use href="#i-image"/></svg><input type="range" id="tileSize" min="100" max="320" value="170" style="width:90px"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg>
+          <span>Grootte</span> <svg class="ic sm" data-i="image" aria-hidden="true"><use href="#i-image"/></svg><input type="range" id="tileSize" min="100" max="320" value="170"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg><span id="tileSizeV">170 px</span>
         </label>
         <input type="text" id="presetSearch" placeholder="Zoek preset" aria-label="Presets zoeken op naam of nummer" autocomplete="off">
         <button class="icon" id="btnOrderReset" style="white-space:nowrap;padding:5px 10px;font-size:13px" hidden title="Eigen volgorde van de tegels weghalen (terug naar 1, 2, 3 …)"><svg class="ic" data-i="reset" aria-hidden="true"><use href="#i-reset"/></svg> Volgorde</button>
@@ -1025,36 +1122,39 @@
       <div id="ctrlBody" class="foldbody">
 
       <div class="dpad" id="dpad">
-        <button class="btn" data-dir="leftup" aria-label="Linksboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-45deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="up" aria-label="Omhoog"><svg class="ic" data-i="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="rightup" aria-label="Rechtsboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(45deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="left" aria-label="Links"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-90deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn sm" id="btnHome" title="Home: naar de beginpositie" aria-label="Home"><svg class="ic" data-i="home" aria-hidden="true"><use href="#i-home"/></svg></button>
-        <button class="btn" data-dir="right" aria-label="Rechts"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(90deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="leftdown" aria-label="Linksonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-135deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="down" aria-label="Omlaag"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="rightdown" aria-label="Rechtsonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(135deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="leftup" data-tipk="dir" aria-label="Linksboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-45deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="up" data-tipk="dir" aria-label="Omhoog"><svg class="ic" data-i="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="rightup" data-tipk="dir" aria-label="Rechtsboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(45deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="left" data-tipk="dir" aria-label="Links"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-90deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn sm" id="btnHome" data-tipk="home" aria-label="Home"><svg class="ic" data-i="home" aria-hidden="true"><use href="#i-home"/></svg></button>
+        <button class="btn" data-dir="right" data-tipk="dir" aria-label="Rechts"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(90deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="leftdown" data-tipk="dir" aria-label="Linksonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-135deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="down" data-tipk="dir" aria-label="Omlaag"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="rightdown" data-tipk="dir" aria-label="Rechtsonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(135deg)"><use href="#i-arrow"/></svg></button>
       </div>
       <div class="pair">
-        <button class="btn sm" data-zoom="in"><svg class="ic" data-i="zoom-in" aria-hidden="true"><use href="#i-zoom-in"/></svg> Zoom +</button>
-        <button class="btn sm" data-zoom="out"><svg class="ic" data-i="zoom-out" aria-hidden="true"><use href="#i-zoom-out"/></svg> Zoom −</button>
-        <button class="btn sm" data-focus="far">Focus ver</button>
-        <button class="btn sm" data-focus="near">Focus dichtbij</button>
+        <button class="btn sm" data-zoom="in" data-tipk="zoom_in"><svg class="ic" data-i="zoom-in" aria-hidden="true"><use href="#i-zoom-in"/></svg> Zoom +</button>
+        <button class="btn sm" data-zoom="out" data-tipk="zoom_out"><svg class="ic" data-i="zoom-out" aria-hidden="true"><use href="#i-zoom-out"/></svg> Zoom −</button>
+        <button class="btn sm" data-focus="far" data-tipk="focus_far">Focus ver</button>
+        <button class="btn sm" data-focus="near" data-tipk="focus_near">Focus dichtbij</button>
       </div>
       <div class="tri">
-        <button class="btn sm" id="afOn">AF auto</button>
-        <button class="btn sm" id="afOff">AF hand</button>
-        <button class="btn sm" id="afPush">One-push</button>
+        <button class="btn sm" id="afOn" data-tipk="af_on">AF auto</button>
+        <button class="btn sm" id="afOff" data-tipk="af_off">AF hand</button>
+        <button class="btn sm" id="afPush" data-tipk="af_push">One-push</button>
       </div>
-      <div class="trkline"><button class="btn trackbtn" id="btnTrack" title="De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan)"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Persoon volgen</button>
-        <button class="btn" id="btnTrackSet" title="Kader en persoon kiezen: instellen waar de persoon in beeld moet blijven en aanklikken wie gevolgd wordt"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg> Kader…</button></div>
+      <div class="trkline"><button class="btn trackbtn" id="btnTrack" data-tipk="track"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Persoon volgen</button>
+        <button class="btn" id="btnTrackSet" data-tipk="trackset"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg> Kader…</button></div>
       <div class="small" id="trackInfo" style="margin-top:4px"></div>
       <details ontoggle="fitDocked()">
         <summary>Snelheden</summary>
-        <label class="sl">Pan <input type="range" id="spPan" min="1" max="24" value="8"><span id="vPan"></span></label>
-        <label class="sl">Tilt <input type="range" id="spTilt" min="1" max="20" value="7"><span id="vTilt"></span></label>
-        <label class="sl">Zoom <input type="range" id="spZoom" min="1" max="7" value="4"><span id="vZoom"></span></label>
-        <label class="sl">Focus <input type="range" id="spFocus" min="1" max="7" value="3"><span id="vFocus"></span></label>
+        <label class="sl" data-tipk="spPan">Pan <input type="range" id="spPan" min="1" max="24" value="8"><span id="vPan"></span></label>
+        <label class="sl" data-tipk="spTilt">Tilt <input type="range" id="spTilt" min="1" max="20" value="7"><span id="vTilt"></span></label>
+        <label class="sl" data-tipk="spZoom">Zoom <input type="range" id="spZoom" min="1" max="7" value="4"><span id="vZoom"></span></label>
+        <label class="sl" data-tipk="spFocus">Focus <input type="range" id="spFocus" min="1" max="7" value="3"><span id="vFocus"></span></label>
+        <label class="sl" data-tipk="spAccel">Acceleratie <input type="range" id="spAccel" min="0" max="100" step="5" value="0"><span id="vAccel"></span></label>
+        <label class="slchk" data-tipk="spBrake"><input type="checkbox" id="spBrake"> Ook geleidelijk afremmen bij loslaten</label>
+        <p class="small muted zsinfo" id="zsInfo" data-tipk="zoomScale">Pijlen en pijltjestoetsen draaien vanzelf langzamer als je inzoomt<span id="zsPct"></span></p>
       </details>
       </div>
     </div>
@@ -1072,14 +1172,22 @@
       <div class="small" id="padLive" style="margin-top:4px"></div>
       <div class="padset">
         <div class="padtogs">
-        <button class="padtog" id="padSoft" aria-pressed="false" title="Zachte beweging: camera trekt geleidelijk op (ca. 1 s naar topsnelheid) en reageert fijner rond het midden van de stick"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg> Zachte beweging <span class="pstate">uit</span></button>
-        <button class="padtog" id="padPanOnly" aria-pressed="false" title="Pan only: linker stick draait alleen links/rechts, omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm."><svg class="ic" aria-hidden="true"><use href="#i-width"/></svg> Pan only <span class="pstate">uit</span></button>
-        <button class="padtog" id="padInvY" aria-pressed="false" title="Tilt omkeren: stick omhoog = camera omlaag. Niet beschikbaar zolang Pan only aan staat."><svg class="ic" aria-hidden="true" style="transform: rotate(90deg)"><use href="#i-swap"/></svg> Tilt omkeren <span class="pstate">uit</span></button>
+        <div class="padsoft" id="padSoftBox" data-tipk="padSoft">
+          <div class="psrow"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg> Zachte beweging <span class="pval" id="padSoftV">50%</span></div>
+          <input type="range" id="padSoft" min="0" max="100" step="5" value="50" aria-label="Zachte beweging (0 = uit, 100 = extra zacht)">
+          <div class="psscale" aria-hidden="true"><span>Uit</span><span>Zacht</span><span>Extra zacht</span></div>
         </div>
-        <label>Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
+        <button class="padtog" id="padSplit" aria-pressed="false" data-tipk="padSplit"><svg class="ic" aria-hidden="true"><use href="#i-sticks"/></svg> Gescheiden sticks <span class="pstate">uit</span></button>
+        <button class="padtog" id="padPanOnly" aria-pressed="false" data-tipk="padPanOnly"><svg class="ic" aria-hidden="true"><use href="#i-width"/></svg> Pan only <span class="pstate">uit</span></button>
+        <button class="padtog" id="padInvY" aria-pressed="false" data-tipk="padInvY"><svg class="ic" aria-hidden="true" style="transform: rotate(90deg)"><use href="#i-swap"/></svg> Tilt omkeren <span class="pstate">uit</span></button>
+        </div>
+        <label data-tipk="padMax">Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
       </div>
-      <label class="small padprofcard">Knoppenprofiel <select class="padprof" id="padProfCard" title="Welke knoppenindeling deze controller op dit scherm gebruikt"></select></label>
-      <button class="icon" id="btnMap2" style="margin-top:6px"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling instellen…</button>
+      <label class="small padprofcard" data-tipk="padProf">Knoppenprofiel <select class="padprof" id="padProfCard"></select></label>
+      <div class="padbtns">
+        <button class="icon" id="btnMap2" data-tipk="padMap"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling instellen…</button>
+        <button class="icon" id="btnCal" data-tipk="padCal"><svg class="ic" data-i="sticks" aria-hidden="true"><use href="#i-sticks"/></svg> Sticks afstellen…</button>
+      </div>
       </div>
     </div>
   </aside>
@@ -1160,11 +1268,7 @@
   <p class="small" style="margin:6px 0 10px">Elk profiel heeft een eigen knoppenindeling, bijvoorbeeld per persoon. Welk profiel actief is,
     onthoudt elk scherm zelf; de profielen zelf zijn op alle schermen beschikbaar.</p>
   <p class="small" style="margin:0">Druk op een knop van de controller om de regel te laten oplichten. Zolang dit venster open is, bestuurt de controller niets.</p>
-  <div class="map">
-    <b>Linker stick</b><span>Pan / tilt: hoe verder je duwt, hoe sneller (met <i>Pan only</i> in de Xbox-kaart alleen links/rechts)</span>
-    <b>RT / LT</b><span>Zoom in / uit: hoe dieper je drukt, hoe sneller</span>
-    <b>Rechter stick ↑ / ↓</b><span>Focus ver / dichtbij (zet autofocus uit)</span>
-  </div>
+  <div class="map" id="padStickMap"></div>
   <p class="small" style="margin:8px 0 0">Per knop instelbaar voor profiel <b id="mapProfName">Standaard</b>. <b>Shift</b> en <b>Opslaan</b> werken
     als je ze ingedrukt houdt en dan een presetknop drukt (opslaan trilt ter bevestiging).</p>
   <div class="map" id="padMap"></div>
@@ -1173,6 +1277,36 @@
     <button class="icon" id="padReset">Standaard terugzetten</button>
   </div>
   <div class="actions"><span></span><button class="primary" id="btnMapClose">Sluiten</button></div>
+</dialog>
+
+<dialog id="dlgCal" aria-labelledby="calTitle">
+  <h3 id="calTitle"><svg class="ic" data-i="sticks" aria-hidden="true"><use href="#i-sticks"/></svg> Sticks afstellen</h3>
+  <p class="small" style="margin:0 0 10px">Geldt voor <b>alle schermen en knoppenprofielen</b> (in deze workspace). Zolang dit venster open is, bestuurt de controller niets; beweeg een stick om te zien waar hij staat.</p>
+  <div class="caltabs" role="tablist">
+    <button role="tab" data-side="left" id="calTabL">Linker stick</button><button role="tab" data-side="right" id="calTabR">Rechter stick</button>
+  </div>
+  <p class="small muted" id="calUse" style="margin:8px 0 6px"></p>
+  <div class="calgrid">
+    <div class="calstick">
+      <svg id="calLive" viewBox="0 0 120 120" role="img" aria-label="Stand van de stick">
+        <circle cx="60" cy="60" r="52" class="cl-ring"/><path d="M60 8v104M8 60h104" class="cl-axis"/>
+        <rect id="calDz" class="cl-dz" x="60" y="60" width="0" height="0"/>
+        <circle id="calDot" cx="60" cy="60" r="6" class="cl-dot"/>
+      </svg>
+      <div class="small muted" id="calLiveTxt">Geen controller</div>
+    </div>
+    <div class="calcurve">
+      <div class="calmodes" role="group" aria-label="Curve">
+        <button class="calmode" data-curve="standaard">Standaard</button><button class="calmode" data-curve="vertraagd">Vertraagd</button>
+        <button class="calmode" data-curve="direct">Direct</button><button class="calmode" data-curve="eigen">Eigen</button>
+      </div>
+      <svg id="calGraph" viewBox="0 0 220 150" role="img" aria-label="Stickbeweging naar camerabeweging"></svg>
+      <div class="small muted" id="calGraphTxt"></div>
+    </div>
+  </div>
+  <label class="sl calsl" data-tipk="calDz">Dode zone <input type="range" id="calDzR" min="0" max="40" step="1"><span id="calDzV"></span></label>
+  <label class="sl calsl" data-tipk="calMax">Maximaal <input type="range" id="calMaxR" min="50" max="100" step="5"><span id="calMaxV"></span></label>
+  <div class="actions"><button class="icon" id="calReset">Standaard terugzetten</button><button class="primary" id="calClose">Sluiten</button></div>
 </dialog>
 
 <dialog id="dlgBackup">
@@ -1282,6 +1416,10 @@
       starten en stoppen van de stream gebeurt buiten deze app.</div>
     <label class="small" style="display:block;margin-top:10px">Kanaal <span class="muted">(geldt voor alle schermen)</span>
       <input type="text" id="ytChannel" placeholder="@kerknaam, kanaal-id (UC…), kanaallink of link naar de stream" maxlength="200"></label>
+    <div class="ytfind">
+      <button class="icon" id="ytFindId" type="button"><svg class="ic" data-i="external" aria-hidden="true"><use href="#i-external"/></svg> Kanaal-ID opzoeken op YouTube</button>
+      <span class="muted">Opent youtube.com/account_advanced: daar staat je kanaal-ID (UC…) als je ingelogd bent. Kopieer en plak hem hierboven.</span>
+    </div>
     <div class="small" id="ytPrefStatus" style="margin-top:6px"></div>
   </div>
   <div class="actions"><span></span>
@@ -1420,6 +1558,7 @@
   </div>
 </div>
 <div id="toast"></div>
+<div id="tip" role="tooltip" hidden></div>
 <nav id="tabBar" aria-label="Camera kiezen"></nav>
 <dialog id="dlgPin">
   <h3><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Pincode</h3>
@@ -1572,6 +1711,7 @@ let view = null;            // camera-id of ALL
 let ctrlCam = null;         // camera in zijbalk (bij ALL: laatst gebruikte)
 let storeMode = false;
 let lastPreset = {};
+let adjusted = {};          // camId -> true: na de laatst gekozen preset met de hand (of door volgen) bewogen (server: STATE.adjusted)
 let thumbVer = {};          // cache-buster per cam_n
 let serverAddr = location.host;
 let track = {};             // camId -> {on, status, fps, detector}
@@ -1609,7 +1749,9 @@ async function cmd(action, args = {}, camId = ctrlCam) {
 
 /* ================= config ================= */
 async function loadConfig() {
+  const keepCal = typeof calKeep === "function" ? calKeep() : null;   // sticks afstellen: niet terugspringen tijdens slepen
   cfg = await (await fetch("/api/config")).json();
+  if (keepCal) { cfg.pad_cal = keepCal.cal; cfg.pad_cal_set = keepCal.set; }
   cfg.preset_count ||= 12;
   if (!cfg.tile_size && store.get("ptzTile")) cfg.tile_size = +store.get("ptzTile");
   applyTile(cfg.tile_size || 170); $("#tileCount").value = cfg.preset_count;
@@ -1618,6 +1760,7 @@ async function loadConfig() {
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
   render(); renderBackup(); renderPadProfiles(); renderPadMap(); renderLoad(); renderCap(); renderKeyHints(); trkRender();
+  if ($("#dlgCal").open) calRender();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -1663,7 +1806,7 @@ function renderTabs() {
 // Kies welke camera bediend wordt (pijltjes, 1–9, controller) zonder de weergave "Alle camera's" te verlaten.
 function selectCam(c, origin) {
   if (!c) return;
-  if (pressed.size) { pressed.clear(); cmd("stop"); }       // geen beweging laten doorlopen op de vorige camera
+  if (pressed.size || hand.dir) { pressed.clear(); handHalt(true); }   // geen beweging laten doorlopen op de vorige camera
   ctrlCam = c.id;
   if (view !== ALL) view = c.id;
   render(); toast((origin === "pad" ? "Controller: " : "Camera: ") + c.name, true);
@@ -1676,11 +1819,18 @@ function setView(id) {
   render();
 }
 
+/* 🧑 status van de laatst gekozen preset: rood LIVE alleen als de camera volgens de videomixer IN BEELD is,
+   anders (ook zonder videomixer) indigo GESELECTEERD; daarna bewogen = AANGEPAST (amber). "" = niet de laatst gekozen preset. */
+function presetState(camId, n) {
+  if (lastPreset[camId] !== n) return "";
+  if (adjusted[camId]) return "adj";             // 🧑 na de preset bewogen (handbediening of volgen): AANGEPAST
+  return midiOnAir(camId) ? "live" : "chosen";
+}
 function tile(c, n) {
   const b = document.createElement("button");
-  const live = lastPreset[c.id] === n;
   const mv = moving[c.id] && (moving[c.id].n ?? lastPreset[c.id]) === n;
-  b.className = "tile" + (live ? " live" : "") + (mv ? " moving" : "");
+  const st = mv ? "moving" : presetState(c.id, n);   // ONDERWEG… gaat voor alles
+  b.className = "tile" + (st ? " " + st : "");
   const name = c.presets[n];
   const col = (c.preset_colors || {})[n];
   const hk = c.id === ctrlCam && n <= 9 ? keyOf("preset_" + n) : "";
@@ -1730,11 +1880,11 @@ function renderPresets() {
     cols.style.setProperty("--ncol", Math.min(cfg.cameras.length, 4));
     cfg.cameras.forEach((c, i) => {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "") + (midiOnAir(c.id) ? " onair" : "") + (presetLocked(c.id) ? " locked" : "");
-      const ln = lastPreset[c.id];
+      const ln = lastPreset[c.id], lst = ln ? presetState(c.id, ln) : "";
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
         ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}
         ${presetLocked(c.id) ? `<span class="locktag" title="In beeld en op slot: presets en home zijn geblokkeerd, bewegen met de controller kan wel">${ic("lock")}SLOT</span>` : ""}
-        <span class="livename">${ln ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
+        <span class="livename${lst ? " " + lst : ""}">${!ln ? "" : lst === "adj" ? `Aangepast (was ${esc(c.presets[ln] || "preset " + ln)})` : (lst === "live" ? "LIVE: " : "Geselecteerd: ") + esc(c.presets[ln] || "preset " + ln)}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
         if (e.target.closest(".lockbtn")) { e.stopPropagation(); return toggleLock(c.id); }
@@ -1763,6 +1913,7 @@ function renderPresets() {
 
 function renderSide() {
   const c = ctrl();
+  if (c && zsCam !== c.id) zsLoad();
   $("#camLabel").innerHTML = c ? `<span class="lblpre">Bediening · </span>${esc(c.name)}` : "Bediening";
   const t = c ? track[c.id] || {} : {};
   const b = $("#btnTrack");
@@ -1771,7 +1922,7 @@ function renderSide() {
   b.classList.toggle("err", bad);
   b.innerHTML = ic(bad ? "alert" : "track") + (!t.on ? " Persoon volgen"
     : bad ? ` Volgen mislukt · ${esc(t.status || "fout")}` : ` Volgt persoon · ${esc(t.status || "")}`);
-  b.title = bad ? (t.detail || t.status || "") : "De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan)";
+  b.dataset.tip = bad ? (t.detail || t.status || "") : "";   // reden van de fout in de tooltip (tipInit), anders de standaarduitleg
   $("#trackInfo").textContent = cfg.tracking_error ? "Volgen niet beschikbaar: " + cfg.tracking_error
     : bad && t.detail ? t.detail
     : t.on && t.fps ? [
@@ -1799,7 +1950,8 @@ async function presetClick(camId, n, el) {
     toast(`${camById(camId)?.name || "Camera"} is in beeld en staat op slot: geen preset. Bewegen met de controller kan wel.`);
     return;
   }
-  lastPreset[camId] = n;            // direct feedback; server bevestigt via event
+  if (hand.dir && hand.cam === camId) handHalt(false);   // preset kiezen: optrekken/afremmen direct stoppen (preset neemt het over)
+  lastPreset[camId] = n; delete adjusted[camId];   // direct feedback; server bevestigt via event
   renderPresets(); renderSide();
   await cmd("preset_call", { n }, camId);
 }
@@ -1875,11 +2027,14 @@ function hold(el, start, stop) {
   const up = () => { if (!active) return; active = false; el.classList.remove("held"); stop(); };
   ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => el.addEventListener(ev, up));
 }
-const moved = () => { if (lastPreset[ctrlCam]) { delete lastPreset[ctrlCam]; renderPresets(); } };
-$$("#dpad [data-dir]").forEach(b => hold(b, () => { moved(); cmd("move", { dir: b.dataset.dir, pan: sp("#spPan"), tilt: sp("#spTilt") }); }, () => cmd("stop")));
-$$("[data-zoom]").forEach(b => hold(b, () => { moved(); cmd("zoom", { dir: b.dataset.zoom, speed: sp("#spZoom") }); }, () => cmd("zoom", { dir: "stop" })));
+// 🧑 Bewegen na een preset (pan/tilt/home, ook volgen) maakt de tegel AANGEPAST. De server houdt dat bij
+// (STATE.adjusted, SSE "preset" met adjusted: true), zodat alle schermen hetzelfde tonen. Zoom/focus tellen niet mee.
+$$("#dpad [data-dir]").forEach(b => hold(b, () => handMove(b.dataset.dir), () => handMove(keyDir())));   // loslaten: terug naar wat de pijltjestoetsen doen
+$$("[data-zoom]").forEach(b => hold(b, () => { cmd("zoom", { dir: b.dataset.zoom, speed: sp("#spZoom") }); }, () => zoomStop()));
+// zoom gestopt: daarna het percentage van "snelheid volgt de zoom" opnieuw ophalen (server leest de zoom na 0,4 s)
+function zoomStop(camId = ctrlCam) { const j = cmd("zoom", { dir: "stop" }, camId); setTimeout(() => zsLoad(true), 900); return j; }
 $$("[data-focus]").forEach(b => hold(b, () => { setAF(false); cmd("focus", { dir: b.dataset.focus, speed: sp("#spFocus") }); }, () => cmd("focus", { dir: "stop" })));
-$("#btnHome").onclick = () => { moved(); cmd("home"); };
+$("#btnHome").onclick = () => { cmd("home"); };
 function setAF(on) { $("#afOn").classList.toggle("on", on); $("#afOff").classList.toggle("on", !on); }
 $("#afOn").onclick = async () => { if ((await cmd("autofocus", { on: true }))?.ok) setAF(true); };
 $("#afOff").onclick = async () => { if ((await cmd("autofocus", { on: false }))?.ok) setAF(false); };
@@ -1905,9 +2060,10 @@ function saveTilesSoon() {
 }
 function applyTile(v) {
   v = Math.max(100, Math.min(320, +v || 170));
-  $("#tileSize").value = v;
+  $("#tileSize").value = v; $("#tileSizeV").textContent = v + " px";
   document.documentElement.style.setProperty("--tile", v + "px");
-  document.documentElement.style.setProperty("--ctile", Math.round(v * 0.68) + "px");
+  // kolommen van Alle camera's: kleinere tegels; 0,82 zodat Grootte 170 er ongeveer uitziet als vroeger met 1fr (±140 px)
+  document.documentElement.style.setProperty("--ctile", (v * 0.82).toFixed(2) + "px");   // niet afronden: anders doen sommige stappen niets
 }
 $("#tileSize").oninput = () => { applyTile($("#tileSize").value); cfg.tile_size = +$("#tileSize").value; saveTilesSoon(); wallFitSoon(); };
 applyTile(store.get("ptzTile") || 170);   // tot de instellingen geladen zijn
@@ -1927,12 +2083,99 @@ $("#tileCount").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault()
 /* ================= toetsenbord ================= */
 const pressed = new Set();   // vastgehouden richtingen: up/down/left/right
 const anyDialog = () => $$("dialog").some(d => d.open) || !$("#tour").hidden;   // rondleiding blokkeert ook toetsen en controller
-const sendMove = () => {
+const keyDir = () => {   // richting uit de vastgehouden pijltjes ("" = geen)
   const d = [...pressed];
   const v = d.includes("up") ? "up" : d.includes("down") ? "down" : "";
   const h = d.includes("left") ? "left" : d.includes("right") ? "right" : "";
-  cmd("move", { dir: (h && v) ? h + v : (h || v), pan: sp("#spPan"), tilt: sp("#spTilt") });
+  return (h && v) ? h + v : (h || v);
 };
+const sendMove = () => handMove(keyDir());
+/* 🧑 Acceleratie (pijlknoppen en pijltjestoetsen; de controller heeft Zachte beweging): schuif #spAccel 0–100 %
+   (per scherm). 0 = direct op de ingestelde snelheid (zoals vroeger). Anders in stapjes van ACC_TICK ms omhoog tot de
+   ingestelde snelheid, 100 % ≈ ACC_FULL ms; de server schaalt daarna nog met de zoom (zs). Vinkje #spBrake: bij loslaten
+   in stapjes omlaag en dan stop. Stop (Spatie/stop, Alles stoppen, venster kwijt, preset kiezen, andere camera) is altijd direct. */
+const ACC_TICK = 85, ACC_FULL = 1500;   // 85 ms = hooguit ~12 commando's per seconde
+const hand = { dir: "", cam: null, p: 0, t: 0, sent: "", timer: 0, braking: false };
+const accLevel = () => Math.max(0, Math.min(100, +$("#spAccel").value || 0));
+function handSend() {
+  const P = Math.max(1, Math.round(hand.p)), T = Math.max(1, Math.round(hand.t)), k = `${hand.dir} ${P}/${T}`;
+  if (k === hand.sent) return;   // alleen bij verandering
+  hand.sent = k;
+  moveCmd(hand.dir, P, T, hand.cam);
+}
+function handTick() {
+  const tp = sp("#spPan"), tt = sp("#spTilt"), n = Math.max(1, ACC_FULL * accLevel() / 100 / ACC_TICK);   // stapjes tot topsnelheid
+  if (hand.braking) {
+    hand.p -= tp / n; hand.t -= tt / n;
+    if (hand.p <= 1 && hand.t <= 1) return handHalt(true);   // laagste stand bereikt: nu echt stoppen
+  } else {
+    hand.p = Math.min(tp, hand.p + tp / n); hand.t = Math.min(tt, hand.t + tt / n);
+  }
+  handSend();
+  if (!hand.braking && hand.p >= tp && hand.t >= tt) { clearInterval(hand.timer); hand.timer = 0; }   // op snelheid
+}
+// richting omkeren (links ↔ rechts, omhoog ↔ omlaag) = opnieuw optrekken vanaf de laagste stand
+const handReversed = (a, b) => ["left", "right"].some(x => a.includes(x) && b.includes(x === "left" ? "right" : "left"))
+  || ["up", "down"].some(x => a.includes(x) && b.includes(x === "up" ? "down" : "up"));
+function handMove(dir) {
+  if (!dir) return handRelease();
+  const cam = ctrlCam; if (!cam) return;
+  if (hand.dir && hand.cam !== cam) handHalt(true);           // andere camera: de vorige eerst stil
+  const old = hand.dir;                                       // ook tijdens afremmen: omkeren = opnieuw optrekken
+  hand.cam = cam; hand.braking = false;
+  if (!accLevel()) {                                          // geen acceleratie: direct op snelheid (zoals vroeger)
+    clearInterval(hand.timer); hand.timer = 0;
+    hand.dir = dir; hand.p = sp("#spPan"); hand.t = sp("#spTilt"); hand.sent = "";
+    handSend(); return;
+  }
+  if (!hand.dir || (old && handReversed(old, dir))) { hand.p = 0; hand.t = 0; }
+  hand.dir = dir;
+  handTick();                                                  // eerste stapje meteen
+  if (hand.timer === 0 && (hand.p < sp("#spPan") || hand.t < sp("#spTilt"))) hand.timer = setInterval(handTick, ACC_TICK);
+}
+function handRelease() {
+  if (!hand.dir) return;
+  if (accLevel() && $("#spBrake").checked && (hand.p > 1 || hand.t > 1)) {   // geleidelijk afremmen
+    hand.braking = true;
+    if (!hand.timer) hand.timer = setInterval(handTick, ACC_TICK);
+    return;
+  }
+  handHalt(true);
+}
+// direct stoppen; send = stop naar de camera sturen (als die bewoog). Geeft de camera terug die bewoog.
+function handHalt(send) {
+  clearInterval(hand.timer); hand.timer = 0;
+  const c = hand.cam, was = hand.dir;
+  Object.assign(hand, { dir: "", p: 0, t: 0, sent: "", braking: false });
+  if (send && was && c) cmd("stop", {}, c);
+  return was ? c : null;
+}
+// acceleratie + afremmen (per scherm)
+function accShow() { const v = accLevel(); $("#vAccel").textContent = v ? v + "%" : "uit"; $("#spBrake").disabled = !v; }
+if (store.get("ptzAccel") != null) $("#spAccel").value = store.get("ptzAccel");
+$("#spBrake").checked = store.get("ptzAccBrake") === "1";
+accShow();
+$("#spAccel").oninput = () => { store.set("ptzAccel", String(accLevel())); accShow(); };
+$("#spBrake").onchange = () => store.set("ptzAccBrake", $("#spBrake").checked ? "1" : "0");
+/* 🧑 Snelheid volgt de zoom (pijlknoppen en pijltjestoetsen, niet de controller of volgen): de server schaalt pan/tilt
+   met de zoompositie (args zs: 1) en geeft het percentage terug (speed_scale), getoond onder Snelheden. */
+function moveCmd(dir, pan = sp("#spPan"), tilt = sp("#spTilt"), camId = ctrlCam) {
+  return cmd("move", { dir, pan, tilt, zs: 1 }, camId).then(j => { if (j && "speed_scale" in j && camId === ctrlCam) zsShow(j.speed_scale); return j; });
+}
+let zsCam = null;
+function zsShow(pct) {
+  const el = $("#zsPct"); if (!el) return;
+  el.textContent = pct == null ? "" : ` · nu ${pct}%`;
+}
+async function zsLoad(force) {   // bij een andere bediende camera en na zoomen: percentage ophalen (server leest de zoom via VISCA)
+  if (!ctrlCam || viewOnly() || (!force && zsCam === ctrlCam)) return;
+  zsCam = ctrlCam;
+  const cam = ctrlCam;
+  try {
+    const j = await (await fetch("/api/zoomscale?cam=" + encodeURIComponent(cam))).json();
+    if (cam === ctrlCam) zsShow(j.scale);
+  } catch {}
+}
 /* ---- sneltoetsen: alles instelbaar (cfg.keymap = {actie: combinatie}, camera's via cfg.cameras[i].hotkey) ---- */
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 // actie → [omschrijving, standaardtoets, groep, vasthouden?]
@@ -2030,12 +2273,12 @@ document.addEventListener("keydown", (e) => {
   e.preventDefault();
   if (e.repeat) return;
   if (KEY_ACTIONS[a][3]) holding.set(e.code, a);
-  if (["up", "down", "left", "right"].includes(a)) { pressed.add(a); moved(); sendMove(); }
-  else if (a === "zoom_in") { moved(); cmd("zoom", { dir: "in", speed: sp("#spZoom") }); }
-  else if (a === "zoom_out") { moved(); cmd("zoom", { dir: "out", speed: sp("#spZoom") }); }
+  if (["up", "down", "left", "right"].includes(a)) { pressed.add(a); sendMove(); }
+  else if (a === "zoom_in") { cmd("zoom", { dir: "in", speed: sp("#spZoom") }); }
+  else if (a === "zoom_out") { cmd("zoom", { dir: "out", speed: sp("#spZoom") }); }
   else if (a === "focus_far") cmd("focus", { dir: "far", speed: sp("#spFocus") });
   else if (a === "focus_near") cmd("focus", { dir: "near", speed: sp("#spFocus") });
-  else if (a === "home") { moved(); cmd("home"); }
+  else if (a === "home") { cmd("home"); }
   else if (a === "track") { if (ctrlCam) toggleTrack(ctrlCam); }
   else if (a === "wall") setWall(!document.body.classList.contains("wall"));
   else if (a === "youtube") ytToggle();
@@ -2043,18 +2286,18 @@ document.addEventListener("keydown", (e) => {
   else if (a === "ctrl") toggleCard("ctrlCard");
   else if (a === "pad") toggleCard("padCard");
   else if (a === "help") helpOpen();
-  else if (a === "stop") { cmd("stop"); cmd("zoom", { dir: "stop" }); }
+  else if (a === "stop") { const c = handHalt(false); cmd("stop"); if (c && c !== ctrlCam) cmd("stop", {}, c); cmd("zoom", { dir: "stop" }); }   // altijd direct
   else if (a.startsWith("preset_")) { if (ctrlCam) presetClick(ctrlCam, +a.slice(7)); }
 });
 document.addEventListener("keyup", (e) => {
   const a = holding.get(e.code); if (!a) return;
   holding.delete(e.code);
-  if (["up", "down", "left", "right"].includes(a)) { if (pressed.delete(a)) pressed.size ? sendMove() : cmd("stop"); }   // alleen als dit pijltje echt bewoog
-  else if (a === "zoom_in" || a === "zoom_out") cmd("zoom", { dir: "stop" });
+  if (["up", "down", "left", "right"].includes(a)) { if (pressed.delete(a)) sendMove(); }   // alleen als dit pijltje echt bewoog; leeg = loslaten (eventueel afremmen)
+  else if (a === "zoom_in" || a === "zoom_out") zoomStop();
   else if (a === "focus_far" || a === "focus_near") cmd("focus", { dir: "stop" });
 });
 window.addEventListener("blur", () => {
-  if (pressed.size) { pressed.clear(); cmd("stop"); }
+  pressed.clear(); handHalt(true);   // venster kwijt: direct stoppen, ook zonder afremmen
   if ([...holding.values()].some(a => a.startsWith("zoom"))) cmd("zoom", { dir: "stop" });
   if ([...holding.values()].some(a => a.startsWith("focus"))) cmd("focus", { dir: "stop" });
   holding.clear();
@@ -2262,7 +2505,10 @@ function fitWallTiles(keepBottom, free) {   // free = zelf gekozen verdeling: te
   const set = (w) => area.style.setProperty("--wt", w + "px");
   let lo = free ? WALL_TILE_MIN : Math.floor(base), hi = Math.min(WALL_TILE_MAX, gw);
   area.classList.add("wfit"); set(lo);
-  if (hi <= lo || !fits()) { if (!free) wallTileReset(); return; }   // zelfs de kleinste past niet: zoals het was
+  if (!fits()) {   // ingestelde Grootte past niet: kleiner (ondergrens = min(ingesteld, wat past)), nooit voorbij de onderrand
+    hi = lo; lo = WALL_TILE_MIN; set(lo);
+    if (!fits()) { if (!free) wallTileReset(); return; }   // zelfs de kleinste past niet: zoals het was
+  } else if (hi <= lo) return;
   while (hi - lo > 1) { const m = (lo + hi) >> 1; set(m); if (fits()) lo = m; else hi = m; }
   set(lo);
   if (keepBottom) {   // ruimte die over is boven de camera's, zodat ze onderaan blijven
@@ -2289,11 +2535,15 @@ function fitDocked() {
       z = nz; body.style.zoom = z.toFixed(3);
     }
     while (card.scrollHeight > card.clientHeight + 1 && z > 0.5) { z = Math.max(0.5, z * 0.97); body.style.zoom = z.toFixed(3); }
-    fits.push([body, z]);
+    fits.push([body, z, card]);
   }
-  if (fits.length < 2) return;
-  const zmin = Math.min(...fits.map(([, z]) => z)).toFixed(3);
-  fits.forEach(([body]) => { body.style.zoom = zmin; });
+  if (fits.length >= 2) {
+    const zmin = Math.min(...fits.map(([, z]) => z)).toFixed(3);
+    fits.forEach(([body]) => { body.style.zoom = zmin; });
+  }
+  // nog steeds te hoog bij zoom 0,5: laat de kaart scrollen (titelbalk blijft staan), zodat alles bereikbaar blijft
+  fits.forEach(([, , card]) => card.classList.toggle("wscroll", card.scrollHeight > card.clientHeight + 1));
+  $$("aside .foldcard.wscroll").forEach(c => { if (!c.classList.contains("docked") || c.classList.contains("collapsed")) c.classList.remove("wscroll"); });
 }
 // inhoud kan veranderen (Snelheden open, controller verbonden, volgstatus): af en toe opnieuw passend maken
 setInterval(() => { if (isWall()) fitDocked(); }, 1000);
@@ -2633,13 +2883,21 @@ $$("#trkEdgeL, #trkEdgeR, #trkAim").forEach(h => {
 });
 
 /* ================= Xbox-controller (Gamepad API) ================= */
+// Zachte beweging 0–100 (per scherm). Oude schakelaar padSoft omzetten: "0" = uit → 0, aan/standaard → 50
+function padSoftInit() {
+  const v = store.get("padSoftLevel");
+  if (v !== null && v !== undefined && v !== "" && isFinite(+v)) return Math.max(0, Math.min(100, Math.round(+v)));
+  return store.get("padSoft") === "0" ? 0 : 50;
+}
 const pad = {
   idx: null, prev: [], last: { move: null, zoom: null, focus: null }, lastSend: 0, fine: false,
-  invY: store.get("padInvY") === "1", panOnly: store.get("padPanOnly") === "1", soft: store.get("padSoft") !== "0", max: +(store.get("padMax") || 18),
+  invY: store.get("padInvY") === "1", panOnly: store.get("padPanOnly") === "1", soft: padSoftInit(), max: +(store.get("padMax") || 18),
+  split: store.get("padSplit") === "1",   // 🧑 Gescheiden sticks: linker stick pan, rechter stick tilt (standaard uit)
 };
 const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 // Knopindeling staat in cameras.json (cfg.pad_map), zodat alle schermen dezelfde indeling hebben.
-// Sticks en triggers liggen vast: linker stick pan/tilt, RT/LT zoom, rechter stick ↑↓ focus.
+// Sticks en triggers hebben een vaste functie: linker stick pan/tilt, RT/LT zoom, rechter stick ↑↓ focus (Gescheiden sticks: rechts = tilt).
+// Hoe ze reageren (dode zone, curve, maximaal) staat in cfg.pad_cal (Sticks afstellen, #dlgCal).
 const PAD_BUTTONS = [
   ["A", "A"], ["B", "B"], ["X", "X"], ["Y", "Y"], ["LB", "LB"], ["RB", "RB"],
   ["UP", "D-pad ↑"], ["DOWN", "D-pad ↓"], ["LEFT", "D-pad ←"], ["RIGHT", "D-pad →"],
@@ -2647,7 +2905,7 @@ const PAD_BUTTONS = [
 ];
 const PAD_DEFAULT = {
   buttons: { A: "preset:1", B: "preset:2", X: "preset:3", Y: "preset:4", LB: "shift", RB: "track",
-             UP: "", DOWN: "home", LEFT: "cam_prev", RIGHT: "cam_next",
+             UP: "focus_far", DOWN: "focus_near", LEFT: "cam_prev", RIGHT: "cam_next",   // 🧑 17 nov 2026: D-pad ↑/↓ = focus (was ↓ home)
              L3: "fine", R3: "af", VIEW: "stopall", MENU: "store" },
   shift: 4,
 };
@@ -2709,8 +2967,9 @@ const padMap = () => {
 function padActionOptions() {
   const o = [["", "— niets —"], ["cam_prev", "Vorige camera"], ["cam_next", "Volgende camera"]];
   cfg.cameras.forEach((c, i) => o.push(["cam:" + (i + 1), "Camera: " + c.name]));
+  o.push(["focus_far", "Focus ver (vasthouden)"], ["focus_near", "Focus dichtbij (vasthouden)"]);
   o.push(["home", "Home"], ["track", "Persoon volgen aan/uit"], ["af", "Autofocus (one-push)"], ["fine", "Fijn-modus aan/uit"],
-         ["pan_only", "Pan only aan/uit"], ["stopall", "Alles stoppen"]);
+         ["pan_only", "Pan only aan/uit"], ["split", "Gescheiden sticks aan/uit"], ["stopall", "Alles stoppen"]);
   o.push(["shift", "Shift (vasthouden: presets +N)"], ["store", "Opslaan (vasthouden + presetknop)"]);
   const pn = presetNums(); for (let n = 1; pn.length < 8 && n <= 254; n++) if (!RESERVED(n) && !pn.includes(n)) pn.push(n);
   pn.forEach(n => o.push(["preset:" + n, `Preset ${n}`]));
@@ -2732,7 +2991,20 @@ async function savePadMap() {
   await saveConfig(); toast(`Knopindeling opgeslagen (${padProfileName()})`, true);
 }
 $("#padShift").onchange = savePadMap;
-const openMap = () => { renderPadProfiles(); renderPadMap(); $("#dlgMap").showModal(); };
+// vaste regels (sticks en triggers) in de knoppenindeling, volgens de stand van Gescheiden sticks / Pan only
+function padStickRows() {
+  const rows = pad.split ? [
+    ["Linker stick ← / →", "Pan (alleen links/rechts): hoe verder je duwt, hoe sneller (<i>Gescheiden sticks</i> staat aan)"],
+    ["Rechter stick ↑ / ↓", "Tilt (alleen omhoog/omlaag)" + (pad.invY ? ", omgekeerd (<i>Tilt omkeren</i>)" : "") + "; focus zit dan niet op een stick"],
+    ["RT / LT", "Zoom in / uit: hoe dieper je drukt, hoe sneller"],
+  ] : [
+    ["Linker stick", padPanOnlyOn() ? "Pan (alleen links/rechts, <i>Pan only</i> staat aan)" : "Pan / tilt: hoe verder je duwt, hoe sneller (met <i>Pan only</i> in de Xbox-kaart alleen links/rechts)"],
+    ["RT / LT", "Zoom in / uit: hoe dieper je drukt, hoe sneller"],
+    ["Rechter stick ↑ / ↓", "Focus ver / dichtbij (zet autofocus uit). Met <i>Gescheiden sticks</i> in de Xbox-kaart wordt dit tilt"],
+  ];
+  $("#padStickMap").innerHTML = rows.map(([k, v]) => `<b>${esc(k)}</b><span>${v}</span>`).join("");
+}
+const openMap = () => { renderPadProfiles(); padStickRows(); renderPadMap(); $("#dlgMap").showModal(); };
 $("#btnMap2").onclick = openMap;
 $("#btnMapClose").onclick = () => $("#dlgMap").close();
 function padHit(k) {
@@ -2746,25 +3018,177 @@ $("#padReset").onclick = async () => {
   if (!confirm(`Standaard knopindeling terugzetten in profiel "${padProfileName()}"?`)) return;
   padSetRawMap(JSON.parse(JSON.stringify(PAD_DEFAULT))); await saveConfig(); renderPadMap(); toast("Standaard teruggezet", true);
 };
+/* ---- venster Sticks afstellen (#dlgCal) ---- */
+let calSide = "left", calSaveT = 0, calDirty = 0, calMag = null;
+const calCopy = () => JSON.parse(JSON.stringify(cfg.pad_cal || cfg.pad_cal_default || PAD_CAL_FALLBACK));
+function calKeep() { return calDirty && Date.now() - calDirty < 1500 ? { cal: JSON.parse(JSON.stringify(cfg.pad_cal)), set: Object.assign({}, cfg.pad_cal_set) } : null; }
+const calFocus = () => calSide === "right" && !pad.split;   // rechter stick = focus (tenzij Gescheiden sticks)
+function calUseText() {
+  if (calSide === "left") return pad.split ? "Linker stick = pan (links/rechts), <i>Gescheiden sticks</i> staat aan."
+    : padPanOnlyOn() ? "Linker stick = pan (links/rechts), <i>Pan only</i> staat aan." : "Linker stick = pan en tilt.";
+  return pad.split ? "Rechter stick = tilt (omhoog/omlaag), <i>Gescheiden sticks</i> staat aan." : "Rechter stick ↑/↓ = focus ver/dichtbij.";
+}
+function calOpen() { calSide = "left"; calMag = null; calRender(); $("#dlgCal").showModal(); }
+function calRender() {
+  const c = padCal(calSide);
+  $$(".caltabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.side === calSide ? "true" : "false"));
+  $("#calUse").innerHTML = calUseText();
+  $$(".calmode").forEach(b => { b.classList.toggle("on", b.dataset.curve === c.curve); b.setAttribute("aria-pressed", b.dataset.curve === c.curve ? "true" : "false"); });
+  $("#calDzR").value = Math.round(c.dz * 100); $("#calDzV").textContent = Math.round(c.dz * 100) + "%";
+  $("#calMaxR").value = Math.round(c.max * 100); $("#calMaxV").textContent = Math.round(c.max * 100) + "%";
+  const h = c.dz * 52; Object.entries({ x: 60 - h, y: 60 - h, width: 2 * h, height: 2 * h }).forEach(([k, v]) => $("#calDz").setAttribute(k, v.toFixed(1)));
+  calGraph();
+}
+// grafiek: stickbeweging (0 = midden, 1 = helemaal) → camerabeweging; dode zone gestippeld, lineair als stippellijn
+const CG = { x0: 28, x1: 210, y0: 128, y1: 10 };
+const cgX = (r) => CG.x0 + r * (CG.x1 - CG.x0), cgY = (o) => CG.y0 - o * (CG.y0 - CG.y1);
+function calGraph() {
+  const c = padCal(calSide), focus = calFocus(), soft = !focus && softS() > 0;
+  const path = (sf) => Array.from({ length: 81 }, (_, i) => { const r = i / 80; return `${i ? "L" : "M"}${cgX(r).toFixed(1)} ${cgY(Math.abs(calAxis(r, calSide, focus, sf))).toFixed(1)}`; }).join("");
+  let svg = `<path class="cg-axis" d="M${CG.x0} ${CG.y1}V${CG.y0}H${CG.x1}"/>`
+    + (c.dz > 0 ? `<rect class="cg-dz" x="${CG.x0}" y="${CG.y1}" width="${(cgX(c.dz) - CG.x0).toFixed(1)}" height="${CG.y0 - CG.y1}"/><path class="cg-dzl" d="M${cgX(c.dz).toFixed(1)} ${CG.y1}V${CG.y0}"/>` : "")
+    + `<path class="cg-lin" d="M${CG.x0} ${CG.y0}L${CG.x1} ${CG.y1}"/>`
+    + (soft ? `<path class="cg-soft" d="${path(true)}"/>` : "")
+    + `<path class="cg-curve" d="${path(false)}"/>`
+    + `<text x="${CG.x1}" y="${CG.y0 + 14}" text-anchor="end">stick →</text><text x="4" y="${CG.y1 + 6}">camera</text>`;
+  if (c.curve === "eigen") c.pts.forEach((p, i) => {
+    const r = c.dz + p[0] * (1 - c.dz);
+    svg += `<circle class="cg-pt" data-pt="${i}" cx="${cgX(r).toFixed(1)}" cy="${cgY(p[1] * c.max).toFixed(1)}" r="6" tabindex="0" role="slider"
+      aria-label="Punt ${i + 1} van de eigen curve (pijltjes: verschuiven, Shift = grotere stap)" aria-valuetext="stick ${Math.round(p[0] * 100)}%, camera ${Math.round(p[1] * 100)}%"/>`;
+  });
+  svg += `<circle class="cg-live" id="cgLive" r="4" cx="0" cy="0"${calMag === null ? " hidden" : ""}/>`;
+  const fi = document.activeElement?.closest?.("#calGraph .cg-pt")?.dataset.pt;   // focus op een punt behouden na opnieuw tekenen
+  $("#calGraph").innerHTML = svg;
+  if (fi != null) $(`#calGraph .cg-pt[data-pt="${fi}"]`)?.focus({ preventScroll: true });
+  calLiveDot();
+  $("#calGraphTxt").innerHTML = `Stickbeweging → ${focus ? "focussnelheid" : "camerasnelheid"}. Stippellijn = recht evenredig.`
+    + (soft ? ` Dunne lijn = met <i>Zachte beweging</i> (${pad.soft}%) erbij.` : "");
+}
+function calSet(part, now) {   // wijziging voor de gekozen stick; opslaan na 400 ms (alle schermen krijgen hem via SSE config)
+  const eff = Object.assign({}, padCal(calSide));   // wat nu geldt (ook de 18 %-standaard bij Gescheiden sticks)
+  cfg.pad_cal = calCopy();
+  cfg.pad_cal[calSide] = Object.assign(eff, part);
+  cfg.pad_cal_set = Object.assign({}, cfg.pad_cal_set, { [calSide]: true });
+  calDirty = Date.now(); calRender();
+  clearTimeout(calSaveT);
+  calSaveT = setTimeout(async () => {
+    const j = await post("/api/pad/cal", { cal: { [calSide]: cfg.pad_cal[calSide] } });
+    if (!j || j.ok === false) toast(j?.error || "Opslaan mislukt");
+  }, now ? 0 : 400);
+}
+// eigen curve: punten verslepen (pointer) of met de pijltjes (focus op het punt)
+function calPtMove(i, x, y) {
+  const c = padCal(calSide), pts = c.pts.map(p => p.slice());
+  const lo = i === 0 ? 0.02 : pts[0][0] + 0.05, hi = i === 0 ? pts[1][0] - 0.05 : 0.98;
+  pts[i][0] = +Math.max(lo, Math.min(hi, x)).toFixed(3);
+  pts[i][1] = +Math.max(i === 1 ? pts[0][1] : 0, Math.min(i === 0 ? pts[1][1] : 1, y)).toFixed(3);   // curve loopt niet terug
+  calSet({ pts });
+}
+// (één keer gekoppeld aan de svg, want de inhoud wordt bij elke wijziging opnieuw getekend)
+let calDrag = -1;
+function calPtFocus(i) { requestAnimationFrame(() => $(`#calGraph .cg-pt[data-pt="${i}"]`)?.focus({ preventScroll: true })); }
+(function calPtsInit() {
+  const svg = $("#calGraph");
+  svg.addEventListener("pointerdown", (e) => {
+    const el = e.target.closest?.(".cg-pt"); if (!el) return;
+    e.preventDefault(); calDrag = +el.dataset.pt; svg.setPointerCapture(e.pointerId); calPtFocus(calDrag);
+  });
+  svg.addEventListener("pointermove", (e) => {
+    if (calDrag < 0) return;
+    const m = svg.getScreenCTM(); if (!m) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    const c = padCal(calSide), r = (pt.x - CG.x0) / (CG.x1 - CG.x0), o = (CG.y0 - pt.y) / (CG.y0 - CG.y1);
+    calPtMove(calDrag, (r - c.dz) / Math.max(0.05, 1 - c.dz), o / c.max);
+    calPtFocus(calDrag);
+  });
+  const up = () => { calDrag = -1; };
+  svg.addEventListener("pointerup", up); svg.addEventListener("lostpointercapture", up);
+  svg.addEventListener("keydown", (e) => {
+    const el = e.target.closest?.(".cg-pt"); if (!el) return;
+    const i = +el.dataset.pt, d = e.shiftKey ? 0.1 : 0.02, p = padCal(calSide).pts[i];
+    const k = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, d], ArrowDown: [0, -d] }[e.key];
+    if (!k) return;
+    e.preventDefault(); e.stopPropagation();
+    calPtMove(i, p[0] + k[0], p[1] + k[1]); calPtFocus(i);
+  });
+})();
+// live: stip in de cirkel en op de curve (aangeroepen vanuit padLoop zolang het venster open is)
+function calLive(gp) {
+  const [ax, ay] = calSide === "left" ? [gp.axes[0] || 0, gp.axes[1] || 0] : [gp.axes[2] || 0, gp.axes[3] || 0];
+  $("#calDot").setAttribute("cx", (60 + ax * 52).toFixed(1)); $("#calDot").setAttribute("cy", (60 + ay * 52).toFixed(1));
+  const txt = `x ${ax.toFixed(2)} · y ${ay.toFixed(2)}`.replace(/\./g, ",");
+  if ($("#calLiveTxt").textContent !== txt) $("#calLiveTxt").textContent = txt;
+  // op de grafiek: de as die telt (rechts: alleen ↑/↓; links: de grootste uitslag, met Pan only/Gescheiden alleen ←/→)
+  const mag = calSide === "right" || !(pad.split || padPanOnlyOn()) ? Math.max(calSide === "right" ? 0 : Math.abs(ax), Math.abs(ay)) : Math.abs(ax);
+  const m = Math.round(mag * 100) / 100;
+  if (m !== calMag) { calMag = m; calLiveDot(); }
+}
+function calLiveDot() {   // stip op de curve (alleen de stip bijwerken, niet de hele grafiek)
+  const d = $("#cgLive"); if (!d) return;
+  if (calMag === null) { d.setAttribute("hidden", ""); return; }
+  const o = Math.abs(calAxis(calMag, calSide, calFocus(), true));
+  d.removeAttribute("hidden"); d.setAttribute("cx", cgX(calMag).toFixed(1)); d.setAttribute("cy", cgY(o).toFixed(1));
+}
+$("#btnCal").onclick = calOpen;
+$("#calClose").onclick = () => $("#dlgCal").close();
+$$(".caltabs button").forEach(b => b.onclick = () => { calSide = b.dataset.side; calMag = null; calRender(); });
+$(".caltabs").addEventListener("keydown", (e) => {   // tabs: pijltjes links/rechts
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  e.preventDefault(); e.stopPropagation(); calSide = calSide === "left" ? "right" : "left"; calMag = null; calRender();
+  $(calSide === "left" ? "#calTabL" : "#calTabR").focus();
+});
+$$(".calmode").forEach(b => b.onclick = () => calSet({ curve: b.dataset.curve }));
+$("#calDzR").oninput = () => calSet({ dz: +$("#calDzR").value / 100 });
+$("#calMaxR").oninput = () => calSet({ max: +$("#calMaxR").value / 100 });
+$("#calReset").onclick = async () => {
+  if (!confirm("Beide sticks terugzetten op de standaardafstelling? Dit geldt voor alle schermen.")) return;
+  clearTimeout(calSaveT); calDirty = 0;
+  const j = await post("/api/pad/cal", { reset: true });
+  if (j?.ok) { cfg.pad_cal = j.cal; cfg.pad_cal_set = { left: false, right: false }; calRender(); toast("Standaardafstelling teruggezet", true); } else toast(j?.error || "Mislukt");
+};
 // schakelknop (.padtog) in de Xbox-kaart: indigo + AAN als de optie aan staat
 function padTog(id, on) {
   const b = $(id);
   b.classList.toggle("on", !!on); b.setAttribute("aria-pressed", on ? "true" : "false");
   b.querySelector(".pstate").textContent = on ? "aan" : "uit";
 }
-padTog("#padSoft", pad.soft); padTog("#padInvY", pad.invY);
-$("#padSoft").onclick = () => { pad.soft = !pad.soft; store.set("padSoft", pad.soft ? "1" : "0"); padTog("#padSoft", pad.soft); };
+// 🧑 Zachte beweging als schuif (0–100 %, per scherm in store padSoftLevel)
+function padSoftShow() {
+  const v = pad.soft, o = $("#padSoftV");
+  $("#padSoft").value = v; o.textContent = v ? v + "%" : "uit"; o.classList.toggle("off", !v);
+}
+padSoftShow(); padTog("#padInvY", pad.invY);
+$("#padSoft").oninput = () => { pad.soft = Math.max(0, Math.min(100, +$("#padSoft").value || 0)); store.set("padSoftLevel", String(pad.soft)); padSoftShow(); };
 $("#padMax").value = pad.max; $("#padMaxV").textContent = pad.max;
-$("#padInvY").onclick = () => { pad.invY = !pad.invY; store.set("padInvY", pad.invY ? "1" : "0"); padTog("#padInvY", pad.invY); };
+$("#padInvY").onclick = () => { pad.invY = !pad.invY; store.set("padInvY", pad.invY ? "1" : "0"); padTog("#padInvY", pad.invY); if ($("#dlgMap").open) padStickRows(); };
 // Pan only: voor alle camera's, per scherm (zoals de andere Xbox-opties); schakelknop in de Xbox-kaart en controllerknop (actie pan_only)
+// Niet beschikbaar zolang Gescheiden sticks aan staat (dan is de knop uitgeschakeld en telt hij niet mee).
+const padPanOnlyOn = () => pad.panOnly && !pad.split;
+function padTogsState() {
+  padTog("#padSplit", pad.split); padTog("#padPanOnly", pad.panOnly);
+  $("#padPanOnly").disabled = pad.split;
+  if (pad.split) {   // 🧑 uitgeschakeld door Gescheiden sticks: n.v.t. (opgeslagen stand blijft en komt terug)
+    $("#padPanOnly").classList.remove("on"); $("#padPanOnly").setAttribute("aria-pressed", "false");
+    $("#padPanOnly .pstate").textContent = "n.v.t.";
+  }
+  $("#padInvY").disabled = padPanOnlyOn();       // Tilt omkeren werkt met Gescheiden sticks op de rechter stick
+  if ($("#dlgMap").open) padStickRows();
+}
 function setPanOnly(on, say) {
+  if (pad.split) { if (say) toast("Pan only is niet beschikbaar met Gescheiden sticks"); return; }
   pad.panOnly = !!on; store.set("padPanOnly", pad.panOnly ? "1" : "0");
-  padTog("#padPanOnly", pad.panOnly);
-  $("#padInvY").disabled = pad.panOnly;
+  padTogsState();
   if (say) toast(pad.panOnly ? "Pan only aan (alle camera's)" : "Pan only uit: pannen en tilten", true);
 }
-setPanOnly(pad.panOnly);
+// 🧑 Gescheiden sticks (per scherm, standaard uit): linker stick alleen pan, rechter stick alleen tilt (focus dan niet op de stick)
+function setSplit(on, say) {
+  pad.split = !!on; store.set("padSplit", pad.split ? "1" : "0");
+  padTogsState();
+  if (say) toast(pad.split ? "Gescheiden sticks aan: links = pan, rechts = tilt" : "Gescheiden sticks uit: linker stick pan/tilt", true);
+}
+padTogsState();
 $("#padPanOnly").onclick = () => setPanOnly(!pad.panOnly);
+$("#padSplit").onclick = () => setSplit(!pad.split);
 $("#padMax").oninput = () => { pad.max = +$("#padMax").value; $("#padMaxV").textContent = pad.max; store.set("padMax", pad.max); };
 function setMenu(open) {
   const m = $("#mainMenu");
@@ -2866,8 +3290,46 @@ function rumble(gp, ms = 120, strong = 0.6) {
   try { gp.vibrationActuator?.playEffect("dual-rumble", { duration: ms, strongMagnitude: strong, weakMagnitude: strong }); } catch {}
 }
 const dz = (v, d = 0.18) => Math.abs(v) < d ? 0 : Math.sign(v) * (Math.abs(v) - d) / (1 - d);
-// fijner rond het midden, snel bij volle uitslag; zachte beweging = nog fijner (derde macht)
-const curve = (v) => pad.soft ? v * v * v : Math.sign(v) * v * v;
+// fijner rond het midden, snel bij volle uitslag. Zachte beweging s = 0…1 (schuif/100), traploos:
+//   exponent 2 (s = 0, vroeger "uit") → 3 (s = 0,5, vroeger "aan") → 3,5 (s = 1, extra zacht)
+//   optrekken: in ca. 2·s seconden naar topsnelheid = per commando (~80 ms) max/(24·s) erbij (s = 0,5 → max/12 ≈ 1 s; s = 1 ≈ 2 s)
+const softS = () => Math.max(0, Math.min(1, (+pad.soft || 0) / 100));
+const softExp = (s) => s <= 0.5 ? 2 + 2 * s : 3 + (s - 0.5);
+const softStep = (s, max) => s > 0 ? Math.max(1, Math.round(max / (24 * s))) : Infinity;   // s = 0: geen limiet (direct)
+
+/* ---- 🧑 Sticks afstellen (cfg.pad_cal: één afstelling voor alle schermen en knoppenprofielen, per workspace) ----
+   Per stick: dz (dode zone, deel van de uitslag), max (maximaal), curve (standaard/vertraagd/direct/eigen), pts (eigen curve).
+   Volgorde: dode zone → curve → zachte beweging (vorm: macht softExp/2, alleen pan/tilt) → maximaal → optrekken (padLoop).
+   Standaard = precies het oude gedrag: pan/tilt v² met zachte beweging = v^softExp, dode zone 18 %; focus lineair, dode zone 35 %. */
+const PAD_CAL_FALLBACK = { left: { dz: 0.18, max: 1, curve: "standaard", pts: [[0.33, 0.11], [0.67, 0.44]] },
+                           right: { dz: 0.35, max: 1, curve: "standaard", pts: [[0.33, 0.11], [0.67, 0.44]] } };
+// 🧑 rechter stick nog niet zelf afgesteld (pad_cal_set.right false) en Gescheiden sticks aan (= tilt): standaard dode zone 18 % i.p.v. 35 %
+const padCalSplitStd = (side) => side === "right" && pad.split && !(cfg.pad_cal_set && cfg.pad_cal_set.right);
+function padCal(side) {
+  const def = (cfg.pad_cal_default || PAD_CAL_FALLBACK)[side];
+  if (padCalSplitStd(side)) return Object.assign({}, def, { dz: (cfg.pad_cal_default || PAD_CAL_FALLBACK).left.dz });
+  return (cfg.pad_cal && cfg.pad_cal[side]) || def;
+}
+// vorm op v = 0…1 (na de dode zone) → 0…1
+function calShape(c, v, focus) {
+  v = Math.max(0, Math.min(1, v));
+  if (c.curve === "vertraagd") return v * v * v;
+  if (c.curve === "direct") return v;
+  if (c.curve === "eigen") {   // rechte stukken door (0,0), de twee punten en (1,1)
+    const P = [[0, 0], ...(c.pts || PAD_CAL_FALLBACK.left.pts), [1, 1]];
+    for (let i = 1; i < P.length; i++) if (v <= P[i][0]) return P[i - 1][1] + (P[i][1] - P[i - 1][1]) * (v - P[i - 1][0]) / Math.max(1e-6, P[i][0] - P[i - 1][0]);
+    return 1;
+  }
+  return focus ? v : v * v;    // standaard: pan/tilt kwadratisch, focus lineair (zoals altijd)
+}
+// stickwaarde −1…1 → −1…1 voor de camera; soft = false: zonder zachte beweging (voor de grafiek)
+function calAxis(raw, side, focus, soft = true) {
+  const c = padCal(side), a = Math.abs(raw);
+  if (a < c.dz) return 0;
+  let o = calShape(c, (a - c.dz) / (1 - c.dz), focus);
+  if (!focus && soft) o = Math.pow(o, softExp(softS()) / 2);   // zachte beweging: standaard v² → v^softExp (precies als vroeger)
+  return Math.sign(raw) * o * c.max;
+}
 
 function padStopAll() {
   if (pad.last.move) cmd("stop");
@@ -2898,12 +3360,13 @@ function padAction(action, gp, mods) {
     case "cam_prev": return selectByPad(-1);
     case "cam_next": return selectByPad(+1);
     case "cam": return selectCamByPad(cfg.cameras[+arg - 1]);
-    case "home": padStopAll(); moved(); cmd("home"); break;
+    case "home": padStopAll(); cmd("home"); break;
     case "track": toggleTrack(ctrlCam); break;
     case "af": cmd("onepush_af"); setAF(true); break;
     case "fine": pad.fine = !pad.fine; toast(pad.fine ? "Fijn-modus aan" : "Fijn-modus uit", true); rumble(gp, 80, 0.4); break;
     case "pan_only": setPanOnly(!pad.panOnly, true); rumble(gp, 80, 0.4); break;
-    case "stopall": padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); break;
+    case "split": setSplit(!pad.split, true); rumble(gp, 80, 0.4); break;
+    case "stopall": { const hc = handHalt(false); if (hc && hc !== ctrlCam) cmd("stop", {}, hc); } padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); break;
   }
 }
 
@@ -2915,11 +3378,15 @@ function padLoop() {
     pad.idx = any.index; padUI(any);
   }
   const gp = navigator.getGamepads()[pad.idx];
-  if (!gp || !ctrlCam) return;
+  if (!gp) return;
+  if ($("#dlgCal").open) calLive(gp);      // live stickstand, ook zonder camera
+  if (!ctrlCam) return;
   const btn = (i) => !!gp.buttons[i]?.pressed;
   const val = (i) => gp.buttons[i]?.value || 0;
   const down = (i) => btn(i) && !pad.prev[i];
   const busy = anyDialog();
+  // venster open (of rondleiding) terwijl de controller nog iets liet bewegen: één keer alles stoppen, daarna niets meer sturen
+  if (busy && (pad.last.move || pad.last.zoom || pad.last.focus)) { padStopAll(); $("#padBadge").classList.remove("act"); }
   if ($("#dlgMap").open) PAD_BUTTONS.forEach(([k]) => { if (down(B[k])) padHit(k); });
   if ($("#dlgOsd").open && $("#tour").hidden) osdPad(gp, down);
 
@@ -2935,7 +3402,11 @@ function padLoop() {
 
     // ---- analoog: pan/tilt
     const max = pad.fine ? Math.max(2, Math.round(pad.max / 4)) : pad.max;
-    const x = curve(dz(gp.axes[0] || 0)), y = pad.panOnly ? 0 : curve(dz(gp.axes[1] || 0)) * (pad.invY ? -1 : 1);
+    // Gescheiden sticks: x van de linker stick, y van de rechter stick; anders beide van de linker stick (Pan only: geen y)
+    // afstelling per stick (calAxis): dode zone → curve → zachte beweging → maximaal; daarna optrekken (zachte beweging)
+    const x = calAxis(gp.axes[0] || 0, "left");
+    const y = pad.split ? calAxis(gp.axes[3] || 0, "right") * (pad.invY ? -1 : 1)
+      : padPanOnlyOn() ? 0 : calAxis(gp.axes[1] || 0, "left") * (pad.invY ? -1 : 1);
     let move = null;
     if (x || y) {
       const ang = Math.atan2(-y, x) * 180 / Math.PI;          // 0 = rechts, 90 = omhoog
@@ -2944,9 +3415,9 @@ function padLoop() {
       const pan = Math.max(1, Math.round(Math.abs(x) * max));
       const tilt = Math.max(1, Math.round(Math.abs(y) * Math.min(20, max)));
       move = { dir, pan, tilt };
-      if (pad.soft) {
-        // geleidelijk optrekken: per verzonden commando (~80 ms) hooguit één stap erbij, ca. 1 s naar topsnelheid
-        const p = pad.last.move, step = Math.max(1, Math.round(max / 12));
+      if (softS() > 0) {
+        // geleidelijk optrekken: per verzonden commando (~80 ms) hooguit één stap erbij (stoppen blijft direct)
+        const p = pad.last.move, step = softStep(softS(), max);
         move.pan = Math.min(pan, (p ? p.pan : 0) + step);
         move.tilt = Math.min(tilt, (p ? p.tilt : 0) + step);
       }
@@ -2954,24 +3425,27 @@ function padLoop() {
     // ---- zoom (RT in, LT uit)
     const z = val(B.RT) - val(B.LT);
     const zoom = Math.abs(z) > 0.08 ? { dir: z > 0 ? "in" : "out", speed: Math.max(1, Math.round(Math.abs(z) * 7)) } : null;
-    if (zoom && pad.soft) {
+    if (zoom && softS() > 0) {   // s = 0,5 of meer: +1 per commando; minder zacht = grotere stap
       const pz = pad.last.zoom;
-      zoom.speed = Math.min(zoom.speed, (pz && pz.dir === zoom.dir ? pz.speed : 0) + 1);
+      zoom.speed = Math.min(zoom.speed, (pz && pz.dir === zoom.dir ? pz.speed : 0) + softStep(softS(), 7));
     }
-    // ---- focus (rechter stick verticaal)
-    const fy = dz(gp.axes[3] || 0, 0.35);
-    const focus = fy ? { dir: fy < 0 ? "far" : "near", speed: Math.max(1, Math.round(Math.abs(fy) * 5)) } : null;
+    // ---- focus (rechter stick verticaal; niet met Gescheiden sticks, dan is die stick tilt)
+    const fy = pad.split ? 0 : calAxis(gp.axes[3] || 0, "right", true);
+    // knopacties focus_far / focus_near (standaard D-pad ↑/↓): vasthouden = focus met de ingestelde focussnelheid, loslaten = stop
+    const fb = held("focus_far") ? "far" : held("focus_near") ? "near" : "";
+    const focus = fy ? { dir: fy < 0 ? "far" : "near", speed: Math.max(1, Math.round(Math.abs(fy) * 5)) }
+      : fb ? { dir: fb, speed: sp("#spFocus") } : null;
 
     // alleen versturen bij verandering, en hooguit ~12x per seconde
     const now = performance.now();
     const key = (o) => o ? JSON.stringify(o) : null;
     if (now - pad.lastSend > 80) {
       if (key(move) !== key(pad.last.move)) {
-        if (move) { moved(); cmd("move", move); } else cmd("stop");
+        if (move) { cmd("move", move); } else cmd("stop");
         pad.last.move = move; pad.lastSend = now;
       }
       if (key(zoom) !== key(pad.last.zoom)) {
-        if (zoom) { moved(); cmd("zoom", zoom); } else cmd("zoom", { dir: "stop" });
+        if (zoom) { cmd("zoom", zoom); } else zoomStop();
         pad.last.zoom = zoom; pad.lastSend = now;
       }
       if (key(focus) !== key(pad.last.focus)) {
@@ -2988,7 +3462,7 @@ function padLoop() {
 }
 requestAnimationFrame(padLoop);
 // tabblad weg of venster kwijt: niets laten doordraaien
-document.addEventListener("visibilitychange", () => { if (document.hidden) padStopAll(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) { padStopAll(); pressed.clear(); handHalt(true); } });
 window.addEventListener("blur", padStopAll);
 
 /* ================= back-up ================= */
@@ -3521,6 +3995,8 @@ $("#btnQuit").onclick = async () => {
   if (new URLSearchParams(location.search).has("app")) setTimeout(() => { try { window.close(); } catch {} }, 2000);
 };
 $("#prefsCancel").onclick = () => $("#dlgPrefs").close();
+// 🧑 spec 6.1: kanaal-ID opzoeken (alleen een link naar YouTube; geen streambediening, §8). Nieuw venster, werkt ook in het app-venster
+$("#ytFindId").onclick = () => window.open("https://www.youtube.com/account_advanced", "_blank", "noopener");
 $("#prefsSave").onclick = async () => {
   const chan = $("#ytChannel").value.trim();
   if (chan !== ((cfg.youtube || {}).channel || "")) {
@@ -3644,6 +4120,7 @@ function connectEvents() {
     if (ev.type === "state") {
       if (ev.server) serverAddr = ev.server;
       Object.assign(lastPreset, ev.last_preset || {});
+      adjusted = Object.assign({}, ev.adjusted || {});
       if (ev.active && $("#chkFollow").checked && camById(ev.active)) { ctrlCam = ev.active; if (view !== ALL) view = ev.active; }
       render();
     } else if (ev.type === "select") {
@@ -3652,7 +4129,9 @@ function connectEvents() {
         render(); toast("Camera: " + camById(ev.cam).name, true);
       }
     } else if (ev.type === "preset") {
-      lastPreset[ev.cam] = ev.n; renderPresets();
+      lastPreset[ev.cam] = ev.n;
+      if (ev.adjusted) adjusted[ev.cam] = true; else delete adjusted[ev.cam];
+      renderPresets();
     } else if (ev.type === "thumb") {
       const c = camById(ev.cam); if (!c) return;
       thumbVer[ev.cam + "_" + ev.n] = Date.now();
@@ -3689,7 +4168,7 @@ function connectEvents() {
     } else if (ev.type === "osd") {
       osdOpen = ev.cams || {}; renderTabs(); renderPresets(); osdRender();
     } else if (ev.type === "moving") {
-      if (ev.moving) moving[ev.cam] = { n: ev.n }; else delete moving[ev.cam];
+      if (ev.moving) moving[ev.cam] = { n: ev.n }; else { delete moving[ev.cam]; if (ev.cam === ctrlCam) zsLoad(true); }   // preset kan de zoom veranderd hebben
       renderPresets();
     } else if (ev.type === "access") {
       accessLoad();
@@ -3894,9 +4373,10 @@ function barsTop() {
   const bs = document.body.style, h = $("header");
   bs.setProperty("--headh", (getComputedStyle(h).position === "sticky" ? h.offsetHeight : 0) + "px");
   bs.setProperty("--practh", $("#practiceBar").offsetHeight + "px");
+  bs.setProperty("--alerth", $("#alertBar").offsetHeight + "px");   // zijbalk plakt onder een zichtbare foutbalk
 }
 if (window.ResizeObserver) {
-  const ro = new ResizeObserver(barsTop); ro.observe($("header")); ro.observe($("#practiceBar"));
+  const ro = new ResizeObserver(barsTop); ro.observe($("header")); ro.observe($("#practiceBar")); ro.observe($("#alertBar"));
   const rb = new ResizeObserver(() => { if (isWall()) dockLayout(); }); rb.observe($("#alertBar")); rb.observe($("#practiceBar"));   // vensterbalk onder fout-/oefenbalk
 }
 barsTop();
@@ -4467,6 +4947,71 @@ $("#songSrcBtn").onclick = () => {
 fetch("/api/liederen").then(r => r.json()).then(j => { delete j.config; if (!songs) songs = j; songWinRender();
   if (store.get("songOpen") === "1" && (songs.pp?.enabled || songs.voordienst?.enabled)) songWinShow(true); }).catch(() => {});
 
+/* ---- 🧑 Tooltips na 2 s (spec 2.3, goedgekeurd 17 nov 2026) ----
+   Eigen tooltip, want de browser-title komt te snel en is niet instelbaar. Element met data-tipk="<sleutel>" → TIPS[sleutel]:
+   t = titel, d = uitleg (HTML), keys = acties uit KEY_ACTIONS (toets volgt de eigen instelling). data-tip op het element vervangt d
+   (bijv. de foutreden bij volgen). Alleen met de muis (niet op touch), niet tijdens de rondleiding; weg bij bewegen, klik, toets, scroll. */
+const TIPS = {
+  dir: { t: "Bewegen", d: "Draait de camera zolang je de pijl vasthoudt; de schuine pijlen bewegen in twee richtingen tegelijk. Snelheid stel je in bij <i>Snelheden</i>. Persoon volgen gaat uit.", keys: ["up", "down", "left", "right"] },
+  home: { t: "Home", d: "Stuurt de camera naar zijn beginpositie. Persoon volgen gaat uit.", keys: ["home"] },
+  zoom_in: { t: "Zoom +", d: "Inzoomen zolang je de knop vasthoudt. Snelheid stel je in bij <i>Snelheden</i>.", keys: ["zoom_in"] },
+  zoom_out: { t: "Zoom −", d: "Uitzoomen zolang je de knop vasthoudt. Snelheid stel je in bij <i>Snelheden</i>.", keys: ["zoom_out"] },
+  focus_far: { t: "Focus ver", d: "Stelt scherp op iets verder weg zolang je de knop vasthoudt. Draait de autofocus het terug, zet dan eerst <i>AF hand</i>.", keys: ["focus_far"] },
+  focus_near: { t: "Focus dichtbij", d: "Stelt scherp op iets dichterbij zolang je de knop vasthoudt. Draait de autofocus het terug, zet dan eerst <i>AF hand</i>.", keys: ["focus_near"] },
+  af_on: { t: "AF auto", d: "Autofocus aan: de camera stelt zelf steeds opnieuw scherp." },
+  af_off: { t: "AF hand", d: "Handmatige focus: de scherpte blijft staan. Bijstellen met <i>Focus ver</i> en <i>Focus dichtbij</i>." },
+  af_push: { t: "One-push", d: "Stelt één keer automatisch scherp en zet daarna de focus vast (handmatig). Handig als AF blijft zoeken." },
+  track: { t: "Persoon volgen", d: "De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan). Handbediening, home of een preset zet volgen weer uit.", keys: ["track"] },
+  trackset: { t: "Kader…", d: "Kader en persoon kiezen: instellen waar de persoon in beeld moet blijven, grenzen links/rechts en aanklikken wie gevolgd wordt. Eén beeld, geen live beeld." },
+  spPan: { t: "Pan-snelheid", d: "Hoe snel de camera links/rechts draait met de pijlen en het toetsenbord (1–24). Geldt voor dit scherm." },
+  spTilt: { t: "Tilt-snelheid", d: "Hoe snel de camera omhoog/omlaag draait met de pijlen en het toetsenbord (1–20). Geldt voor dit scherm." },
+  spZoom: { t: "Zoomsnelheid", d: "Hoe snel <i>Zoom +</i> en <i>Zoom −</i> (en de toetsen) zoomen (1–7). Geldt voor dit scherm." },
+  spAccel: { t: "Acceleratie", d: "Hoe geleidelijk de camera optrekt met de pijlen en pijltjestoetsen. <i>Uit</i> = direct op de ingestelde snelheid; 100% ≈ 1,5 s tot de ingestelde snelheid. Stoppen gaat direct, tenzij <i>Ook geleidelijk afremmen</i> aan staat; Spatie/stop stopt altijd direct. Geldt voor dit scherm, niet voor de Xbox-controller (die heeft <i>Zachte beweging</i>).", keys: ["stop"] },
+  spBrake: { t: "Geleidelijk afremmen", d: "Bij loslaten van een pijl of pijltjestoets remt de camera in stapjes af in plaats van meteen te stoppen (net zo snel als hij optrekt). Alleen met <i>Acceleratie</i> aan. Stop, Spatie, een preset kiezen of het venster verlaten stopt altijd direct.", keys: ["stop"] },
+  zoomScale: { t: "Snelheid volgt de zoom", d: "Hoe verder de camera is ingezoomd, hoe langzamer de pijlen en pijltjestoetsen draaien: uitgezoomd de ingestelde snelheid, helemaal ingezoomd ongeveer een kwart. Geldt niet voor de Xbox-controller en niet voor persoon volgen. Het percentage is de huidige stand van de bediende camera (leeg = onbekend, bijvoorbeeld zonder VISCA)." },
+  spFocus: { t: "Focussnelheid", d: "Hoe snel <i>Focus ver</i> en <i>Focus dichtbij</i> (en de toetsen) scherpstellen (1–7). Geldt voor dit scherm." },
+  padSoft: { t: "Zachte beweging", d: "Hoe geleidelijk de camera optrekt en hoe fijn de stick rond het midden reageert. <i>Uit</i> = direct op snelheid; 50% ≈ 1 s naar topsnelheid; 100% (extra zacht) ≈ 2 s. Stoppen gaat altijd direct. Geldt voor dit scherm." },
+  padSplit: { t: "Gescheiden sticks", d: "Linker stick alleen links/rechts (pan), rechter stick alleen omhoog/omlaag (tilt). Focus zit dan niet meer op de rechter stick. <i>Pan only</i> is uitgeschakeld zolang dit aan staat; <i>Tilt omkeren</i> werkt op de rechter stick. Geldt voor dit scherm." },
+  padPanOnly: { t: "Pan only", d: "De linker stick draait alleen links/rechts; omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm. Niet beschikbaar zolang <i>Gescheiden sticks</i> aan staat." },
+  padInvY: { t: "Tilt omkeren", d: "Stick omhoog = camera omlaag (met <i>Gescheiden sticks</i>: de rechter stick). Niet beschikbaar zolang <i>Pan only</i> aan staat." },
+  padMax: { t: "Max. pan/tilt-snelheid", d: "Snelheid als je de linker stick helemaal duwt (4–24). Geldt voor dit scherm." },
+  padProf: { t: "Knoppenprofiel", d: "Welke knoppenindeling deze controller op dit scherm gebruikt. Elk scherm onthoudt zijn eigen keuze." },
+  padMap: { t: "Knoppenindeling", d: "Geef elke knop van de controller een eigen functie, per profiel." },
+  padCal: { t: "Sticks afstellen", d: "Per stick de dode zone, het maximum en de curve (Standaard, Vertraagd, Direct of een eigen curve) instellen, met de stand van de stick live erbij. Geldt voor alle schermen en knoppenprofielen." },
+  calDz: { t: "Dode zone", d: "Zo ver kun je de stick duwen zonder dat de camera beweegt (tegen kruipen van een stick die niet precies in het midden terugveert). Standaard 18%; rechter stick als focus 35% (met <i>Gescheiden sticks</i> = tilt: 18%, zolang je hem niet zelf afstelt)." },
+  calMax: { t: "Maximaal", d: "Hoeveel van de maximale snelheid de stick helemaal uitgeduwd geeft. De max. pan/tilt-snelheid in de Xbox-kaart (per scherm) telt daar nog bij." },
+};
+(function tipInit() {
+  const tip = $("#tip"), WAIT = 2000;
+  let timer = 0, el = null, at = null;
+  const hide = () => { clearTimeout(timer); timer = 0; if (!tip.hidden) tip.hidden = true; at = null; };
+  function show() {
+    timer = 0;
+    if (!el || !el.isConnected || !$("#tour").hidden) return;
+    const spec = TIPS[el.dataset.tipk]; if (!spec) return;
+    const keys = (spec.keys || []).map(a => keyOf(a)).filter(Boolean);
+    tip.innerHTML = `<b>${esc(spec.t)}</b><div class="tipd">${el.dataset.tip ? esc(el.dataset.tip) : spec.d}</div>`
+      + (keys.length ? `<div class="tipk">${keys.length > 1 ? "Toetsen" : "Toets"} ${keys.map(k => `<kbd>${esc(keyLabel(k))}</kbd>`).join(" ")}</div>` : "");
+    tip.hidden = false; tip.classList.remove("up");
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 8;
+    let top = r.bottom + 9;
+    if (top + h > innerHeight - m && r.top - 9 - h >= m) { top = r.top - 9 - h; tip.classList.add("up"); }   // onder het element, anders erboven
+    const cx = r.left + r.width / 2, left = Math.min(Math.max(m, cx - w / 2), innerWidth - w - m);
+    tip.style.left = left + "px"; tip.style.top = Math.max(m, top) + "px";
+    tip.style.setProperty("--ax", Math.min(Math.max(12, cx - left), w - 12) + "px");   // pijltje wijst naar het midden van het element
+  }
+  document.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") return hide();   // niet op touch/pen
+    if (at && Math.hypot(e.clientX - at[0], e.clientY - at[1]) < 3) return;   // trillen van de muis telt niet als bewegen
+    hide();
+    el = e.target.closest ? e.target.closest("[data-tipk]") : null;
+    if (el) { at = [e.clientX, e.clientY]; timer = setTimeout(show, WAIT); }
+  }, true);
+  for (const ev of ["pointerdown", "keydown", "wheel", "scroll"]) addEventListener(ev, hide, true);
+  document.addEventListener("mouseout", (e) => { if (!e.relatedTarget) hide(); });   // muis het venster uit
+  addEventListener("blur", hide);
+})();
+
 /* ---- 🎓 Rondleiding ----
    🧑 Elke functie hoort hier een stap te hebben. Voeg je iets toe of haal je iets weg: werk TOUR_STEPS bij (zie CLAUDE.md §2a). */
 const TOUR_STEPS = [
@@ -4475,7 +5020,7 @@ const TOUR_STEPS = [
       <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → Hulp → ${ic("cap")} Rondleiding</b>.</p>` },
   { target: ["#tabs"], title: "Camera's en weergave", text: () => `<p>Kies hier één camera, of <b>Alle camera's</b> om alle presetrasters naast elkaar te zien.</p>
       <p>In <i>Alle camera's</i> kies je met de cameratoets (standaard <kbd>Shift</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>) welke camera je bedient; die kolom licht op.</p>` },
-  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>LIVE</b>.</p>
+  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt het label <b>GESELECTEERD</b> (indigo); staat die camera op de videomixer <b>in beeld</b>, dan is het een rood <b>LIVE</b>. Beweeg je de camera daarna met de pijlen, toetsen, controller of home (of draait <i>persoon volgen</i> hem), dan wordt het <b>AANGEPAST</b> (amber stippelrand): de camera staat niet meer precies op de preset. Zoom en focus tellen niet mee.</p>
       <p>Met het toetsenbord: <kbd>1</kbd>–<kbd>9</kbd> roept preset 1–9 op van de camera die je bedient; de toets staat klein rechtsonder op de tegel.</p>
       <p>Na het oproepen staat er <b>ONDERWEG…</b> op de tegel tot de camera stilstaat. Dan kun je veilig op de mixer overschakelen.</p>
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
@@ -4490,9 +5035,12 @@ const TOUR_STEPS = [
   { target: [".colhead .cdot", ".tab .cdot", "#tabs"], title: "● Camerastatus", text: () => `<p>Het bolletje bij elke camera is <b>groen</b> als de camera bereikbaar is en <b>rood</b> als hij niet reageert (met <i>niet bereikbaar</i> erbij). Zo zie je vóór de dienst al dat er iets mis is.</p>` },
   { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>${ic("download")} Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
-  { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
+  { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. De schuif <b>Grootte</b> werkt traploos: de tegels worden precies zo breed als de waarde ernaast (in <i>Alle camera's</i> iets kleiner). Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
   { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
-      <p>Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
+      <p>Muis <b>2 seconden</b> stil op een knop = korte uitleg. Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
+  { target: ["#ctrlCard details > summary", "#ctrlCard"], title: ic("sliders") + " Snelheden", text: () => `<p>Onder <b>Snelheden</b> stel je per scherm in hoe snel de pijlen en toetsen draaien, zoomen en scherpstellen.</p>
+      <ul><li><b>Snelheid volgt de zoom</b>: met de pijlen en pijltjestoetsen draait de camera vanzelf langzamer als hij ingezoomd is (helemaal ingezoomd ongeveer een kwart); het percentage staat eronder.</li>
+      <li><b>Acceleratie</b>: de camera trekt geleidelijk op in plaats van meteen op snelheid; met het vinkje remt hij bij loslaten ook geleidelijk af. <kbd>${esc(keyLabel(keyOf("stop")))}</kbd> stopt altijd direct.</li></ul>` },
   { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
       <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
   { target: ["#btnTrackSet"], title: ic("image") + " Kader en persoon kiezen", text: () => `<p><b>Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>
@@ -4500,17 +5048,19 @@ const TOUR_STEPS = [
       <li>Sleep de <b>oranje lijnen</b> voor het kader: binnen het kader staat de camera stil, loopt de persoon eruit, dan draait hij terug naar de <b>witte stippellijn</b>.</li>
       <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met de pijlen en klik <i>Grens … = hier</i>).</li>
       <li><b>Afstelling</b>: slingert de camera heen en weer, zet dan de beginsnelheid lager of de rust na een stop langer; per camera.</li></ul>` },
-  { target: ["#padCard"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
+  { target: ["#padCard"], small: ["#padBar"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
-      <li>D-pad ←/→ = andere camera, ↓ = home, RB = volgen</li><li>View = alles stoppen</li></ul>
-      <p>Is de controller verbonden, dan staat er een groen <b>● Verbonden</b> in de titel. Hier zet je ook <b>Zachte beweging</b>, <b>Pan only</b> en <b>Tilt omkeren</b> aan of uit (knop indigo met <b>AAN</b> = aan) en de maximale snelheid (per apparaat).</p>` },
+      <li>D-pad ←/→ = andere camera, ↑/↓ = focus ver/dichtbij (vasthouden), RB = volgen</li><li>View = alles stoppen</li></ul>
+      <p>Verbonden = groen <b>● Verbonden</b> in de titel. Per apparaat: <b>Zachte beweging</b> (schuif), <b>Gescheiden sticks</b>, <b>Pan only</b>, <b>Tilt omkeren</b> (indigo = aan) en de max. snelheid.</p>` },
+  { target: ["#padSplit"], title: ic("sticks") + " Gescheiden sticks", text: () => `<p>Met <b>Gescheiden sticks</b> (indigo = aan) draait de <b>linker stick alleen links/rechts</b> en de <b>rechter stick alleen omhoog/omlaag</b>, zoals bij veel camera- en droneregelaars. Focus zit dan niet meer op de rechter stick.</p><p>Zolang dit aan staat is <i>Pan only</i> uitgeschakeld; <i>Tilt omkeren</i> werkt dan op de rechter stick. Standaard uit, geldt voor dit scherm. Ook op een controllerknop te zetten (<i>Gescheiden sticks aan/uit</i>).</p>` },
   { target: ["#padPanOnly"], title: ic("width") + " Pan only", text: () => `<p>Klik om <b>Pan only</b> aan of uit te zetten; aan = knop indigo met <b>AAN</b>. De linker stick draait de camera dan alleen <b>links en rechts</b>, voor <b>alle camera's</b>; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt voor dit scherm. Je kunt het ook op een controllerknop zetten (<i>Pan only aan/uit</i> in de knoppenindeling).</p>` },
+  { target: ["#btnCal"], title: ic("sticks") + " Sticks afstellen", text: () => `<p>Reageert een stick te snel, te traag of kruipt de camera als je hem loslaat? In <b>Sticks afstellen</b> stel je per stick de <b>dode zone</b>, het <b>maximum</b> en de <b>curve</b> in: <i>Standaard</i>, <i>Vertraagd</i> (fijner rond het midden), <i>Direct</i> of <i>Eigen</i> met twee punten die je versleept. Je ziet live waar de stick staat.</p><p>Eén afstelling voor alle schermen en knoppenprofielen. <i>Zachte beweging</i> werkt er nog bovenop.</p>` },
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
   { target: ["#followWrap"], title: ic("link") + " Remote control: meewisselen", text: () => `<p>Staat de schakelaar aan (tegel indigo), dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
       <p>Het bolletje is <b>groen</b> zolang de verbinding met de app goed is.</p>` },
   { target: ["#ytWrap"], title: ic("tv") + " YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
-      <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream).</p>
+      <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream). Weet je het kanaal-ID niet, dan opent <b>Kanaal-ID opzoeken op YouTube</b> in dat venster de pagina waar het staat.</p>
       <p>Het venster kun je slepen aan de titelbalk en groter maken met de hoek rechtsonder. Starten en stoppen van de stream gebeurt buiten deze app.</p>` },
   { target: ["#btnSongBar", "#btnPad"], title: ic("music") + " Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → Instellingen → ${ic("music")} Liederen</b>.</p>` },
   { target: ["#wsWrap"], title: ic("pin") + " Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
@@ -4550,7 +5100,7 @@ const TOUR_STEPS = [
 ];
 let tourIdx = -1, tourStepShown = -1;
 function tourTarget(st) {
-  for (const sel of st.target || []) {
+  for (const sel of (innerWidth <= 700 && st.small) || st.target || []) {   // small: kleiner doel op een smal scherm (anders past de kaart niet)
     let el = $(sel);
     if (el && st.parent) el = el.closest(st.parent) || el;
     if (el) { const r = el.getBoundingClientRect(); if (r.width > 0 && r.height > 0) return el; }

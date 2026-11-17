@@ -56,7 +56,16 @@ Later nog eens bekijken: **Menu → Hulp → Rondleiding**.
 ![Rondleiding](docs/screenshots/rondleiding.png)
 
 ## Meerdere camera's tegelijk
-Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de LIVE-preset en alle presettegels.
+Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de laatst gekozen preset en alle presettegels.
+
+De laatst gekozen preset van elke camera krijgt een label op de tegel en staat in de kopregel van de kolom:
+- **GESELECTEERD** (indigo rand): de camera staat op deze preset, maar is niet in beeld. Zonder videomixer-koppeling zie je altijd dit label.
+- **LIVE** (rood): de camera staat op deze preset én is volgens de videomixer **in beeld** (*LIVE: naam* in de kolomkop).
+- **AANGEPAST** (amber stippelrand): na de preset is de camera bewogen met de pijlen, het toetsenbord, de controller of home, of door *persoon volgen*. Hij staat dus niet meer precies op de preset (*Aangepast (was naam)* in de kolomkop). Zoomen en scherpstellen tellen niet mee. Een preset kiezen of opslaan zet het weer gewoon. Dit is op alle schermen gelijk.
+- **ONDERWEG…** (oranje) gaat voor alles: de camera beweegt nog naar de preset.
+
+<img src="docs/screenshots/presetstatus.png" width="720" alt="Links in beeld (LIVE), Midden GESELECTEERD, Rechts AANGEPAST">
+
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Instellingen → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
 Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
 
@@ -83,6 +92,11 @@ Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **X
 ## Tijdens de dienst
 - **ONDERWEG…** op een tegel: de camera rijdt nog naar die preset. Het label verdwijnt zodra hij stilstaat; dan kun je veilig op de mixer overschakelen. (De app leest daarvoor de positie van de camera uit; lukt dat niet, dan staat het label er 3 seconden.)
 - **● Camerastatus**: het bolletje bij elke camera (kolom en tabblad) is groen als de camera bereikbaar is en rood als hij niet reageert, met *niet bereikbaar* erbij. De app controleert dit elke 10 seconden en bij elk commando.
+- **Uitleg bij de bediening**: houd de muis 2 seconden stil op een knop of schuif in de camerabediening of de Xbox-kaart (zoom, focus, AF, One-push, volgen, Kader…, de pijlen, de snelheden) en er verschijnt een korte uitleg met de sneltoets (zoals je die zelf hebt ingesteld). Bewegen, klikken of een toets laat hem verdwijnen. Op een aanraakscherm verschijnt hij niet.<br>
+  <img src="docs/screenshots/tooltip.png" width="300" alt="Uitleg bij Zoom + na 2 seconden stilhouden">
+- **Snelheid volgt de zoom**: met de pijlknoppen en de pijltjestoetsen draait de camera vanzelf langzamer naarmate hij verder is ingezoomd: uitgezoomd de ingestelde snelheid, helemaal ingezoomd ongeveer een kwart. Zo schiet een ingezoomd beeld niet weg. Onder *Snelheden* staat het huidige percentage van de bediende camera. Dit geldt niet voor de Xbox-controller (die heeft *Zachte beweging*) en niet voor persoon volgen. Kan de app de zoom niet uitlezen (geen VISCA), dan blijft de snelheid gewoon de ingestelde.
+- **Acceleratie** (onder *Snelheden*): met de schuif trekt de camera met de pijlknoppen en pijltjestoetsen geleidelijk op in plaats van meteen op de ingestelde snelheid; 100% ≈ 1,5 seconde, *uit* = direct (standaard). Met het vinkje **Ook geleidelijk afremmen bij loslaten** remt hij bij loslaten ook in stapjes af. **Spatie** (stop), *Alles stoppen*, een preset kiezen of het venster verlaten stopt altijd direct. Elk scherm onthoudt zijn eigen stand. Voor de Xbox-controller is er *Zachte beweging*.
+  <img src="docs/screenshots/snelheden.png" width="300" alt="Camerabediening met Snelheden open: acceleratie, afremmen en snelheid volgt de zoom">
 - **Sneltoets op de tegel**: bij de camera die je bedient staat rechtsonder op tegel 1–9 de toets waarmee je die preset oproept.
 - **Ongedaan maken**: heb je een preset overschreven, dan verschijnt onderin 10 seconden *Ongedaan maken*. De camera gaat dan terug naar de oude positie, slaat de preset daar opnieuw op en zet de oude foto terug. Dat kan als de app de oude positie kent: van presets die je met de app opslaat (of uitleest bij Back-up) onthoudt hij die vanzelf.
 
@@ -127,7 +141,7 @@ Waar je in het menu bent, zie je op de monitor van de videomixer (de app toont g
 
 ## Tegels instellen
 Boven het presetraster: **Tegels − 12 +** bepaalt hoeveel presettegels je per camera ziet (90–99 worden overgeslagen),
-**Grootte** de tegelgrootte. Beide worden automatisch opgeslagen en gelden op elk scherm. Staan er presets met een naam of
+**Grootte** de tegelgrootte (traploos: de tegels worden precies zo breed als de waarde naast de schuif, in *Alle camera's* iets kleiner; bij grote tegels kan rechts in een kolom wat ruimte overblijven; op volledig scherm worden ze zo nodig kleiner, zodat ze nooit onder de onderrand doorlopen). Beide worden automatisch opgeslagen en gelden op elk scherm. Staan er presets met een naam of
 foto buiten beeld, dan zie je een melding; klik erop om ze te tonen.
 
 ## Back-up van presets en camera-instellingen
@@ -241,25 +255,39 @@ De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). He
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
-**Zachte beweging**, **Pan only** en **Tilt omkeren** zijn knoppen in de Xbox-kaart: klik om ze aan of uit te zetten; aan = indigo met *AAN*.
+**Gescheiden sticks**, **Pan only** en **Tilt omkeren** zijn knoppen in de Xbox-kaart: klik om ze aan of uit te zetten; aan = indigo met *AAN*. **Zachte beweging** is een schuif van *Uit* tot *Extra zacht* (0–100%).
 
-**Zachte beweging** (standaard aan): de camera trekt geleidelijk op (ca. 1 seconde naar topsnelheid) en de stick reageert fijner rond het midden. Uitzetten geeft direct de volle snelheid.
+<img src="docs/screenshots/xbox-kaart.png" width="300" alt="Xbox-kaart met Gescheiden sticks aan (Pan only n.v.t.)">
+
+**Zachte beweging** (standaard 50%): de camera trekt geleidelijk op en de stick reageert fijner rond het midden. Op 50% duurt het ongeveer 1 seconde tot topsnelheid, op 100% (*Extra zacht*) ongeveer 2 seconden en is de stick rond het midden nog fijner; op *Uit* gaat de camera direct op volle snelheid. Daartussen werkt het traploos. Stoppen gaat altijd direct. Elk scherm onthoudt zijn eigen stand; wie eerder zachte beweging uit had staan, begint op *Uit*.
+
+**Gescheiden sticks** (knop in de Xbox-kaart, standaard uit): de **linker stick draait alleen links/rechts** (pan) en de **rechter stick alleen omhoog/omlaag** (tilt). Focus zit dan niet meer op de rechter stick. Zolang dit aan staat is *Pan only* uitgeschakeld (*n.v.t.*; je eigen stand komt terug als je Gescheiden sticks uitzet); *Tilt omkeren* werkt dan op de rechter stick. Geldt per scherm; in de knoppenindeling kun je er ook een controllerknop voor kiezen (*Gescheiden sticks aan/uit*). Het venster *Knoppenindeling* laat zien wat de sticks op dit moment doen.
 
 **Pan only** (knop in de Xbox-kaart, indigo met *AAN* als hij actief is): de linker stick draait dan alleen links/rechts, voor alle camera's tegelijk; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt per scherm, net als de andere Xbox-opties. In de knoppenindeling kun je er ook een controllerknop voor kiezen (*Pan only aan/uit*).
 
-Sticks en triggers liggen vast. De knoppen stel je per knop in via **Knoppenindeling instellen…** in de Xbox-kaart (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
+**Sticks afstellen…** (knop in de Xbox-kaart, naast *Knoppenindeling instellen…*): per stick (tabs *Linker stick* / *Rechter stick*) stel je in hoe hij reageert, zoals in de Xbox Accessories-app:
+- **Dode zone** (0–40%, standaard 18%; rechter stick als focus 35%, met *Gescheiden sticks* (tilt) 18% zolang je hem niet zelf afstelt): zo ver kun je duwen zonder dat de camera beweegt. Handig als een stick niet precies in het midden terugveert en de camera gaat kruipen.
+- **Maximaal** (50–100%): hoeveel van de topsnelheid je krijgt als je de stick helemaal duwt.
+- **Curve**: *Standaard* (zoals altijd), *Vertraagd* (nog fijner rond het midden), *Direct* (recht evenredig) of *Eigen*: sleep de twee punten in de grafiek (of gebruik de pijltjestoetsen op een punt).
+Links zie je live waar de stick staat (de stippellijn is de dode zone), rechts de grafiek *stickbeweging → camerabeweging*. *Zachte beweging* werkt er nog bovenop (dunne lijn in de grafiek). De afstelling geldt voor **alle schermen en alle knoppenprofielen** (per workspace) en staat in de back-up. Zolang het venster open is, bestuurt de controller niets (een beweging die nog liep stopt meteen; dat geldt voor elk venster). *Standaard terugzetten* zet beide sticks terug.
+
+<img src="docs/screenshots/sticks-afstellen.png" width="560" alt="Sticks afstellen">
+
+Sticks en triggers hebben een vaste functie. De knoppen stel je per knop in via **Knoppenindeling instellen…** in de Xbox-kaart (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
 
 | Controller | Functie |
 |---|---|
 | Linker stick | Pan/tilt, snelheid naar hoe ver je duwt (indrukken = fijn-modus) |
 | RT / LT | Zoom in / uit, snelheid naar hoe diep je drukt |
-| Rechter stick ↑/↓ | Focus ver / dichtbij (indrukken = autofocus) |
+| Rechter stick ↑/↓ | Focus ver / dichtbij (indrukken = autofocus); met *Gescheiden sticks* = tilt |
 | A · B · X · Y | Preset 1–4 · met LB (Shift) ingedrukt: 5–8 |
 | ☰ Menu + A/B/X/Y | Huidige positie opslaan als preset (trilt ter bevestiging) |
-| D-pad ←/→ | Vorige / volgende camera · ↓ home (↑ vrij) |
+| D-pad ←/→ | Vorige / volgende camera |
+| D-pad ↑/↓ | Focus ver / dichtbij zolang je hem vasthoudt (zet autofocus uit) |
 | RB | Persoon volgen aan/uit · View = alles stoppen |
 
-Elke knop kan ook worden: een vaste camera, een andere preset, home, volgen, autofocus, fijn-modus, alles stoppen, of niets.
+Home heeft standaard geen controllerknop meer (wel toets **H** en het huisje in de bediening); wil je hem op de controller, kies dan *Home* bij een knop. Wie de knoppenindeling nooit heeft aangepast, krijgt deze nieuwe standaard vanzelf (vroeger was D-pad ↓ home); een eigen indeling of profiel blijft zoals het was.
+Elke knop kan ook worden: een vaste camera, een andere preset, home, focus ver/dichtbij, volgen, autofocus, fijn-modus, Pan only, Gescheiden sticks, alles stoppen, of niets.
 **Shift** telt bij presets een instelbaar getal op (standaard 4); **Opslaan** vasthouden + presetknop slaat de huidige positie op.
 
 De bediening-pagina moet open en zichtbaar zijn (de browser geeft de controller alleen door aan het actieve tabblad).
@@ -268,7 +296,9 @@ Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 ![Knoppenindeling](docs/screenshots/knoppenindeling.png)
 
 ## YouTube-livestream bekijken
-Klik op de **YouTube**-knop rechtsboven → *Kanaal instellen…* en vul het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
+Klik op de **YouTube**-knop rechtsboven → *Kanaal instellen…* en vul het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Weet je het kanaal-ID niet? De knop **Kanaal-ID opzoeken op YouTube** onder het veld opent youtube.com/account_advanced in een nieuw venster; daar staat het ID (`UC…`) als je ingelogd bent. Kopieer het en plak het in het veld. Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
+
+<img src="docs/screenshots/youtube-kanaal.png" width="480" alt="YouTube-kanaal instellen met de knop Kanaal-ID opzoeken">
 **Na het bijwerken van de app altijd PTZ Control opnieuw starten** (Terminal-venster sluiten, app weer openen), anders draait de server nog de oude versie.
 De app kijkt daarna elke minuut of het kanaal live is. De knop rechtsboven wordt rood (**● LIVE**) zodra er een stream loopt,
 en de stream verschijnt in een **klein venster** (standaard automatisch, zonder geluid).
@@ -288,6 +318,7 @@ Sluit de V-1HD met een **USB-kabel** aan op de computer waar PTZ Control draait 
 - Vink **Koppeling met de videomixer aan** aan. Bovenin staat of de mixer gevonden is.
 - Het venster toont beide rijen van de mixer (A en B, elk knop 1–4). Beide rijen kiezen uit dezelfde vier HDMI-ingangen, dus je kiest per ingang één keer welke camera erop zit. Druk je op de mixer op een knop, dan licht hij in het venster op; de gekozen ingang op de live rij is rood, net als op de mixer.
 - De camera die op de mixer gekozen is, krijgt in de app een **rode rand** en **IN BEELD** (in de kolom en op het tabblad). Zo zie je meteen welke camera je niet moet verplaatsen.
+- Alleen bij die camera wordt de laatst gekozen preset een rood **LIVE**; bij de andere camera's heet hij **GESELECTEERD** (indigo).
 - **Slot**: zet je een camera op slot (het **slotje** in de kolomkop, of *Slot* per ingang in dit venster), dan kan er **geen preset en geen home** worden gekozen zolang die camera in beeld is: niet met een klik op een tegel, niet met de toetsen 1–9 en niet met de presetknoppen van de Xbox-controller. **Bijsturen met de controller** (stick, zoom, focus) en het toetsenbord kan wel. De kolom krijgt dan een oranje **SLOT** en de tegels worden grijs. Zodra je op de mixer naar een andere camera schakelt, werkt alles weer. Presets *opslaan* kan op slot wel. Het slot geldt voor alle schermen (de server weigert de opdracht ook). Een slot kan alleen voor een camera die aan een ingang van de mixer hangt; anders is het slotje grijs.
 - **Fader**: helemaal naar **A** (0) = rij A live, helemaal naar **B** (127) = rij B live, **ertussen = beide rijen live** (beide camera's krijgen IN BEELD, en een slot geldt dan voor allebei). In het venster staat *live* bij de rij(en) die live zijn. De app vraagt de faderstand elke halve seconde op bij de mixer; zolang de mixer nog geen stand heeft gegeven, geldt rij A als live.
 - **Verkenning**: legt alles vast wat de mixer via MIDI stuurt. Start, druk op de knoppen van beide rijen en kies een memory, en klik **Log downloaden**. Handig als de koppeling niet klopt.
@@ -322,6 +353,8 @@ De instellingen gelden voor alle schermen en worden per workspace en in de back-
 De schakelaar onder *Weergave* in het menu (toont **Licht** of **Donker**) wisselt direct. Elk apparaat onthoudt zijn eigen keuze.
 
 De vormgeving volgt de huisstijl van de Voordienst app: lichtgrijze achtergrond met witte kaarten, één hoofdkleur (indigo) voor selectie en knoppen, een donkere kopbalk en het lettertype Inter (zonder internet valt de app terug op het systeemlettertype). Rood = LIVE/fout, groen = in orde, amber = let op, oranje = onderweg/oefenstand.
+
+De **zijbalk** met de camerabediening en de Xbox-controller is nooit hoger dan het scherm: hij blijft direct onder de kopbalk staan als je door de presets scrolt, zodat pijlen, zoom, focus en volgen altijd in beeld zijn. Past niet alles, dan scrolt de zijbalk zelf (bijvoorbeeld naar de Xbox-kaart). Tot 900 pixels breed staat de zijbalk rechts; op een smaller scherm komt hij onder de presets. In *alleen kijken* is er geen zijbalk en gebruiken de presets de hele breedte.
 
 De app past zich aan elke schermgrootte aan. Passen de cameratabbladen niet naast de knoppen in de kopbalk, dan krijgen ze een eigen regel (en schuiven ze opzij als ze ook dan niet passen). Op een smal scherm tonen de knoppen in de kop alleen hun icoon (de uitleg staat erbij als je erop wijst) en staan de onderdelen onder elkaar:
 
