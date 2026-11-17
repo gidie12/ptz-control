@@ -182,9 +182,18 @@ def find_camera(ref):
 
 
 # ---------------------------------------------------------------- live events (SSE)
-STATE = {"active": None, "last_preset": {}}
+STATE = {"active": None, "last_preset": {}, "adjusted": {}}   # adjusted: {cam_id: True} na bewegen (zie mark_adjusted)
 SUBSCRIBERS = []
 SUB_LOCK = threading.Lock()
+
+
+def mark_adjusted(cam_id):
+    """🧑 Camera is na de laatst gekozen preset bewogen (pan/tilt/home, ook door volgen): tegel AANGEPAST op alle schermen.
+    Alleen bij de overgang een SSE "preset" met adjusted: true; een nieuwe preset (oproepen/opslaan/ongedaan maken) wist het."""
+    n = STATE["last_preset"].get(cam_id)
+    if n is None or STATE["adjusted"].get(cam_id):
+        return
+    broadcast({"type": "preset", "cam": cam_id, "n": n, "adjusted": True})
 
 
 def broadcast(event):
@@ -192,6 +201,10 @@ def broadcast(event):
         STATE["active"] = event["cam"]
     elif event.get("type") == "preset":
         STATE["last_preset"][event["cam"]] = event["n"]
+        if event.get("adjusted"):
+            STATE["adjusted"][event["cam"]] = True
+        else:
+            STATE["adjusted"].pop(event["cam"], None)
     with SUB_LOCK:
         for q in list(SUBSCRIBERS):
             q.put(event)
@@ -338,6 +351,9 @@ def describe_request(path, body, code, resp):
     elif path == "/api/track/limit":
         msg = {"left": "Volgen: grens links ingesteld", "right": "Volgen: grens rechts ingesteld"}.get(
             body.get("side"), "Volgen: grenzen gewist")
+    elif path == "/api/pad/cal":
+        msg = ("Xbox: sticks standaard afgesteld" if body.get("reset") else "Xbox: sticks afgesteld") if ok \
+            else "Xbox: sticks afstellen"
     elif path == "/api/thumb":
         msg = f"Foto van preset {body.get('n')} " + ("verwijderd" if body.get("delete") else "vernieuwd")
     elif path == "/api/config":
@@ -678,6 +694,87 @@ def _store_thumb(cam, n, data):
 HAND_MOVING = set()    # {(cam_id, "move"|"zoom"|"focus")}: laatste commando was een doorlopende beweging
 
 
+# ---------------------------------------------------------------- snelheid volgt de zoom
+# 🧑 Pijlknoppen en pijltjestoetsen (args zs: 1) draaien langzamer naarmate de camera verder is ingezoomd.
+# Niet voor de Xbox-controller en niet voor volgen (die sturen geen zs). De zoompositie komt via VISCA
+# (81 09 04 47 FF), hooguit eens per ZOOM_AGE seconden per camera, op de achtergrond (een beweging wacht nooit);
+# ook bijgewerkt na zoom-stop en door "onderweg" (leest de hele positie). Geen VISCA → geen schaling.
+# ⚠️ Zoombereik per model niet gecontroleerd: 0 = uitgezoomd, ZOOM_MAX (0x4000, optisch bij Sony/PTZOptics) = helemaal in.
+ZOOM = {}              # cam_id -> {"t": tijd laatste meting, "raw": zoomwaarde, "fail": tijd laatste fout, "busy": bool}
+ZOOM_LOCK = threading.Lock()
+ZOOM_AGE = 1.0
+ZOOM_FAIL_WAIT = 60.0  # na een mislukte meting zo lang niet opnieuw proberen (geen VISCA = elke keer 2 s wachten)
+try:
+    ZOOM_MAX = max(1, int(os.environ.get("PTZ_ZOOM_MAX", "16384"), 0))
+except ValueError:
+    ZOOM_MAX = 16384
+ZOOM_MIN_SCALE = 0.25
+
+
+def zoom_scale_of(raw):
+    """Zoomwaarde → snelheidsfactor. Uitgezoomd 1,0, helemaal ingezoomd 0,25; daartussen 0,25 + 0,75·(1 − z)²
+    (z = raw / ZOOM_MAX): eerst snel omlaag, omdat de beeldhoek bij inzoomen ook eerst snel kleiner wordt.
+    z = 0,25 → 67 %, 0,5 → 44 %, 0,75 → 30 %."""
+    z = max(0.0, min(1.0, float(raw) / ZOOM_MAX))
+    return ZOOM_MIN_SCALE + (1 - ZOOM_MIN_SCALE) * (1 - z) ** 2
+
+
+def zoom_store(cam_id, raw):
+    with ZOOM_LOCK:
+        e = ZOOM.setdefault(cam_id, {})
+        e.update(t=time.time(), raw=int(raw), fail=0)
+
+
+def _zoom_read(cam):
+    cid = cam["id"]
+    try:
+        with _backup.visca_session(cam) as sock:
+            raw = _backup.nib(_backup.visca_inq(sock, "81 09 04 47 FF"))
+        zoom_store(cid, raw)
+    except Exception:  # noqa: BLE001  (geen VISCA of geen antwoord: niet schalen)
+        with ZOOM_LOCK:
+            ZOOM.setdefault(cid, {})["fail"] = time.time()
+    finally:
+        with ZOOM_LOCK:
+            ZOOM.setdefault(cid, {})["busy"] = False
+
+
+def zoom_refresh(cam, delay=0.0, wait=False):
+    """Zoompositie opnieuw lezen (achtergrond, of wachtend met wait=True). Niet tijdens een taak of na een recente fout."""
+    if JOB.get("running"):
+        return
+    cid = cam["id"]
+    with ZOOM_LOCK:
+        e = ZOOM.setdefault(cid, {})
+        if e.get("busy") or (e.get("fail") and time.time() - e["fail"] < ZOOM_FAIL_WAIT):
+            return
+        e["busy"] = True
+
+    def run():
+        if delay:
+            time.sleep(delay)
+        _zoom_read(cam)
+
+    if wait:
+        run()
+    else:
+        threading.Thread(target=run, daemon=True, name=f"zoom-{cid}").start()
+
+
+def zoom_scale(cam, wait=False):
+    """Snelheidsfactor voor deze camera, of None (onbekend). Ouder dan ZOOM_AGE → opnieuw lezen."""
+    with ZOOM_LOCK:
+        e = dict(ZOOM.get(cam["id"]) or {})
+    if not e.get("t") or time.time() - e["t"] > ZOOM_AGE:
+        zoom_refresh(cam, wait=wait)
+        if wait:
+            with ZOOM_LOCK:
+                e = dict(ZOOM.get(cam["id"]) or {})
+    if e.get("raw") is None or (e.get("fail") and e.get("fail", 0) > e.get("t", 0)):
+        return None
+    return zoom_scale_of(e["raw"])
+
+
 LOCK_ACTIONS = ("preset_call", "home")   # 🧑 springen naar een positie; handbediening (move/zoom/focus) blijft mogelijk
 
 
@@ -717,6 +814,13 @@ def do_action(cam, action, args, info=None):
     if action in ("move", "stop", "home", "preset_call", "preset_set"):
         moving_cancel(cam["id"])          # een nieuw commando beëindigt de "onderweg"-markering
     old = undo_snapshot(cam, clamp(args.get("n"), 0, 254)) if action == "preset_set" else None
+    if action == "move" and args.get("zs"):   # 🧑 pijlen/pijltjestoetsen: langzamer als de camera ingezoomd is
+        sc = zoom_scale(cam)
+        if sc is not None:
+            args = dict(args, pan=max(1, round(clamp(args.get("pan"), 1, 24) * sc)),
+                        tilt=max(1, round(clamp(args.get("tilt"), 1, 20) * sc)))
+        if info is not None:
+            info["speed_scale"] = None if sc is None else round(sc * 100)
     try:
         res = run_command(cam, action, args)
     except (urllib.error.URLError, OSError) as e:
@@ -731,6 +835,15 @@ def do_action(cam, action, args, info=None):
             HAND_MOVING.discard(key)
     elif action in ("stop", "home", "preset_call", "preset_set"):
         HAND_MOVING.discard((cam["id"], "move"))
+    if action in ("move", "home"):        # zoom/focus tellen niet als aangepast
+        mark_adjusted(cam["id"])
+    if action in ("zoom", "home", "preset_call") and (action != "zoom" or args.get("dir") == "stop"):
+        with ZOOM_LOCK:                   # zoom veranderd: oude meting telt niet meer
+            ZOOM.setdefault(cam["id"], {})["t"] = 0
+        if action == "zoom":
+            zoom_refresh(cam, delay=0.4)
+        elif action == "home":
+            zoom_refresh(cam, delay=2.5)  # home zet ook de zoom terug; na het bewegen opnieuw lezen
     if action == "preset_call":
         n = clamp(args.get("n"), 0, 254)
         broadcast({"type": "preset", "cam": cam["id"], "n": n})
@@ -778,6 +891,7 @@ def moving_watch(cam, n):
                     time.sleep(0.35)
                     try:
                         p = _backup.read_position(sock)
+                        zoom_store(cid, p["zoom"])   # gratis bijwerken voor "snelheid volgt de zoom"
                     except _backup.ViscaError:
                         continue
                     key = (p["pan"], p["tilt"], p["zoom"], p.get("focus"))
@@ -1092,6 +1206,14 @@ def read_pan_once(cam):
         return _backup.read_pan(sock)
 
 
+def _track_send(cam, action, args):
+    """Commando van de tracker; een pan-beweging maakt de laatst gekozen preset AANGEPAST."""
+    res = run_command(cam, action, args)
+    if action == "move":
+        mark_adjusted(cam["id"])
+    return res
+
+
 def start_tracking(cam, pick=None):
     """pick = (cx, kleurhistogram) van een aangeklikte persoon, of None = automatisch de grootste."""
     err = tracking_error()
@@ -1112,7 +1234,7 @@ def start_tracking(cam, pick=None):
             settings["limits"], settings["read_pan"] = limits, PanReader(cam)
         t = _tracker.CameraTracker(
             cam, stream_url(cam), det,
-            send=lambda a, args, c=cam: run_command(c, a, args),
+            send=lambda a, args, c=cam: _track_send(c, a, args),
             on_status=lambda st, cid=cam["id"]: _track_status(cid, **st),
             settings=settings)
         TRACKERS[cam["id"]] = t
@@ -1245,6 +1367,72 @@ def track_pick(cam, i=None, auto=False):
         start_tracking(cam, pick=(p[0], p[5]))
     _track_status(cam["id"], picked=True)
     return {"ok": True, "on": True}
+
+
+# ---------------------------------------------------------------- Xbox: sticks afstellen
+# 🧑 Eén afstelling voor alle schermen en knoppenprofielen (per workspace, in back-ups): cfg.pad_cal.
+# Per stick: dz = dode zone (0–0,4 van de uitslag), max = maximaal (0,5–1), curve = standaard|vertraagd|direct|eigen,
+# pts = twee punten [[x, y], [x, y]] (0–1) van de eigen curve. Alleen via POST /api/pad/cal; /api/config behoudt hem.
+PAD_CURVES = ("standaard", "vertraagd", "direct", "eigen")
+PAD_CAL_DEFAULT = {
+    "left": {"dz": 0.18, "max": 1.0, "curve": "standaard", "pts": [[0.33, 0.11], [0.67, 0.44]]},
+    "right": {"dz": 0.35, "max": 1.0, "curve": "standaard", "pts": [[0.33, 0.11], [0.67, 0.44]]},
+}
+
+
+def _num(v, lo, hi, default):
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return default
+    if v != v:   # NaN
+        return default
+    return round(max(lo, min(hi, v)), 3)
+
+
+def norm_pad_cal(cal):
+    """Afstelling controleren en aanvullen met de standaard (onbekende sleutels weg)."""
+    cal = cal if isinstance(cal, dict) else {}
+    out = {}
+    for side, d in PAD_CAL_DEFAULT.items():
+        c = cal.get(side) if isinstance(cal.get(side), dict) else {}
+        pts = c.get("pts") if isinstance(c.get("pts"), list) and len(c.get("pts")) == 2 else d["pts"]
+        try:
+            (x1, y1), (x2, y2) = [(_num(p[0], 0.02, 0.98, 0.5), _num(p[1], 0, 1, 0.5)) for p in pts]
+        except (TypeError, IndexError, ValueError):
+            (x1, y1), (x2, y2) = d["pts"]
+        if x1 > x2:
+            (x1, y1), (x2, y2) = (x2, y2), (x1, y1)
+        x2 = max(x2, min(0.98, x1 + 0.05))
+        y2 = max(y2, y1)                       # curve loopt nooit terug
+        out[side] = {"dz": _num(c.get("dz"), 0, 0.4, d["dz"]), "max": _num(c.get("max"), 0.5, 1, d["max"]),
+                     "curve": c.get("curve") if c.get("curve") in PAD_CURVES else d["curve"],
+                     "pts": [[x1, y1], [x2, y2]]}
+    return out
+
+
+def set_pad_cal(cal, reset=False):
+    with LOCK:
+        cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+        if reset:
+            cfg.pop("pad_cal", None)
+        else:
+            stored = cfg.get("pad_cal") if isinstance(cfg.get("pad_cal"), dict) else {}
+            cur = norm_pad_cal(stored)
+            new = cal if isinstance(cal, dict) else {}
+            sides = [k for k in PAD_CAL_DEFAULT if k in stored]
+            for side in cur:                   # per stick samenvoegen: alleen meegestuurde velden wijzigen
+                if isinstance(new.get(side), dict):
+                    cur[side].update(new[side])
+                    if side not in sides:
+                        sides.append(side)
+            cur = norm_pad_cal(cur)
+            # 🧑 alleen sticks die echt zijn afgesteld opslaan: een ontbrekende stick = standaard
+            # (rechter stick als tilt bij Gescheiden sticks dan 18 % dode zone i.p.v. 35 %, zie index.html padCal)
+            cfg["pad_cal"] = {k: cur[k] for k in PAD_CAL_DEFAULT if k in sides}
+        _write(cfg)
+    broadcast({"type": "config"})
+    return norm_pad_cal(cfg.get("pad_cal"))
 
 
 def set_track_frame(cam_id, frame):
@@ -1423,7 +1611,7 @@ def _activate(ws_id):
         WS["active"] = ws_id
         CONFIG_PATH, THUMB_DIR = ws_paths(ws_id)
         ws_save(WS)
-    STATE.update(active=None, last_preset={})
+    STATE.update(active=None, last_preset={}, adjusted={})
     JOB.update(running=False, kind="", cams={})
     with YT._lock:   # livestream van de vorige workspace niet laten hangen
         YT.state.update(channel="", live=False, upcoming=False, video_id=None, title=None, start=None, checked=None, error=None)
@@ -2001,6 +2189,10 @@ class Handler(BaseHTTPRequestHandler):
                 cam["password_set"] = bool(cam.pop("password", ""))
             cfg["tracking_error"] = tracking_error()
             cfg["first_run"] = first_run(cfg)
+            stored_cal = cfg.get("pad_cal") if isinstance(cfg.get("pad_cal"), dict) else {}
+            cfg["pad_cal_set"] = {k: k in stored_cal for k in PAD_CAL_DEFAULT}   # welke stick is zelf afgesteld
+            cfg["pad_cal"] = norm_pad_cal(stored_cal)   # altijd volledig (ontbreekt = standaard)
+            cfg["pad_cal_default"] = norm_pad_cal(None)
             if cfg.get("liederen"):           # zonder token (de UI gebruikt /api/liederen; POST /api/config behoudt hem)
                 cfg["liederen"] = _liederen.public_cfg(cfg["liederen"])
             return self._send(200, cfg)
@@ -2059,6 +2251,13 @@ class Handler(BaseHTTPRequestHandler):
             name = f"ptz-control-activiteit-{datetime.date.today().isoformat()}.txt"
             return self._send(200, ACTLOG.text(), "text/plain; charset=utf-8",
                               {"Content-Disposition": f'attachment; filename="{name}"'})
+        if u.path == "/api/zoomscale":   # 🧑 snelheid volgt de zoom: huidige factor van een camera (wacht op een meting)
+            try:
+                cam = find_camera(parse_qs(u.query).get("cam", [""])[0])
+            except KeyError as e:
+                return self._send(404, {"ok": False, "error": e.args[0]})
+            sc = zoom_scale(cam, wait=True)
+            return self._send(200, {"ok": True, "cam": cam["id"], "scale": None if sc is None else round(sc * 100)})
         if u.path == "/api/camstatus":
             with CAMSTATUS_LOCK:
                 return self._send(200, {"type": "camstatus", "cams": dict(CAMSTATUS)})
@@ -2231,6 +2430,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "cameras ontbreekt"})
             body.pop("tracking_error", None)
             body.pop("first_run", None)
+            body.pop("pad_cal_default", None)
+            body.pop("pad_cal_set", None)
             body.pop("obs", None)  # OBS-koppeling (stream starten/stoppen) is verwijderd
             body.pop("scenes", None)  # scènes zijn verwijderd
             old_cfg = load_config()
@@ -2254,6 +2455,10 @@ class Handler(BaseHTTPRequestHandler):
             body.pop("liederen", None)
             if old_cfg.get("liederen"):
                 body["liederen"] = old_cfg["liederen"]
+            # Xbox-sticks afstellen idem: alleen via /api/pad/cal
+            body.pop("pad_cal", None)
+            if old_cfg.get("pad_cal"):
+                body["pad_cal"] = old_cfg["pad_cal"]
             existing = {c["id"]: c for c in old_cfg.get("cameras", [])}
             for cam in body["cameras"]:
                 cam.pop("thumbs", None)
@@ -2421,6 +2626,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": True, "frame": set_track_frame(cam["id"], body.get("frame"))})
             except KeyError as e:
                 return self._send(404, {"ok": False, "error": e.args[0]})
+            except Exception as e:  # noqa: BLE001
+                return self._send(400, {"ok": False, "error": str(e)})
+
+        if u.path == "/api/pad/cal":       # 🧑 sticks afstellen (alle schermen, per workspace)
+            try:
+                return self._send(200, {"ok": True, "cal": set_pad_cal(body.get("cal"), bool(body.get("reset")))})
             except Exception as e:  # noqa: BLE001
                 return self._send(400, {"ok": False, "error": str(e)})
 
