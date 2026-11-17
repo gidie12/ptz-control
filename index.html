@@ -5036,8 +5036,11 @@ const TOUR_STEPS = [
   { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>${ic("download")} Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
   { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. De schuif <b>Grootte</b> werkt traploos: de tegels worden precies zo breed als de waarde ernaast (in <i>Alle camera's</i> iets kleiner). Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
-  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in; met de pijlen en pijltjestoetsen draait de camera vanzelf <b>langzamer als hij ingezoomd is</b> (het percentage staat eronder). Met <b>Acceleratie</b> trekt de camera geleidelijk op (en met het vinkje remt hij ook geleidelijk af); <kbd>${esc(keyLabel(keyOf("stop")))}</kbd> stopt altijd direct.</p>
+  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
       <p>Muis <b>2 seconden</b> stil op een knop = korte uitleg. Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
+  { target: ["#ctrlCard details > summary", "#ctrlCard"], title: ic("sliders") + " Snelheden", text: () => `<p>Onder <b>Snelheden</b> stel je per scherm in hoe snel de pijlen en toetsen draaien, zoomen en scherpstellen.</p>
+      <ul><li><b>Snelheid volgt de zoom</b>: met de pijlen en pijltjestoetsen draait de camera vanzelf langzamer als hij ingezoomd is (helemaal ingezoomd ongeveer een kwart); het percentage staat eronder.</li>
+      <li><b>Acceleratie</b>: de camera trekt geleidelijk op in plaats van meteen op snelheid; met het vinkje remt hij bij loslaten ook geleidelijk af. <kbd>${esc(keyLabel(keyOf("stop")))}</kbd> stopt altijd direct.</li></ul>` },
   { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
       <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
   { target: ["#btnTrackSet"], title: ic("image") + " Kader en persoon kiezen", text: () => `<p><b>Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>
@@ -5045,7 +5048,7 @@ const TOUR_STEPS = [
       <li>Sleep de <b>oranje lijnen</b> voor het kader: binnen het kader staat de camera stil, loopt de persoon eruit, dan draait hij terug naar de <b>witte stippellijn</b>.</li>
       <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met de pijlen en klik <i>Grens … = hier</i>).</li>
       <li><b>Afstelling</b>: slingert de camera heen en weer, zet dan de beginsnelheid lager of de rust na een stop langer; per camera.</li></ul>` },
-  { target: ["#padCard"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
+  { target: ["#padCard"], small: ["#padBar"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
       <li>D-pad ←/→ = andere camera, ↑/↓ = focus ver/dichtbij (vasthouden), RB = volgen</li><li>View = alles stoppen</li></ul>
       <p>Verbonden = groen <b>● Verbonden</b> in de titel. Per apparaat: <b>Zachte beweging</b> (schuif), <b>Gescheiden sticks</b>, <b>Pan only</b>, <b>Tilt omkeren</b> (indigo = aan) en de max. snelheid.</p>` },
@@ -5097,7 +5100,7 @@ const TOUR_STEPS = [
 ];
 let tourIdx = -1, tourStepShown = -1;
 function tourTarget(st) {
-  for (const sel of st.target || []) {
+  for (const sel of (innerWidth <= 700 && st.small) || st.target || []) {   // small: kleiner doel op een smal scherm (anders past de kaart niet)
     let el = $(sel);
     if (el && st.parent) el = el.closest(st.parent) || el;
     if (el) { const r = el.getBoundingClientRect(); if (r.width > 0 && r.height > 0) return el; }
