@@ -576,6 +576,8 @@
     padding: 0; border-radius: 10px; box-shadow: 0 12px 34px var(--shadow); border-color: var(--line); }
   body.wall aside .foldcard.whide { display: none; }
   body.wall aside .foldcard.docked:not(.collapsed) { overflow: hidden; }
+  /* past de inhoud ook bij de kleinste zoom (0,5) niet (bijv. Snelheden open op 1366×768): dan scrollt de kaart (fitDocked) */
+  body.wall aside .foldcard.docked.wscroll:not(.collapsed) { overflow: hidden auto; }
   body.wall aside .foldbar { margin: 0 !important; padding: 5px 6px 5px 10px; border-radius: 0; gap: 6px; font-size: 12px; cursor: grab;
     border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 1; background: var(--panel); }
   body.wall aside .foldbar:hover { background: var(--panel); }
@@ -630,8 +632,11 @@
   .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 5px; }
   details { margin-top: 10px; }
   summary { cursor: pointer; color: var(--muted); font-size: 13px; }
-  label.sl { display: grid; grid-template-columns: 50px 1fr 24px; gap: 8px; align-items: center; font-size: 13px;
-    color: var(--muted); margin: 6px 0; }
+  label.sl { display: grid; grid-template-columns: 76px 1fr 34px; gap: 8px; align-items: center; font-size: 13px;
+    color: var(--muted); margin: 6px 0; }   /* 76 px: "Acceleratie" past; 34 px: "100%" */
+  label.slchk { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); margin: 2px 0 6px; cursor: pointer; }
+  label.slchk input { margin: 0; accent-color: var(--accent); }
+  label.slchk:has(input:disabled) { opacity: .5; cursor: default; }
   .zsinfo { margin: 4px 0 2px; line-height: 1.35; }
   input[type=range] { width: 100%; accent-color: var(--accent); }
 
@@ -1115,6 +1120,8 @@
         <label class="sl" data-tipk="spTilt">Tilt <input type="range" id="spTilt" min="1" max="20" value="7"><span id="vTilt"></span></label>
         <label class="sl" data-tipk="spZoom">Zoom <input type="range" id="spZoom" min="1" max="7" value="4"><span id="vZoom"></span></label>
         <label class="sl" data-tipk="spFocus">Focus <input type="range" id="spFocus" min="1" max="7" value="3"><span id="vFocus"></span></label>
+        <label class="sl" data-tipk="spAccel">Acceleratie <input type="range" id="spAccel" min="0" max="100" step="5" value="0"><span id="vAccel"></span></label>
+        <label class="slchk" data-tipk="spBrake"><input type="checkbox" id="spBrake"> Ook geleidelijk afremmen bij loslaten</label>
         <p class="small muted zsinfo" id="zsInfo" data-tipk="zoomScale">Pijlen en pijltjestoetsen draaien vanzelf langzamer als je inzoomt<span id="zsPct"></span></p>
       </details>
       </div>
@@ -1734,7 +1741,7 @@ function renderTabs() {
 // Kies welke camera bediend wordt (pijltjes, 1–9, controller) zonder de weergave "Alle camera's" te verlaten.
 function selectCam(c, origin) {
   if (!c) return;
-  if (pressed.size) { pressed.clear(); cmd("stop"); }       // geen beweging laten doorlopen op de vorige camera
+  if (pressed.size || hand.dir) { pressed.clear(); handHalt(true); }   // geen beweging laten doorlopen op de vorige camera
   ctrlCam = c.id;
   if (view !== ALL) view = c.id;
   render(); toast((origin === "pad" ? "Controller: " : "Camera: ") + c.name, true);
@@ -1878,6 +1885,7 @@ async function presetClick(camId, n, el) {
     toast(`${camById(camId)?.name || "Camera"} is in beeld en staat op slot: geen preset. Bewegen met de controller kan wel.`);
     return;
   }
+  if (hand.dir && hand.cam === camId) handHalt(false);   // preset kiezen: optrekken/afremmen direct stoppen (preset neemt het over)
   lastPreset[camId] = n; delete adjusted[camId];   // direct feedback; server bevestigt via event
   renderPresets(); renderSide();
   await cmd("preset_call", { n }, camId);
@@ -1956,7 +1964,7 @@ function hold(el, start, stop) {
 }
 // 🧑 Bewegen na een preset (pan/tilt/home, ook volgen) maakt de tegel AANGEPAST. De server houdt dat bij
 // (STATE.adjusted, SSE "preset" met adjusted: true), zodat alle schermen hetzelfde tonen. Zoom/focus tellen niet mee.
-$$("#dpad [data-dir]").forEach(b => hold(b, () => { moveCmd(b.dataset.dir); }, () => cmd("stop")));
+$$("#dpad [data-dir]").forEach(b => hold(b, () => handMove(b.dataset.dir), () => handMove(keyDir())));   // loslaten: terug naar wat de pijltjestoetsen doen
 $$("[data-zoom]").forEach(b => hold(b, () => { cmd("zoom", { dir: b.dataset.zoom, speed: sp("#spZoom") }); }, () => zoomStop()));
 // zoom gestopt: daarna het percentage van "snelheid volgt de zoom" opnieuw ophalen (server leest de zoom na 0,4 s)
 function zoomStop(camId = ctrlCam) { const j = cmd("zoom", { dir: "stop" }, camId); setTimeout(() => zsLoad(true), 900); return j; }
@@ -2010,12 +2018,80 @@ $("#tileCount").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault()
 /* ================= toetsenbord ================= */
 const pressed = new Set();   // vastgehouden richtingen: up/down/left/right
 const anyDialog = () => $$("dialog").some(d => d.open) || !$("#tour").hidden;   // rondleiding blokkeert ook toetsen en controller
-const sendMove = () => {
+const keyDir = () => {   // richting uit de vastgehouden pijltjes ("" = geen)
   const d = [...pressed];
   const v = d.includes("up") ? "up" : d.includes("down") ? "down" : "";
   const h = d.includes("left") ? "left" : d.includes("right") ? "right" : "";
-  moveCmd((h && v) ? h + v : (h || v));
+  return (h && v) ? h + v : (h || v);
 };
+const sendMove = () => handMove(keyDir());
+/* 🧑 Acceleratie (pijlknoppen en pijltjestoetsen; de controller heeft Zachte beweging): schuif #spAccel 0–100 %
+   (per scherm). 0 = direct op de ingestelde snelheid (zoals vroeger). Anders in stapjes van ACC_TICK ms omhoog tot de
+   ingestelde snelheid, 100 % ≈ ACC_FULL ms; de server schaalt daarna nog met de zoom (zs). Vinkje #spBrake: bij loslaten
+   in stapjes omlaag en dan stop. Stop (Spatie/stop, Alles stoppen, venster kwijt, preset kiezen, andere camera) is altijd direct. */
+const ACC_TICK = 85, ACC_FULL = 1500;   // 85 ms = hooguit ~12 commando's per seconde
+const hand = { dir: "", cam: null, p: 0, t: 0, sent: "", timer: 0, braking: false };
+const accLevel = () => Math.max(0, Math.min(100, +$("#spAccel").value || 0));
+function handSend() {
+  const P = Math.max(1, Math.round(hand.p)), T = Math.max(1, Math.round(hand.t)), k = `${hand.dir} ${P}/${T}`;
+  if (k === hand.sent) return;   // alleen bij verandering
+  hand.sent = k;
+  moveCmd(hand.dir, P, T, hand.cam);
+}
+function handTick() {
+  const tp = sp("#spPan"), tt = sp("#spTilt"), n = Math.max(1, ACC_FULL * accLevel() / 100 / ACC_TICK);   // stapjes tot topsnelheid
+  if (hand.braking) {
+    hand.p -= tp / n; hand.t -= tt / n;
+    if (hand.p <= 1 && hand.t <= 1) return handHalt(true);   // laagste stand bereikt: nu echt stoppen
+  } else {
+    hand.p = Math.min(tp, hand.p + tp / n); hand.t = Math.min(tt, hand.t + tt / n);
+  }
+  handSend();
+  if (!hand.braking && hand.p >= tp && hand.t >= tt) { clearInterval(hand.timer); hand.timer = 0; }   // op snelheid
+}
+// richting omkeren (links ↔ rechts, omhoog ↔ omlaag) = opnieuw optrekken vanaf de laagste stand
+const handReversed = (a, b) => ["left", "right"].some(x => a.includes(x) && b.includes(x === "left" ? "right" : "left"))
+  || ["up", "down"].some(x => a.includes(x) && b.includes(x === "up" ? "down" : "up"));
+function handMove(dir) {
+  if (!dir) return handRelease();
+  const cam = ctrlCam; if (!cam) return;
+  if (hand.dir && hand.cam !== cam) handHalt(true);           // andere camera: de vorige eerst stil
+  const old = hand.dir;                                       // ook tijdens afremmen: omkeren = opnieuw optrekken
+  hand.cam = cam; hand.braking = false;
+  if (!accLevel()) {                                          // geen acceleratie: direct op snelheid (zoals vroeger)
+    clearInterval(hand.timer); hand.timer = 0;
+    hand.dir = dir; hand.p = sp("#spPan"); hand.t = sp("#spTilt"); hand.sent = "";
+    handSend(); return;
+  }
+  if (!hand.dir || (old && handReversed(old, dir))) { hand.p = 0; hand.t = 0; }
+  hand.dir = dir;
+  handTick();                                                  // eerste stapje meteen
+  if (hand.timer === 0 && (hand.p < sp("#spPan") || hand.t < sp("#spTilt"))) hand.timer = setInterval(handTick, ACC_TICK);
+}
+function handRelease() {
+  if (!hand.dir) return;
+  if (accLevel() && $("#spBrake").checked && (hand.p > 1 || hand.t > 1)) {   // geleidelijk afremmen
+    hand.braking = true;
+    if (!hand.timer) hand.timer = setInterval(handTick, ACC_TICK);
+    return;
+  }
+  handHalt(true);
+}
+// direct stoppen; send = stop naar de camera sturen (als die bewoog). Geeft de camera terug die bewoog.
+function handHalt(send) {
+  clearInterval(hand.timer); hand.timer = 0;
+  const c = hand.cam, was = hand.dir;
+  Object.assign(hand, { dir: "", p: 0, t: 0, sent: "", braking: false });
+  if (send && was && c) cmd("stop", {}, c);
+  return was ? c : null;
+}
+// acceleratie + afremmen (per scherm)
+function accShow() { const v = accLevel(); $("#vAccel").textContent = v ? v + "%" : "uit"; $("#spBrake").disabled = !v; }
+if (store.get("ptzAccel") != null) $("#spAccel").value = store.get("ptzAccel");
+$("#spBrake").checked = store.get("ptzAccBrake") === "1";
+accShow();
+$("#spAccel").oninput = () => { store.set("ptzAccel", String(accLevel())); accShow(); };
+$("#spBrake").onchange = () => store.set("ptzAccBrake", $("#spBrake").checked ? "1" : "0");
 /* 🧑 Snelheid volgt de zoom (pijlknoppen en pijltjestoetsen, niet de controller of volgen): de server schaalt pan/tilt
    met de zoompositie (args zs: 1) en geeft het percentage terug (speed_scale), getoond onder Snelheden. */
 function moveCmd(dir, pan = sp("#spPan"), tilt = sp("#spTilt"), camId = ctrlCam) {
@@ -2145,18 +2221,18 @@ document.addEventListener("keydown", (e) => {
   else if (a === "ctrl") toggleCard("ctrlCard");
   else if (a === "pad") toggleCard("padCard");
   else if (a === "help") helpOpen();
-  else if (a === "stop") { cmd("stop"); cmd("zoom", { dir: "stop" }); }
+  else if (a === "stop") { const c = handHalt(false); cmd("stop"); if (c && c !== ctrlCam) cmd("stop", {}, c); cmd("zoom", { dir: "stop" }); }   // altijd direct
   else if (a.startsWith("preset_")) { if (ctrlCam) presetClick(ctrlCam, +a.slice(7)); }
 });
 document.addEventListener("keyup", (e) => {
   const a = holding.get(e.code); if (!a) return;
   holding.delete(e.code);
-  if (["up", "down", "left", "right"].includes(a)) { if (pressed.delete(a)) pressed.size ? sendMove() : cmd("stop"); }   // alleen als dit pijltje echt bewoog
+  if (["up", "down", "left", "right"].includes(a)) { if (pressed.delete(a)) sendMove(); }   // alleen als dit pijltje echt bewoog; leeg = loslaten (eventueel afremmen)
   else if (a === "zoom_in" || a === "zoom_out") zoomStop();
   else if (a === "focus_far" || a === "focus_near") cmd("focus", { dir: "stop" });
 });
 window.addEventListener("blur", () => {
-  if (pressed.size) { pressed.clear(); cmd("stop"); }
+  pressed.clear(); handHalt(true);   // venster kwijt: direct stoppen, ook zonder afremmen
   if ([...holding.values()].some(a => a.startsWith("zoom"))) cmd("zoom", { dir: "stop" });
   if ([...holding.values()].some(a => a.startsWith("focus"))) cmd("focus", { dir: "stop" });
   holding.clear();
@@ -2394,11 +2470,15 @@ function fitDocked() {
       z = nz; body.style.zoom = z.toFixed(3);
     }
     while (card.scrollHeight > card.clientHeight + 1 && z > 0.5) { z = Math.max(0.5, z * 0.97); body.style.zoom = z.toFixed(3); }
-    fits.push([body, z]);
+    fits.push([body, z, card]);
   }
-  if (fits.length < 2) return;
-  const zmin = Math.min(...fits.map(([, z]) => z)).toFixed(3);
-  fits.forEach(([body]) => { body.style.zoom = zmin; });
+  if (fits.length >= 2) {
+    const zmin = Math.min(...fits.map(([, z]) => z)).toFixed(3);
+    fits.forEach(([body]) => { body.style.zoom = zmin; });
+  }
+  // nog steeds te hoog bij zoom 0,5: laat de kaart scrollen (titelbalk blijft staan), zodat alles bereikbaar blijft
+  fits.forEach(([, , card]) => card.classList.toggle("wscroll", card.scrollHeight > card.clientHeight + 1));
+  $$("aside .foldcard.wscroll").forEach(c => { if (!c.classList.contains("docked") || c.classList.contains("collapsed")) c.classList.remove("wscroll"); });
 }
 // inhoud kan veranderen (Snelheden open, controller verbonden, volgstatus): af en toe opnieuw passend maken
 setInterval(() => { if (isWall()) fitDocked(); }, 1000);
@@ -3024,7 +3104,7 @@ function padAction(action, gp, mods) {
     case "af": cmd("onepush_af"); setAF(true); break;
     case "fine": pad.fine = !pad.fine; toast(pad.fine ? "Fijn-modus aan" : "Fijn-modus uit", true); rumble(gp, 80, 0.4); break;
     case "pan_only": setPanOnly(!pad.panOnly, true); rumble(gp, 80, 0.4); break;
-    case "stopall": padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); break;
+    case "stopall": { const hc = handHalt(false); if (hc && hc !== ctrlCam) cmd("stop", {}, hc); } padStopAll(); cmd("stop"); cmd("zoom", { dir: "stop" }); cmd("focus", { dir: "stop" }); break;
   }
 }
 
@@ -3109,7 +3189,7 @@ function padLoop() {
 }
 requestAnimationFrame(padLoop);
 // tabblad weg of venster kwijt: niets laten doordraaien
-document.addEventListener("visibilitychange", () => { if (document.hidden) padStopAll(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) { padStopAll(); pressed.clear(); handHalt(true); } });
 window.addEventListener("blur", padStopAll);
 
 /* ================= back-up ================= */
@@ -4613,6 +4693,8 @@ const TIPS = {
   spPan: { t: "Pan-snelheid", d: "Hoe snel de camera links/rechts draait met de pijlen en het toetsenbord (1–24). Geldt voor dit scherm." },
   spTilt: { t: "Tilt-snelheid", d: "Hoe snel de camera omhoog/omlaag draait met de pijlen en het toetsenbord (1–20). Geldt voor dit scherm." },
   spZoom: { t: "Zoomsnelheid", d: "Hoe snel <i>Zoom +</i> en <i>Zoom −</i> (en de toetsen) zoomen (1–7). Geldt voor dit scherm." },
+  spAccel: { t: "Acceleratie", d: "Hoe geleidelijk de camera optrekt met de pijlen en pijltjestoetsen. <i>Uit</i> = direct op de ingestelde snelheid; 100% ≈ 1,5 s tot de ingestelde snelheid. Stoppen gaat direct, tenzij <i>Ook geleidelijk afremmen</i> aan staat; Spatie/stop stopt altijd direct. Geldt voor dit scherm, niet voor de Xbox-controller (die heeft <i>Zachte beweging</i>).", keys: ["stop"] },
+  spBrake: { t: "Geleidelijk afremmen", d: "Bij loslaten van een pijl of pijltjestoets remt de camera in stapjes af in plaats van meteen te stoppen (net zo snel als hij optrekt). Alleen met <i>Acceleratie</i> aan. Stop, Spatie, een preset kiezen of het venster verlaten stopt altijd direct.", keys: ["stop"] },
   zoomScale: { t: "Snelheid volgt de zoom", d: "Hoe verder de camera is ingezoomd, hoe langzamer de pijlen en pijltjestoetsen draaien: uitgezoomd de ingestelde snelheid, helemaal ingezoomd ongeveer een kwart. Geldt niet voor de Xbox-controller en niet voor persoon volgen. Het percentage is de huidige stand van de bediende camera (leeg = onbekend, bijvoorbeeld zonder VISCA)." },
   spFocus: { t: "Focussnelheid", d: "Hoe snel <i>Focus ver</i> en <i>Focus dichtbij</i> (en de toetsen) scherpstellen (1–7). Geldt voor dit scherm." },
   padSoft: { t: "Zachte beweging", d: "Hoe geleidelijk de camera optrekt en hoe fijn de stick rond het midden reageert. <i>Uit</i> = direct op snelheid; 50% ≈ 1 s naar topsnelheid; 100% (extra zacht) ≈ 2 s. Stoppen gaat altijd direct. Geldt voor dit scherm." },
@@ -4677,7 +4759,7 @@ const TOUR_STEPS = [
   { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>${ic("download")} Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
   { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. De schuif <b>Grootte</b> werkt traploos: de tegels worden precies zo breed als de waarde ernaast (in <i>Alle camera's</i> iets kleiner). Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
-  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in; met de pijlen en pijltjestoetsen draait de camera vanzelf <b>langzamer als hij ingezoomd is</b> (het percentage staat eronder).</p>
+  { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in; met de pijlen en pijltjestoetsen draait de camera vanzelf <b>langzamer als hij ingezoomd is</b> (het percentage staat eronder). Met <b>Acceleratie</b> trekt de camera geleidelijk op (en met het vinkje remt hij ook geleidelijk af); <kbd>${esc(keyLabel(keyOf("stop")))}</kbd> stopt altijd direct.</p>
       <p>Muis <b>2 seconden</b> stil op een knop = korte uitleg. Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
   { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
       <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
