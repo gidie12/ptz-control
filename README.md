@@ -83,7 +83,8 @@ Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **X
 ## Tijdens de dienst
 - **ONDERWEG…** op een tegel: de camera rijdt nog naar die preset. Het label verdwijnt zodra hij stilstaat; dan kun je veilig op de mixer overschakelen. (De app leest daarvoor de positie van de camera uit; lukt dat niet, dan staat het label er 3 seconden.)
 - **● Camerastatus**: het bolletje bij elke camera (kolom en tabblad) is groen als de camera bereikbaar is en rood als hij niet reageert, met *niet bereikbaar* erbij. De app controleert dit elke 10 seconden en bij elk commando.
-- **Uitleg bij de bediening**: houd de muis 2 seconden stil op een knop of schuif in de camerabediening of de Xbox-kaart (zoom, focus, AF, One-push, volgen, Kader…, de pijlen, de snelheden) en er verschijnt een korte uitleg met de sneltoets (zoals je die zelf hebt ingesteld). Bewegen, klikken of een toets laat hem verdwijnen. Op een aanraakscherm verschijnt hij niet.
+- **Uitleg bij de bediening**: houd de muis 2 seconden stil op een knop of schuif in de camerabediening of de Xbox-kaart (zoom, focus, AF, One-push, volgen, Kader…, de pijlen, de snelheden) en er verschijnt een korte uitleg met de sneltoets (zoals je die zelf hebt ingesteld). Bewegen, klikken of een toets laat hem verdwijnen. Op een aanraakscherm verschijnt hij niet.<br>
+  <img src="docs/screenshots/tooltip.png" width="300" alt="Uitleg bij Zoom + na 2 seconden stilhouden">
 - **Sneltoets op de tegel**: bij de camera die je bedient staat rechtsonder op tegel 1–9 de toets waarmee je die preset oproept.
 - **Ongedaan maken**: heb je een preset overschreven, dan verschijnt onderin 10 seconden *Ongedaan maken*. De camera gaat dan terug naar de oude positie, slaat de preset daar opnieuw op en zet de oude foto terug. Dat kan als de app de oude positie kent: van presets die je met de app opslaat (of uitleest bij Back-up) onthoudt hij die vanzelf.
 
@@ -270,6 +271,8 @@ Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 
 ## YouTube-livestream bekijken
 Klik op de **YouTube**-knop rechtsboven → *Kanaal instellen…* en vul het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Weet je het kanaal-ID niet? De knop **Kanaal-ID opzoeken op YouTube** onder het veld opent youtube.com/account_advanced in een nieuw venster; daar staat het ID (`UC…`) als je ingelogd bent. Kopieer het en plak het in het veld. Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
+
+<img src="docs/screenshots/youtube-kanaal.png" width="480" alt="YouTube-kanaal instellen met de knop Kanaal-ID opzoeken">
 **Na het bijwerken van de app altijd PTZ Control opnieuw starten** (Terminal-venster sluiten, app weer openen), anders draait de server nog de oude versie.
 De app kijkt daarna elke minuut of het kanaal live is. De knop rechtsboven wordt rood (**● LIVE**) zodra er een stream loopt,
 en de stream verschijnt in een **klein venster** (standaard automatisch, zonder geluid).

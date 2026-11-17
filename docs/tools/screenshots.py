@@ -63,7 +63,11 @@ def page(b, theme="light", w=1440, h=900):   # 🧑 screenshots altijd in de lic
 with sync_playwright() as p:
     b = p.chromium.launch()
     pg = page(b); pg.screenshot(path=f"{OUT}/hoofdscherm.png")
+    z = pg.locator('[data-tipk="zoom_in"]').bounding_box(); pg.mouse.move(z["x"] + z["width"] / 2, z["y"] + z["height"] / 2); pg.wait_for_timeout(2400)   # 🧑 tooltip na 2 s stilstaan
+    sb = pg.locator("aside").bounding_box(); tb = pg.locator("#tip").bounding_box() or sb; x0 = min(sb["x"], tb["x"]) - 12   # uitsnede zijbalk + ballon
+    pg.screenshot(path=f"{OUT}/tooltip.png", clip={"x": x0, "y": sb["y"], "width": sb["x"] + sb["width"] + 8 - x0, "height": min(560, 900 - sb["y"])}); pg.mouse.move(5, 5); pg.wait_for_timeout(200)
     pg.click("#btnYt"); pg.wait_for_timeout(300); pg.screenshot(path=f"{OUT}/youtube-menu.png", clip={"x": 640, "y": 0, "width": 800, "height": 520}); pg.keyboard.press("Escape")
+    pg.evaluate("openPrefs()"); pg.wait_for_timeout(300); pg.locator("#dlgPrefs").screenshot(path=f"{OUT}/youtube-kanaal.png"); pg.click("#prefsCancel")   # kanaal + knop Kanaal-ID opzoeken
     pg.click("#btnPad"); pg.hover("#miSet"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/menu.png", clip={"x": 640, "y": 0, "width": 800, "height": 540}); pg.keyboard.press("Escape"); pg.keyboard.press("Escape")   # menu met Instellingen ▸ open
     pg.click("#presetArea .tile .edit"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/preset-bewerken.png"); pg.click("#pCancel")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnSettings"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/cameras.png"); pg.click("#btnCancel")
