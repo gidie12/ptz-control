@@ -246,6 +246,15 @@
   .padtog:disabled { opacity: .45; cursor: not-allowed; }
   .padtog:disabled:hover { background: var(--panel); }
   .padtog small { font-weight: 400; opacity: .75; }
+  /* 🧑 Zachte beweging = schuif 0–100 % (spec 5.3) in een blok met dezelfde maat/stijl als .padtog */
+  .padsoft { display: grid; gap: 4px; padding: 9px 12px 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel);
+    color: var(--text); font-size: 13px; font-weight: 500; }
+  .padsoft .psrow { display: flex; align-items: center; gap: 8px; }
+  .padsoft .pval { margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--onaccent); font-variant-numeric: tabular-nums; }
+  .padsoft .pval.off { background: var(--line); color: var(--muted); }
+  .padsoft input[type=range] { margin: 2px 0 0; }
+  .padsoft .psscale { display: flex; justify-content: space-between; font-size: 11px; font-weight: 400; color: var(--muted); }
   #dlgBackup { width: min(760px, 95vw); }
   #dlgMap { width: min(720px, 95vw); }
   #dlgMap #padMap { grid-template-columns: 120px 1fr 120px 1fr; gap: 6px 12px; font-size: 13px; }
@@ -1103,7 +1112,11 @@
       <div class="small" id="padLive" style="margin-top:4px"></div>
       <div class="padset">
         <div class="padtogs">
-        <button class="padtog" id="padSoft" aria-pressed="false" data-tipk="padSoft"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg> Zachte beweging <span class="pstate">uit</span></button>
+        <div class="padsoft" id="padSoftBox" data-tipk="padSoft">
+          <div class="psrow"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg> Zachte beweging <span class="pval" id="padSoftV">50%</span></div>
+          <input type="range" id="padSoft" min="0" max="100" step="5" value="50" aria-label="Zachte beweging (0 = uit, 100 = extra zacht)">
+          <div class="psscale" aria-hidden="true"><span>Uit</span><span>Zacht</span><span>Extra zacht</span></div>
+        </div>
         <button class="padtog" id="padPanOnly" aria-pressed="false" data-tipk="padPanOnly"><svg class="ic" aria-hidden="true"><use href="#i-width"/></svg> Pan only <span class="pstate">uit</span></button>
         <button class="padtog" id="padInvY" aria-pressed="false" data-tipk="padInvY"><svg class="ic" aria-hidden="true" style="transform: rotate(90deg)"><use href="#i-swap"/></svg> Tilt omkeren <span class="pstate">uit</span></button>
         </div>
@@ -2669,9 +2682,15 @@ $$("#trkEdgeL, #trkEdgeR, #trkAim").forEach(h => {
 });
 
 /* ================= Xbox-controller (Gamepad API) ================= */
+// Zachte beweging 0–100 (per scherm). Oude schakelaar padSoft omzetten: "0" = uit → 0, aan/standaard → 50
+function padSoftInit() {
+  const v = store.get("padSoftLevel");
+  if (v !== null && v !== undefined && v !== "" && isFinite(+v)) return Math.max(0, Math.min(100, Math.round(+v)));
+  return store.get("padSoft") === "0" ? 0 : 50;
+}
 const pad = {
   idx: null, prev: [], last: { move: null, zoom: null, focus: null }, lastSend: 0, fine: false,
-  invY: store.get("padInvY") === "1", panOnly: store.get("padPanOnly") === "1", soft: store.get("padSoft") !== "0", max: +(store.get("padMax") || 18),
+  invY: store.get("padInvY") === "1", panOnly: store.get("padPanOnly") === "1", soft: padSoftInit(), max: +(store.get("padMax") || 18),
 };
 const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 // Knopindeling staat in cameras.json (cfg.pad_map), zodat alle schermen dezelfde indeling hebben.
@@ -2788,8 +2807,13 @@ function padTog(id, on) {
   b.classList.toggle("on", !!on); b.setAttribute("aria-pressed", on ? "true" : "false");
   b.querySelector(".pstate").textContent = on ? "aan" : "uit";
 }
-padTog("#padSoft", pad.soft); padTog("#padInvY", pad.invY);
-$("#padSoft").onclick = () => { pad.soft = !pad.soft; store.set("padSoft", pad.soft ? "1" : "0"); padTog("#padSoft", pad.soft); };
+// 🧑 Zachte beweging als schuif (0–100 %, per scherm in store padSoftLevel)
+function padSoftShow() {
+  const v = pad.soft, o = $("#padSoftV");
+  $("#padSoft").value = v; o.textContent = v ? v + "%" : "uit"; o.classList.toggle("off", !v);
+}
+padSoftShow(); padTog("#padInvY", pad.invY);
+$("#padSoft").oninput = () => { pad.soft = Math.max(0, Math.min(100, +$("#padSoft").value || 0)); store.set("padSoftLevel", String(pad.soft)); padSoftShow(); };
 $("#padMax").value = pad.max; $("#padMaxV").textContent = pad.max;
 $("#padInvY").onclick = () => { pad.invY = !pad.invY; store.set("padInvY", pad.invY ? "1" : "0"); padTog("#padInvY", pad.invY); };
 // Pan only: voor alle camera's, per scherm (zoals de andere Xbox-opties); schakelknop in de Xbox-kaart en controllerknop (actie pan_only)
@@ -2902,8 +2926,13 @@ function rumble(gp, ms = 120, strong = 0.6) {
   try { gp.vibrationActuator?.playEffect("dual-rumble", { duration: ms, strongMagnitude: strong, weakMagnitude: strong }); } catch {}
 }
 const dz = (v, d = 0.18) => Math.abs(v) < d ? 0 : Math.sign(v) * (Math.abs(v) - d) / (1 - d);
-// fijner rond het midden, snel bij volle uitslag; zachte beweging = nog fijner (derde macht)
-const curve = (v) => pad.soft ? v * v * v : Math.sign(v) * v * v;
+// fijner rond het midden, snel bij volle uitslag. Zachte beweging s = 0…1 (schuif/100), traploos:
+//   exponent 2 (s = 0, vroeger "uit") → 3 (s = 0,5, vroeger "aan") → 3,5 (s = 1, extra zacht)
+//   optrekken: in ca. 2·s seconden naar topsnelheid = per commando (~80 ms) max/(24·s) erbij (s = 0,5 → max/12 ≈ 1 s; s = 1 ≈ 2 s)
+const softS = () => Math.max(0, Math.min(1, (+pad.soft || 0) / 100));
+const softExp = (s) => s <= 0.5 ? 2 + 2 * s : 3 + (s - 0.5);
+const softStep = (s, max) => s > 0 ? Math.max(1, Math.round(max / (24 * s))) : Infinity;   // s = 0: geen limiet (direct)
+const curve = (v) => Math.sign(v) * Math.pow(Math.abs(v), softExp(softS()));
 
 function padStopAll() {
   if (pad.last.move) cmd("stop");
@@ -2980,9 +3009,9 @@ function padLoop() {
       const pan = Math.max(1, Math.round(Math.abs(x) * max));
       const tilt = Math.max(1, Math.round(Math.abs(y) * Math.min(20, max)));
       move = { dir, pan, tilt };
-      if (pad.soft) {
-        // geleidelijk optrekken: per verzonden commando (~80 ms) hooguit één stap erbij, ca. 1 s naar topsnelheid
-        const p = pad.last.move, step = Math.max(1, Math.round(max / 12));
+      if (softS() > 0) {
+        // geleidelijk optrekken: per verzonden commando (~80 ms) hooguit één stap erbij (stoppen blijft direct)
+        const p = pad.last.move, step = softStep(softS(), max);
         move.pan = Math.min(pan, (p ? p.pan : 0) + step);
         move.tilt = Math.min(tilt, (p ? p.tilt : 0) + step);
       }
@@ -2990,9 +3019,9 @@ function padLoop() {
     // ---- zoom (RT in, LT uit)
     const z = val(B.RT) - val(B.LT);
     const zoom = Math.abs(z) > 0.08 ? { dir: z > 0 ? "in" : "out", speed: Math.max(1, Math.round(Math.abs(z) * 7)) } : null;
-    if (zoom && pad.soft) {
+    if (zoom && softS() > 0) {   // s = 0,5 of meer: +1 per commando; minder zacht = grotere stap
       const pz = pad.last.zoom;
-      zoom.speed = Math.min(zoom.speed, (pz && pz.dir === zoom.dir ? pz.speed : 0) + 1);
+      zoom.speed = Math.min(zoom.speed, (pz && pz.dir === zoom.dir ? pz.speed : 0) + softStep(softS(), 7));
     }
     // ---- focus (rechter stick verticaal)
     const fy = dz(gp.axes[3] || 0, 0.35);
@@ -4524,7 +4553,7 @@ const TIPS = {
   spTilt: { t: "Tilt-snelheid", d: "Hoe snel de camera omhoog/omlaag draait met de pijlen en het toetsenbord (1–20). Geldt voor dit scherm." },
   spZoom: { t: "Zoomsnelheid", d: "Hoe snel <i>Zoom +</i> en <i>Zoom −</i> (en de toetsen) zoomen (1–7). Geldt voor dit scherm." },
   spFocus: { t: "Focussnelheid", d: "Hoe snel <i>Focus ver</i> en <i>Focus dichtbij</i> (en de toetsen) scherpstellen (1–7). Geldt voor dit scherm." },
-  padSoft: { t: "Zachte beweging", d: "De camera trekt geleidelijk op (ca. 1 s naar topsnelheid) en reageert fijner rond het midden van de stick. Geldt voor dit scherm." },
+  padSoft: { t: "Zachte beweging", d: "Hoe geleidelijk de camera optrekt en hoe fijn de stick rond het midden reageert. <i>Uit</i> = direct op snelheid; 50% ≈ 1 s naar topsnelheid; 100% (extra zacht) ≈ 2 s. Stoppen gaat altijd direct. Geldt voor dit scherm." },
   padPanOnly: { t: "Pan only", d: "De linker stick draait alleen links/rechts; omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm." },
   padInvY: { t: "Tilt omkeren", d: "Stick omhoog = camera omlaag. Niet beschikbaar zolang <i>Pan only</i> aan staat." },
   padMax: { t: "Max. pan/tilt-snelheid", d: "Snelheid als je de linker stick helemaal duwt (4–24). Geldt voor dit scherm." },
@@ -4598,7 +4627,7 @@ const TOUR_STEPS = [
   { target: ["#padCard"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
       <li>D-pad ←/→ = andere camera, ↓ = home, RB = volgen</li><li>View = alles stoppen</li></ul>
-      <p>Is de controller verbonden, dan staat er een groen <b>● Verbonden</b> in de titel. Hier zet je ook <b>Zachte beweging</b>, <b>Pan only</b> en <b>Tilt omkeren</b> aan of uit (knop indigo met <b>AAN</b> = aan) en de maximale snelheid (per apparaat).</p>` },
+      <p>Verbonden = groen <b>● Verbonden</b> in de titel. Per apparaat: <b>Zachte beweging</b> (schuif), <b>Pan only</b>, <b>Tilt omkeren</b> (indigo = aan) en de max. snelheid.</p>` },
   { target: ["#padPanOnly"], title: ic("width") + " Pan only", text: () => `<p>Klik om <b>Pan only</b> aan of uit te zetten; aan = knop indigo met <b>AAN</b>. De linker stick draait de camera dan alleen <b>links en rechts</b>, voor <b>alle camera's</b>; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt voor dit scherm. Je kunt het ook op een controllerknop zetten (<i>Pan only aan/uit</i> in de knoppenindeling).</p>` },
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
