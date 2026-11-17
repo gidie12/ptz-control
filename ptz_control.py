@@ -691,6 +691,87 @@ def _store_thumb(cam, n, data):
 HAND_MOVING = set()    # {(cam_id, "move"|"zoom"|"focus")}: laatste commando was een doorlopende beweging
 
 
+# ---------------------------------------------------------------- snelheid volgt de zoom
+# 🧑 Pijlknoppen en pijltjestoetsen (args zs: 1) draaien langzamer naarmate de camera verder is ingezoomd.
+# Niet voor de Xbox-controller en niet voor volgen (die sturen geen zs). De zoompositie komt via VISCA
+# (81 09 04 47 FF), hooguit eens per ZOOM_AGE seconden per camera, op de achtergrond (een beweging wacht nooit);
+# ook bijgewerkt na zoom-stop en door "onderweg" (leest de hele positie). Geen VISCA → geen schaling.
+# ⚠️ Zoombereik per model niet gecontroleerd: 0 = uitgezoomd, ZOOM_MAX (0x4000, optisch bij Sony/PTZOptics) = helemaal in.
+ZOOM = {}              # cam_id -> {"t": tijd laatste meting, "raw": zoomwaarde, "fail": tijd laatste fout, "busy": bool}
+ZOOM_LOCK = threading.Lock()
+ZOOM_AGE = 1.0
+ZOOM_FAIL_WAIT = 60.0  # na een mislukte meting zo lang niet opnieuw proberen (geen VISCA = elke keer 2 s wachten)
+try:
+    ZOOM_MAX = max(1, int(os.environ.get("PTZ_ZOOM_MAX", "16384"), 0))
+except ValueError:
+    ZOOM_MAX = 16384
+ZOOM_MIN_SCALE = 0.25
+
+
+def zoom_scale_of(raw):
+    """Zoomwaarde → snelheidsfactor. Uitgezoomd 1,0, helemaal ingezoomd 0,25; daartussen 0,25 + 0,75·(1 − z)²
+    (z = raw / ZOOM_MAX): eerst snel omlaag, omdat de beeldhoek bij inzoomen ook eerst snel kleiner wordt.
+    z = 0,25 → 67 %, 0,5 → 44 %, 0,75 → 30 %."""
+    z = max(0.0, min(1.0, float(raw) / ZOOM_MAX))
+    return ZOOM_MIN_SCALE + (1 - ZOOM_MIN_SCALE) * (1 - z) ** 2
+
+
+def zoom_store(cam_id, raw):
+    with ZOOM_LOCK:
+        e = ZOOM.setdefault(cam_id, {})
+        e.update(t=time.time(), raw=int(raw), fail=0)
+
+
+def _zoom_read(cam):
+    cid = cam["id"]
+    try:
+        with _backup.visca_session(cam) as sock:
+            raw = _backup.nib(_backup.visca_inq(sock, "81 09 04 47 FF"))
+        zoom_store(cid, raw)
+    except Exception:  # noqa: BLE001  (geen VISCA of geen antwoord: niet schalen)
+        with ZOOM_LOCK:
+            ZOOM.setdefault(cid, {})["fail"] = time.time()
+    finally:
+        with ZOOM_LOCK:
+            ZOOM.setdefault(cid, {})["busy"] = False
+
+
+def zoom_refresh(cam, delay=0.0, wait=False):
+    """Zoompositie opnieuw lezen (achtergrond, of wachtend met wait=True). Niet tijdens een taak of na een recente fout."""
+    if JOB.get("running"):
+        return
+    cid = cam["id"]
+    with ZOOM_LOCK:
+        e = ZOOM.setdefault(cid, {})
+        if e.get("busy") or (e.get("fail") and time.time() - e["fail"] < ZOOM_FAIL_WAIT):
+            return
+        e["busy"] = True
+
+    def run():
+        if delay:
+            time.sleep(delay)
+        _zoom_read(cam)
+
+    if wait:
+        run()
+    else:
+        threading.Thread(target=run, daemon=True, name=f"zoom-{cid}").start()
+
+
+def zoom_scale(cam, wait=False):
+    """Snelheidsfactor voor deze camera, of None (onbekend). Ouder dan ZOOM_AGE → opnieuw lezen."""
+    with ZOOM_LOCK:
+        e = dict(ZOOM.get(cam["id"]) or {})
+    if not e.get("t") or time.time() - e["t"] > ZOOM_AGE:
+        zoom_refresh(cam, wait=wait)
+        if wait:
+            with ZOOM_LOCK:
+                e = dict(ZOOM.get(cam["id"]) or {})
+    if e.get("raw") is None or (e.get("fail") and e.get("fail", 0) > e.get("t", 0)):
+        return None
+    return zoom_scale_of(e["raw"])
+
+
 LOCK_ACTIONS = ("preset_call", "home")   # 🧑 springen naar een positie; handbediening (move/zoom/focus) blijft mogelijk
 
 
@@ -730,6 +811,13 @@ def do_action(cam, action, args, info=None):
     if action in ("move", "stop", "home", "preset_call", "preset_set"):
         moving_cancel(cam["id"])          # een nieuw commando beëindigt de "onderweg"-markering
     old = undo_snapshot(cam, clamp(args.get("n"), 0, 254)) if action == "preset_set" else None
+    if action == "move" and args.get("zs"):   # 🧑 pijlen/pijltjestoetsen: langzamer als de camera ingezoomd is
+        sc = zoom_scale(cam)
+        if sc is not None:
+            args = dict(args, pan=max(1, round(clamp(args.get("pan"), 1, 24) * sc)),
+                        tilt=max(1, round(clamp(args.get("tilt"), 1, 20) * sc)))
+        if info is not None:
+            info["speed_scale"] = None if sc is None else round(sc * 100)
     try:
         res = run_command(cam, action, args)
     except (urllib.error.URLError, OSError) as e:
@@ -746,6 +834,13 @@ def do_action(cam, action, args, info=None):
         HAND_MOVING.discard((cam["id"], "move"))
     if action in ("move", "home"):        # zoom/focus tellen niet als aangepast
         mark_adjusted(cam["id"])
+    if action in ("zoom", "home", "preset_call") and (action != "zoom" or args.get("dir") == "stop"):
+        with ZOOM_LOCK:                   # zoom veranderd: oude meting telt niet meer
+            ZOOM.setdefault(cam["id"], {})["t"] = 0
+        if action == "zoom":
+            zoom_refresh(cam, delay=0.4)
+        elif action == "home":
+            zoom_refresh(cam, delay=2.5)  # home zet ook de zoom terug; na het bewegen opnieuw lezen
     if action == "preset_call":
         n = clamp(args.get("n"), 0, 254)
         broadcast({"type": "preset", "cam": cam["id"], "n": n})
@@ -793,6 +888,7 @@ def moving_watch(cam, n):
                     time.sleep(0.35)
                     try:
                         p = _backup.read_position(sock)
+                        zoom_store(cid, p["zoom"])   # gratis bijwerken voor "snelheid volgt de zoom"
                     except _backup.ViscaError:
                         continue
                     key = (p["pan"], p["tilt"], p["zoom"], p.get("focus"))
@@ -2082,6 +2178,13 @@ class Handler(BaseHTTPRequestHandler):
             name = f"ptz-control-activiteit-{datetime.date.today().isoformat()}.txt"
             return self._send(200, ACTLOG.text(), "text/plain; charset=utf-8",
                               {"Content-Disposition": f'attachment; filename="{name}"'})
+        if u.path == "/api/zoomscale":   # 🧑 snelheid volgt de zoom: huidige factor van een camera (wacht op een meting)
+            try:
+                cam = find_camera(parse_qs(u.query).get("cam", [""])[0])
+            except KeyError as e:
+                return self._send(404, {"ok": False, "error": e.args[0]})
+            sc = zoom_scale(cam, wait=True)
+            return self._send(200, {"ok": True, "cam": cam["id"], "scale": None if sc is None else round(sc * 100)})
         if u.path == "/api/camstatus":
             with CAMSTATUS_LOCK:
                 return self._send(200, {"type": "camstatus", "cams": dict(CAMSTATUS)})
