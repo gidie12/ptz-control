@@ -112,7 +112,9 @@
   .chip.on { background: var(--live); border-color: var(--live); color: #fff; }
 
   /* ---- presets: hoofdonderdeel ---- */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile, 170px), 1fr)); gap: 10px; }
+  /* 🧑 tegels krijgen echt de ingestelde breedte (geen 1fr: anders verandert de schuif een tijd niets en springt dan alles);
+     min(…, 100%) zodat een grote tegel in een smalle kolom niet buiten beeld loopt */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, min(var(--tile, 170px), 100%)); gap: 10px; }
   .tile { position: relative; border-radius: 10px; overflow: hidden; background: var(--panel2);
     border: 2px solid var(--line); cursor: pointer; padding: 0; text-align: left; touch-action: manipulation;
     transition: transform .06s; }
@@ -348,7 +350,7 @@
   body.tablet #tabs { display: none; }
   body.tablet main { padding-bottom: 100px; }
   body.tablet aside { --asideb: 100px; }
-  body.tablet .grid { grid-template-columns: repeat(auto-fill, minmax(max(var(--tile, 170px), 210px), 1fr)); gap: 12px; }
+  body.tablet .grid { grid-template-columns: repeat(auto-fill, min(max(var(--tile, 170px), 210px), 100%)); gap: 12px; }
   body.tablet .tile .meta { padding: 10px 12px; font-size: 16px; }
   body.tablet .tile .edit { transform: scale(1.25); transform-origin: top right; }
   body.tablet #tabBar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
@@ -863,6 +865,8 @@
   .dpad .btn .ic { width: 22px; height: 22px; stroke-width: 2.4; }
   .osdpad .icon .ic { width: 20px; height: 20px; stroke-width: 2.4; }
   .tilectl > .ic { opacity: .7; }
+  #tileSize { width: 170px; }
+  #tileSizeV { min-width: 46px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   #presetSearch { padding-left: 30px; background-repeat: no-repeat; background-position: 9px 50%; background-size: 15px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a7' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E"); }
 </style>
@@ -1011,7 +1015,7 @@
           <button class="icon tbtn" id="tilePlus" aria-label="Meer tegels">+</button>
         </div>
         <label class="tilectl" title="Tegelgrootte (wordt automatisch opgeslagen)">
-          <span>Grootte</span> <svg class="ic sm" data-i="image" aria-hidden="true"><use href="#i-image"/></svg><input type="range" id="tileSize" min="100" max="320" value="170" style="width:90px"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg>
+          <span>Grootte</span> <svg class="ic sm" data-i="image" aria-hidden="true"><use href="#i-image"/></svg><input type="range" id="tileSize" min="100" max="320" value="170"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg><span id="tileSizeV">170 px</span>
         </label>
         <input type="text" id="presetSearch" placeholder="Zoek preset" aria-label="Presets zoeken op naam of nummer" autocomplete="off">
         <button class="icon" id="btnOrderReset" style="white-space:nowrap;padding:5px 10px;font-size:13px" hidden title="Eigen volgorde van de tegels weghalen (terug naar 1, 2, 3 …)"><svg class="ic" data-i="reset" aria-hidden="true"><use href="#i-reset"/></svg> Volgorde</button>
@@ -1920,9 +1924,10 @@ function saveTilesSoon() {
 }
 function applyTile(v) {
   v = Math.max(100, Math.min(320, +v || 170));
-  $("#tileSize").value = v;
+  $("#tileSize").value = v; $("#tileSizeV").textContent = v + " px";
   document.documentElement.style.setProperty("--tile", v + "px");
-  document.documentElement.style.setProperty("--ctile", Math.round(v * 0.68) + "px");
+  // kolommen van Alle camera's: kleinere tegels; 0,82 zodat Grootte 170 er ongeveer uitziet als vroeger met 1fr (±140 px)
+  document.documentElement.style.setProperty("--ctile", (v * 0.82).toFixed(2) + "px");   // niet afronden: anders doen sommige stappen niets
 }
 $("#tileSize").oninput = () => { applyTile($("#tileSize").value); cfg.tile_size = +$("#tileSize").value; saveTilesSoon(); wallFitSoon(); };
 applyTile(store.get("ptzTile") || 170);   // tot de instellingen geladen zijn
@@ -2277,7 +2282,10 @@ function fitWallTiles(keepBottom, free) {   // free = zelf gekozen verdeling: te
   const set = (w) => area.style.setProperty("--wt", w + "px");
   let lo = free ? WALL_TILE_MIN : Math.floor(base), hi = Math.min(WALL_TILE_MAX, gw);
   area.classList.add("wfit"); set(lo);
-  if (hi <= lo || !fits()) { if (!free) wallTileReset(); return; }   // zelfs de kleinste past niet: zoals het was
+  if (!fits()) {   // ingestelde Grootte past niet: kleiner (ondergrens = min(ingesteld, wat past)), nooit voorbij de onderrand
+    hi = lo; lo = WALL_TILE_MIN; set(lo);
+    if (!fits()) { if (!free) wallTileReset(); return; }   // zelfs de kleinste past niet: zoals het was
+  } else if (hi <= lo) return;
   while (hi - lo > 1) { const m = (lo + hi) >> 1; set(m); if (fits()) lo = m; else hi = m; }
   set(lo);
   if (keepBottom) {   // ruimte die over is boven de camera's, zodat ze onderaan blijven
@@ -4506,7 +4514,7 @@ const TOUR_STEPS = [
   { target: [".colhead .cdot", ".tab .cdot", "#tabs"], title: "● Camerastatus", text: () => `<p>Het bolletje bij elke camera is <b>groen</b> als de camera bereikbaar is en <b>rood</b> als hij niet reageert (met <i>niet bereikbaar</i> erbij). Zo zie je vóór de dienst al dat er iets mis is.</p>` },
   { target: ["#btnLoad"], title: "Presets laden van de camera", text: () => `<p>Staan er al presets in de camera's? Met <b>${ic("download")} Laden van camera</b> roept de app ze één voor één op en maakt van elke preset een foto, zodat je ze hier terugziet.</p>
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
-  { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
+  { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. De schuif <b>Grootte</b> werkt traploos: de tegels worden precies zo breed als de waarde ernaast (in <i>Alle camera's</i> iets kleiner). Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
   { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
       <p>De zijbalk blijft in beeld als je door de presets scrolt; past niet alles, dan scrolt hij zelf.</p>
       <p>Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },

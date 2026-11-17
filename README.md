@@ -127,7 +127,7 @@ Waar je in het menu bent, zie je op de monitor van de videomixer (de app toont g
 
 ## Tegels instellen
 Boven het presetraster: **Tegels − 12 +** bepaalt hoeveel presettegels je per camera ziet (90–99 worden overgeslagen),
-**Grootte** de tegelgrootte. Beide worden automatisch opgeslagen en gelden op elk scherm. Staan er presets met een naam of
+**Grootte** de tegelgrootte (traploos: de tegels worden precies zo breed als de waarde naast de schuif, in *Alle camera's* iets kleiner; bij grote tegels kan rechts in een kolom wat ruimte overblijven; op volledig scherm worden ze zo nodig kleiner, zodat ze nooit onder de onderrand doorlopen). Beide worden automatisch opgeslagen en gelden op elk scherm. Staan er presets met een naam of
 foto buiten beeld, dan zie je een melding; klik erop om ze te tonen.
 
 ## Back-up van presets en camera-instellingen
