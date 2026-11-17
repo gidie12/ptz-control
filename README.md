@@ -63,6 +63,9 @@ De laatst gekozen preset van elke camera krijgt een label op de tegel en staat i
 - **LIVE** (rood): de camera staat op deze preset én is volgens de videomixer **in beeld** (*LIVE: naam* in de kolomkop).
 - **AANGEPAST** (amber stippelrand): na de preset is de camera bewogen met de pijlen, het toetsenbord, de controller of home, of door *persoon volgen*. Hij staat dus niet meer precies op de preset (*Aangepast (was naam)* in de kolomkop). Zoomen en scherpstellen tellen niet mee. Een preset kiezen of opslaan zet het weer gewoon. Dit is op alle schermen gelijk.
 - **ONDERWEG…** (oranje) gaat voor alles: de camera beweegt nog naar de preset.
+
+<img src="docs/screenshots/presetstatus.png" width="720" alt="Links in beeld (LIVE), Midden GESELECTEERD, Rechts AANGEPAST">
+
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Instellingen → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
 Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
 
@@ -93,6 +96,7 @@ Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **X
   <img src="docs/screenshots/tooltip.png" width="300" alt="Uitleg bij Zoom + na 2 seconden stilhouden">
 - **Snelheid volgt de zoom**: met de pijlknoppen en de pijltjestoetsen draait de camera vanzelf langzamer naarmate hij verder is ingezoomd: uitgezoomd de ingestelde snelheid, helemaal ingezoomd ongeveer een kwart. Zo schiet een ingezoomd beeld niet weg. Onder *Snelheden* staat het huidige percentage van de bediende camera. Dit geldt niet voor de Xbox-controller (die heeft *Zachte beweging*) en niet voor persoon volgen. Kan de app de zoom niet uitlezen (geen VISCA), dan blijft de snelheid gewoon de ingestelde.
 - **Acceleratie** (onder *Snelheden*): met de schuif trekt de camera met de pijlknoppen en pijltjestoetsen geleidelijk op in plaats van meteen op de ingestelde snelheid; 100% ≈ 1,5 seconde, *uit* = direct (standaard). Met het vinkje **Ook geleidelijk afremmen bij loslaten** remt hij bij loslaten ook in stapjes af. **Spatie** (stop), *Alles stoppen*, een preset kiezen of het venster verlaten stopt altijd direct. Elk scherm onthoudt zijn eigen stand. Voor de Xbox-controller is er *Zachte beweging*.
+  <img src="docs/screenshots/snelheden.png" width="300" alt="Camerabediening met Snelheden open: acceleratie, afremmen en snelheid volgt de zoom">
 - **Sneltoets op de tegel**: bij de camera die je bedient staat rechtsonder op tegel 1–9 de toets waarmee je die preset oproept.
 - **Ongedaan maken**: heb je een preset overschreven, dan verschijnt onderin 10 seconden *Ongedaan maken*. De camera gaat dan terug naar de oude positie, slaat de preset daar opnieuw op en zet de oude foto terug. Dat kan als de app de oude positie kent: van presets die je met de app opslaat (of uitleest bij Back-up) onthoudt hij die vanzelf.
 
@@ -252,6 +256,8 @@ De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). He
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
 **Gescheiden sticks**, **Pan only** en **Tilt omkeren** zijn knoppen in de Xbox-kaart: klik om ze aan of uit te zetten; aan = indigo met *AAN*. **Zachte beweging** is een schuif van *Uit* tot *Extra zacht* (0–100%).
+
+<img src="docs/screenshots/xbox-kaart.png" width="300" alt="Xbox-kaart met Gescheiden sticks aan (Pan only n.v.t.)">
 
 **Zachte beweging** (standaard 50%): de camera trekt geleidelijk op en de stick reageert fijner rond het midden. Op 50% duurt het ongeveer 1 seconde tot topsnelheid, op 100% (*Extra zacht*) ongeveer 2 seconden en is de stick rond het midden nog fijner; op *Uit* gaat de camera direct op volle snelheid. Daartussen werkt het traploos. Stoppen gaat altijd direct. Elk scherm onthoudt zijn eigen stand; wie eerder zachte beweging uit had staan, begint op *Uit*.
 
