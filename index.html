@@ -33,6 +33,7 @@
     --cardshadow: 0 1px 3px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
     --modalshadow: 0 24px 64px rgba(0,0,0,.5);
     --hdr: #161a2b; --hdrtxt: #c7ccdb; --hdrbtn: rgba(255,255,255,.08); --hdrhover: rgba(255,255,255,.16); --hdrline: rgba(255,255,255,.07);
+    --tiptxt: #ffffff; --tipmuted: rgba(255,255,255,.78); --tipkbd: rgba(255,255,255,.14); --tipline: rgba(255,255,255,.16);
     --editbg: rgba(22,26,43,.85); --editfg: #e6e9f2; --editline: #2a3048;
     --mixoff: #2a3048; --mixgreen: #22c55e; --mixred: #ef4444; --mixtxt: #ffffff; --logbg: #0f1220;
     --pc-rood: #ef4444; --pc-oranje: #f97316; --pc-geel: #eab308; --pc-groen: #22c55e; --pc-blauw: #6366f1; --pc-paars: #a855f7;
@@ -50,6 +51,7 @@
     --cardshadow: 0 1px 3px rgba(20,25,45,.08), 0 8px 24px rgba(20,25,45,.05);
     --modalshadow: 0 24px 64px rgba(15,18,33,.3);
     --hdr: #161a2b; --hdrtxt: #c7ccdb; --hdrbtn: rgba(255,255,255,.08); --hdrhover: rgba(255,255,255,.16); --hdrline: rgba(255,255,255,.07);
+    --tiptxt: #ffffff; --tipmuted: rgba(255,255,255,.78); --tipkbd: rgba(255,255,255,.14); --tipline: rgba(255,255,255,.16);
     --editbg: rgba(255,255,255,.9); --editfg: #1c2333; --editline: #e3e7ef;
     --mixoff: #e3e7ef; --mixgreen: #16a34a; --mixred: #dc2626; --mixtxt: #ffffff; --logbg: #f7f8fc;
     --pc-rood: #dc2626; --pc-oranje: #ea580c; --pc-geel: #d97706; --pc-groen: #16a34a; --pc-blauw: #4f46e5; --pc-paars: #9333ea;
@@ -638,6 +640,16 @@
   @media (max-width: 900px) { .camrow { grid-template-columns: 1fr 1fr; } .camrow > .camdel { grid-column: 1 / -1; } .camhead { display: none; } }
   .small { font-size: 12px; color: var(--muted); line-height: 1.6; }
   kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
+  /* 🧑 eigen tooltip (spec 2.3): verschijnt als de muis 2 s stilstaat op een element met data-tipk (tipInit) */
+  #tip { position: fixed; z-index: 60; max-width: 260px; padding: 9px 12px; border-radius: 9px; background: var(--hdr); color: var(--tiptxt);
+    border: 1px solid var(--tipline); box-shadow: 0 10px 28px var(--shadow); font-size: 13px; line-height: 1.45; pointer-events: none; }
+  #tip b { display: block; font-weight: 600; margin-bottom: 2px; }
+  #tip .tipd { color: var(--tipmuted); }
+  #tip .tipk { margin-top: 5px; color: var(--tipmuted); }
+  #tip kbd { background: var(--tipkbd); border-color: var(--tipline); color: var(--tiptxt); font-size: 12px; }
+  #tip::before { content: ""; position: absolute; left: var(--ax, 50%); top: -6px; width: 10px; height: 10px; margin-left: -5px;
+    background: var(--hdr); border-left: 1px solid var(--tipline); border-top: 1px solid var(--tipline); transform: rotate(45deg); }
+  #tip.up::before { top: auto; bottom: -6px; transform: rotate(225deg); }
 
   #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--errbg); color: var(--text); z-index: 20;
     border: 1px solid var(--live); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0;
@@ -1044,36 +1056,36 @@
       <div id="ctrlBody" class="foldbody">
 
       <div class="dpad" id="dpad">
-        <button class="btn" data-dir="leftup" aria-label="Linksboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-45deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="up" aria-label="Omhoog"><svg class="ic" data-i="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="rightup" aria-label="Rechtsboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(45deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="left" aria-label="Links"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-90deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn sm" id="btnHome" title="Home: naar de beginpositie" aria-label="Home"><svg class="ic" data-i="home" aria-hidden="true"><use href="#i-home"/></svg></button>
-        <button class="btn" data-dir="right" aria-label="Rechts"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(90deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="leftdown" aria-label="Linksonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-135deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="down" aria-label="Omlaag"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-arrow"/></svg></button>
-        <button class="btn" data-dir="rightdown" aria-label="Rechtsonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(135deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="leftup" data-tipk="dir" aria-label="Linksboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-45deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="up" data-tipk="dir" aria-label="Omhoog"><svg class="ic" data-i="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="rightup" data-tipk="dir" aria-label="Rechtsboven"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(45deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="left" data-tipk="dir" aria-label="Links"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-90deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn sm" id="btnHome" data-tipk="home" aria-label="Home"><svg class="ic" data-i="home" aria-hidden="true"><use href="#i-home"/></svg></button>
+        <button class="btn" data-dir="right" data-tipk="dir" aria-label="Rechts"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(90deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="leftdown" data-tipk="dir" aria-label="Linksonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(-135deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="down" data-tipk="dir" aria-label="Omlaag"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-arrow"/></svg></button>
+        <button class="btn" data-dir="rightdown" data-tipk="dir" aria-label="Rechtsonder"><svg class="ic" data-i="arrow" aria-hidden="true" style="transform:rotate(135deg)"><use href="#i-arrow"/></svg></button>
       </div>
       <div class="pair">
-        <button class="btn sm" data-zoom="in"><svg class="ic" data-i="zoom-in" aria-hidden="true"><use href="#i-zoom-in"/></svg> Zoom +</button>
-        <button class="btn sm" data-zoom="out"><svg class="ic" data-i="zoom-out" aria-hidden="true"><use href="#i-zoom-out"/></svg> Zoom −</button>
-        <button class="btn sm" data-focus="far">Focus ver</button>
-        <button class="btn sm" data-focus="near">Focus dichtbij</button>
+        <button class="btn sm" data-zoom="in" data-tipk="zoom_in"><svg class="ic" data-i="zoom-in" aria-hidden="true"><use href="#i-zoom-in"/></svg> Zoom +</button>
+        <button class="btn sm" data-zoom="out" data-tipk="zoom_out"><svg class="ic" data-i="zoom-out" aria-hidden="true"><use href="#i-zoom-out"/></svg> Zoom −</button>
+        <button class="btn sm" data-focus="far" data-tipk="focus_far">Focus ver</button>
+        <button class="btn sm" data-focus="near" data-tipk="focus_near">Focus dichtbij</button>
       </div>
       <div class="tri">
-        <button class="btn sm" id="afOn">AF auto</button>
-        <button class="btn sm" id="afOff">AF hand</button>
-        <button class="btn sm" id="afPush">One-push</button>
+        <button class="btn sm" id="afOn" data-tipk="af_on">AF auto</button>
+        <button class="btn sm" id="afOff" data-tipk="af_off">AF hand</button>
+        <button class="btn sm" id="afPush" data-tipk="af_push">One-push</button>
       </div>
-      <div class="trkline"><button class="btn trackbtn" id="btnTrack" title="De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan)"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Persoon volgen</button>
-        <button class="btn" id="btnTrackSet" title="Kader en persoon kiezen: instellen waar de persoon in beeld moet blijven en aanklikken wie gevolgd wordt"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg> Kader…</button></div>
+      <div class="trkline"><button class="btn trackbtn" id="btnTrack" data-tipk="track"><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Persoon volgen</button>
+        <button class="btn" id="btnTrackSet" data-tipk="trackset"><svg class="ic" data-i="image" aria-hidden="true"><use href="#i-image"/></svg> Kader…</button></div>
       <div class="small" id="trackInfo" style="margin-top:4px"></div>
       <details ontoggle="fitDocked()">
         <summary>Snelheden</summary>
-        <label class="sl">Pan <input type="range" id="spPan" min="1" max="24" value="8"><span id="vPan"></span></label>
-        <label class="sl">Tilt <input type="range" id="spTilt" min="1" max="20" value="7"><span id="vTilt"></span></label>
-        <label class="sl">Zoom <input type="range" id="spZoom" min="1" max="7" value="4"><span id="vZoom"></span></label>
-        <label class="sl">Focus <input type="range" id="spFocus" min="1" max="7" value="3"><span id="vFocus"></span></label>
+        <label class="sl" data-tipk="spPan">Pan <input type="range" id="spPan" min="1" max="24" value="8"><span id="vPan"></span></label>
+        <label class="sl" data-tipk="spTilt">Tilt <input type="range" id="spTilt" min="1" max="20" value="7"><span id="vTilt"></span></label>
+        <label class="sl" data-tipk="spZoom">Zoom <input type="range" id="spZoom" min="1" max="7" value="4"><span id="vZoom"></span></label>
+        <label class="sl" data-tipk="spFocus">Focus <input type="range" id="spFocus" min="1" max="7" value="3"><span id="vFocus"></span></label>
       </details>
       </div>
     </div>
@@ -1091,14 +1103,14 @@
       <div class="small" id="padLive" style="margin-top:4px"></div>
       <div class="padset">
         <div class="padtogs">
-        <button class="padtog" id="padSoft" aria-pressed="false" title="Zachte beweging: camera trekt geleidelijk op (ca. 1 s naar topsnelheid) en reageert fijner rond het midden van de stick"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg> Zachte beweging <span class="pstate">uit</span></button>
-        <button class="padtog" id="padPanOnly" aria-pressed="false" title="Pan only: linker stick draait alleen links/rechts, omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm."><svg class="ic" aria-hidden="true"><use href="#i-width"/></svg> Pan only <span class="pstate">uit</span></button>
-        <button class="padtog" id="padInvY" aria-pressed="false" title="Tilt omkeren: stick omhoog = camera omlaag. Niet beschikbaar zolang Pan only aan staat."><svg class="ic" aria-hidden="true" style="transform: rotate(90deg)"><use href="#i-swap"/></svg> Tilt omkeren <span class="pstate">uit</span></button>
+        <button class="padtog" id="padSoft" aria-pressed="false" data-tipk="padSoft"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg> Zachte beweging <span class="pstate">uit</span></button>
+        <button class="padtog" id="padPanOnly" aria-pressed="false" data-tipk="padPanOnly"><svg class="ic" aria-hidden="true"><use href="#i-width"/></svg> Pan only <span class="pstate">uit</span></button>
+        <button class="padtog" id="padInvY" aria-pressed="false" data-tipk="padInvY"><svg class="ic" aria-hidden="true" style="transform: rotate(90deg)"><use href="#i-swap"/></svg> Tilt omkeren <span class="pstate">uit</span></button>
         </div>
-        <label>Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
+        <label data-tipk="padMax">Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
       </div>
-      <label class="small padprofcard">Knoppenprofiel <select class="padprof" id="padProfCard" title="Welke knoppenindeling deze controller op dit scherm gebruikt"></select></label>
-      <button class="icon" id="btnMap2" style="margin-top:6px"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling instellen…</button>
+      <label class="small padprofcard" data-tipk="padProf">Knoppenprofiel <select class="padprof" id="padProfCard"></select></label>
+      <button class="icon" id="btnMap2" data-tipk="padMap" style="margin-top:6px"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling instellen…</button>
       </div>
     </div>
   </aside>
@@ -1439,6 +1451,7 @@
   </div>
 </div>
 <div id="toast"></div>
+<div id="tip" role="tooltip" hidden></div>
 <nav id="tabBar" aria-label="Camera kiezen"></nav>
 <dialog id="dlgPin">
   <h3><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Pincode</h3>
@@ -1790,7 +1803,7 @@ function renderSide() {
   b.classList.toggle("err", bad);
   b.innerHTML = ic(bad ? "alert" : "track") + (!t.on ? " Persoon volgen"
     : bad ? ` Volgen mislukt · ${esc(t.status || "fout")}` : ` Volgt persoon · ${esc(t.status || "")}`);
-  b.title = bad ? (t.detail || t.status || "") : "De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan)";
+  b.dataset.tip = bad ? (t.detail || t.status || "") : "";   // reden van de fout in de tooltip (tipInit), anders de standaarduitleg
   $("#trackInfo").textContent = cfg.tracking_error ? "Volgen niet beschikbaar: " + cfg.tracking_error
     : bad && t.detail ? t.detail
     : t.on && t.fps ? [
@@ -4491,6 +4504,64 @@ $("#songSrcBtn").onclick = () => {
 fetch("/api/liederen").then(r => r.json()).then(j => { delete j.config; if (!songs) songs = j; songWinRender();
   if (store.get("songOpen") === "1" && (songs.pp?.enabled || songs.voordienst?.enabled)) songWinShow(true); }).catch(() => {});
 
+/* ---- 🧑 Tooltips na 2 s (spec 2.3, goedgekeurd 17 nov 2026) ----
+   Eigen tooltip, want de browser-title komt te snel en is niet instelbaar. Element met data-tipk="<sleutel>" → TIPS[sleutel]:
+   t = titel, d = uitleg (HTML), keys = acties uit KEY_ACTIONS (toets volgt de eigen instelling). data-tip op het element vervangt d
+   (bijv. de foutreden bij volgen). Alleen met de muis (niet op touch), niet tijdens de rondleiding; weg bij bewegen, klik, toets, scroll. */
+const TIPS = {
+  dir: { t: "Bewegen", d: "Draait de camera zolang je de pijl vasthoudt; de schuine pijlen bewegen in twee richtingen tegelijk. Snelheid stel je in bij <i>Snelheden</i>. Persoon volgen gaat uit.", keys: ["up", "down", "left", "right"] },
+  home: { t: "Home", d: "Stuurt de camera naar zijn beginpositie. Persoon volgen gaat uit.", keys: ["home"] },
+  zoom_in: { t: "Zoom +", d: "Inzoomen zolang je de knop vasthoudt. Snelheid stel je in bij <i>Snelheden</i>.", keys: ["zoom_in"] },
+  zoom_out: { t: "Zoom −", d: "Uitzoomen zolang je de knop vasthoudt. Snelheid stel je in bij <i>Snelheden</i>.", keys: ["zoom_out"] },
+  focus_far: { t: "Focus ver", d: "Stelt scherp op iets verder weg zolang je de knop vasthoudt. Draait de autofocus het terug, zet dan eerst <i>AF hand</i>.", keys: ["focus_far"] },
+  focus_near: { t: "Focus dichtbij", d: "Stelt scherp op iets dichterbij zolang je de knop vasthoudt. Draait de autofocus het terug, zet dan eerst <i>AF hand</i>.", keys: ["focus_near"] },
+  af_on: { t: "AF auto", d: "Autofocus aan: de camera stelt zelf steeds opnieuw scherp." },
+  af_off: { t: "AF hand", d: "Handmatige focus: de scherpte blijft staan. Bijstellen met <i>Focus ver</i> en <i>Focus dichtbij</i>." },
+  af_push: { t: "One-push", d: "Stelt één keer automatisch scherp en zet daarna de focus vast (handmatig). Handig als AF blijft zoeken." },
+  track: { t: "Persoon volgen", d: "De camera draait automatisch mee met de spreker (alleen links/rechts; hoogte en zoom blijven staan). Handbediening, home of een preset zet volgen weer uit.", keys: ["track"] },
+  trackset: { t: "Kader…", d: "Kader en persoon kiezen: instellen waar de persoon in beeld moet blijven, grenzen links/rechts en aanklikken wie gevolgd wordt. Eén beeld, geen live beeld." },
+  spPan: { t: "Pan-snelheid", d: "Hoe snel de camera links/rechts draait met de pijlen en het toetsenbord (1–24). Geldt voor dit scherm." },
+  spTilt: { t: "Tilt-snelheid", d: "Hoe snel de camera omhoog/omlaag draait met de pijlen en het toetsenbord (1–20). Geldt voor dit scherm." },
+  spZoom: { t: "Zoomsnelheid", d: "Hoe snel <i>Zoom +</i> en <i>Zoom −</i> (en de toetsen) zoomen (1–7). Geldt voor dit scherm." },
+  spFocus: { t: "Focussnelheid", d: "Hoe snel <i>Focus ver</i> en <i>Focus dichtbij</i> (en de toetsen) scherpstellen (1–7). Geldt voor dit scherm." },
+  padSoft: { t: "Zachte beweging", d: "De camera trekt geleidelijk op (ca. 1 s naar topsnelheid) en reageert fijner rond het midden van de stick. Geldt voor dit scherm." },
+  padPanOnly: { t: "Pan only", d: "De linker stick draait alleen links/rechts; omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm." },
+  padInvY: { t: "Tilt omkeren", d: "Stick omhoog = camera omlaag. Niet beschikbaar zolang <i>Pan only</i> aan staat." },
+  padMax: { t: "Max. pan/tilt-snelheid", d: "Snelheid als je de linker stick helemaal duwt (4–24). Geldt voor dit scherm." },
+  padProf: { t: "Knoppenprofiel", d: "Welke knoppenindeling deze controller op dit scherm gebruikt. Elk scherm onthoudt zijn eigen keuze." },
+  padMap: { t: "Knoppenindeling", d: "Geef elke knop van de controller een eigen functie, per profiel." },
+};
+(function tipInit() {
+  const tip = $("#tip"), WAIT = 2000;
+  let timer = 0, el = null, at = null;
+  const hide = () => { clearTimeout(timer); timer = 0; if (!tip.hidden) tip.hidden = true; at = null; };
+  function show() {
+    timer = 0;
+    if (!el || !el.isConnected || !$("#tour").hidden) return;
+    const spec = TIPS[el.dataset.tipk]; if (!spec) return;
+    const keys = (spec.keys || []).map(a => keyOf(a)).filter(Boolean);
+    tip.innerHTML = `<b>${esc(spec.t)}</b><div class="tipd">${el.dataset.tip ? esc(el.dataset.tip) : spec.d}</div>`
+      + (keys.length ? `<div class="tipk">${keys.length > 1 ? "Toetsen" : "Toets"} ${keys.map(k => `<kbd>${esc(keyLabel(k))}</kbd>`).join(" ")}</div>` : "");
+    tip.hidden = false; tip.classList.remove("up");
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 8;
+    let top = r.bottom + 9;
+    if (top + h > innerHeight - m && r.top - 9 - h >= m) { top = r.top - 9 - h; tip.classList.add("up"); }   // onder het element, anders erboven
+    const cx = r.left + r.width / 2, left = Math.min(Math.max(m, cx - w / 2), innerWidth - w - m);
+    tip.style.left = left + "px"; tip.style.top = Math.max(m, top) + "px";
+    tip.style.setProperty("--ax", Math.min(Math.max(12, cx - left), w - 12) + "px");   // pijltje wijst naar het midden van het element
+  }
+  document.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") return hide();   // niet op touch/pen
+    if (at && Math.hypot(e.clientX - at[0], e.clientY - at[1]) < 3) return;   // trillen van de muis telt niet als bewegen
+    hide();
+    el = e.target.closest ? e.target.closest("[data-tipk]") : null;
+    if (el) { at = [e.clientX, e.clientY]; timer = setTimeout(show, WAIT); }
+  }, true);
+  for (const ev of ["pointerdown", "keydown", "wheel", "scroll"]) addEventListener(ev, hide, true);
+  document.addEventListener("mouseout", (e) => { if (!e.relatedTarget) hide(); });   // muis het venster uit
+  addEventListener("blur", hide);
+})();
+
 /* ---- 🎓 Rondleiding ----
    🧑 Elke functie hoort hier een stap te hebben. Voeg je iets toe of haal je iets weg: werk TOUR_STEPS bij (zie CLAUDE.md §2a). */
 const TOUR_STEPS = [
@@ -4516,8 +4587,7 @@ const TOUR_STEPS = [
       <p class="muted">Doe dit niet tijdens een dienst: de camera's bewegen daarbij.</p>` },
   { target: ["#tileCtls"], title: "Aantal en grootte van de tegels", text: () => `<p>Stel in hoeveel tegels er per camera zijn en hoe groot ze zijn. De schuif <b>Grootte</b> werkt traploos: de tegels worden precies zo breed als de waarde ernaast (in <i>Alle camera's</i> iets kleiner). Dit wordt automatisch opgeslagen en geldt voor elk scherm.</p>` },
   { target: ["#ctrlCard"], title: "Handbediening", text: () => `<p>Bedien de gekozen camera met de hand: <b>pijlen</b> (vasthouden), <b>home</b> (huisje), <b>zoom</b>, <b>focus</b> en de AF-modus. Onder <b>Snelheden</b> stel je de snelheden in.</p>
-      <p>De zijbalk blijft in beeld als je door de presets scrolt; past niet alles, dan scrolt hij zelf.</p>
-      <p>Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
+      <p>Muis <b>2 seconden</b> stil op een knop = korte uitleg. Klik op de titel om in te klappen (toets <kbd>${keyLabel(keyOf("ctrl"))}</kbd>). Op volledig scherm is dit een venster.</p>` },
   { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
       <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
   { target: ["#btnTrackSet"], title: ic("image") + " Kader en persoon kiezen", text: () => `<p><b>Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>

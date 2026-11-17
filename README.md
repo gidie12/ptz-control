@@ -83,6 +83,7 @@ Op volledig scherm zijn er vier vensters: **camerabediening** (toets **C**), **X
 ## Tijdens de dienst
 - **ONDERWEG…** op een tegel: de camera rijdt nog naar die preset. Het label verdwijnt zodra hij stilstaat; dan kun je veilig op de mixer overschakelen. (De app leest daarvoor de positie van de camera uit; lukt dat niet, dan staat het label er 3 seconden.)
 - **● Camerastatus**: het bolletje bij elke camera (kolom en tabblad) is groen als de camera bereikbaar is en rood als hij niet reageert, met *niet bereikbaar* erbij. De app controleert dit elke 10 seconden en bij elk commando.
+- **Uitleg bij de bediening**: houd de muis 2 seconden stil op een knop of schuif in de camerabediening of de Xbox-kaart (zoom, focus, AF, One-push, volgen, Kader…, de pijlen, de snelheden) en er verschijnt een korte uitleg met de sneltoets (zoals je die zelf hebt ingesteld). Bewegen, klikken of een toets laat hem verdwijnen. Op een aanraakscherm verschijnt hij niet.
 - **Sneltoets op de tegel**: bij de camera die je bedient staat rechtsonder op tegel 1–9 de toets waarmee je die preset oproept.
 - **Ongedaan maken**: heb je een preset overschreven, dan verschijnt onderin 10 seconden *Ongedaan maken*. De camera gaat dan terug naar de oude positie, slaat de preset daar opnieuw op en zet de oude foto terug. Dat kan als de app de oude positie kent: van presets die je met de app opslaat (of uitleest bij Back-up) onthoudt hij die vanzelf.
 
