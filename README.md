@@ -269,7 +269,7 @@ Gaat het tabblad naar de achtergrond, dan stopt elke beweging automatisch.
 ![Knoppenindeling](docs/screenshots/knoppenindeling.png)
 
 ## YouTube-livestream bekijken
-Klik op de **YouTube**-knop rechtsboven → *Kanaal instellen…* en vul het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
+Klik op de **YouTube**-knop rechtsboven → *Kanaal instellen…* en vul het kanaal in (`@kerknaam`, een kanaal-id `UC…` of de link naar het kanaal). Weet je het kanaal-ID niet? De knop **Kanaal-ID opzoeken op YouTube** onder het veld opent youtube.com/account_advanced in een nieuw venster; daar staat het ID (`UC…`) als je ingelogd bent. Kopieer het en plak het in het veld. Een link naar één stream (`youtube.com/live/…`) mag ook, maar dan volgt hij alleen die ene stream.
 **Na het bijwerken van de app altijd PTZ Control opnieuw starten** (Terminal-venster sluiten, app weer openen), anders draait de server nog de oude versie.
 De app kijkt daarna elke minuut of het kanaal live is. De knop rechtsboven wordt rood (**● LIVE**) zodra er een stream loopt,
 en de stream verschijnt in een **klein venster** (standaard automatisch, zonder geluid).

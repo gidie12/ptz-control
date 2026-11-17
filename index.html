@@ -734,6 +734,9 @@
   #songWinList { flex: 1; overflow: auto; margin: 0; border: 0; border-radius: 0; max-height: none; }
   #songWinSrc { font-size: 11px; color: var(--muted); padding: 4px 12px 6px; border-top: 1px solid var(--line); }
   #dlgPrefs { width: min(560px, 95vw); }
+  #dlgPrefs .ytfind { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; }
+  #dlgPrefs .ytfind .icon { flex: none; white-space: nowrap; font-size: 13px; padding: 6px 10px; }
+  #dlgPrefs .ytfind .muted { flex: 1 1 220px; font-size: 12px; }
   #dlgPrefs label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
   #toast.good { background: var(--okbg); border-color: var(--ok); }
   /* ---- Updatemelding (rechtsonder) ---- */
@@ -1326,6 +1329,10 @@
       starten en stoppen van de stream gebeurt buiten deze app.</div>
     <label class="small" style="display:block;margin-top:10px">Kanaal <span class="muted">(geldt voor alle schermen)</span>
       <input type="text" id="ytChannel" placeholder="@kerknaam, kanaal-id (UC…), kanaallink of link naar de stream" maxlength="200"></label>
+    <div class="ytfind">
+      <button class="icon" id="ytFindId" type="button"><svg class="ic" data-i="external" aria-hidden="true"><use href="#i-external"/></svg> Kanaal-ID opzoeken op YouTube</button>
+      <span class="muted">Opent youtube.com/account_advanced: daar staat je kanaal-ID (UC…) als je ingelogd bent. Kopieer en plak hem hierboven.</span>
+    </div>
     <div class="small" id="ytPrefStatus" style="margin-top:6px"></div>
   </div>
   <div class="actions"><span></span>
@@ -3586,6 +3593,8 @@ $("#btnQuit").onclick = async () => {
   if (new URLSearchParams(location.search).has("app")) setTimeout(() => { try { window.close(); } catch {} }, 2000);
 };
 $("#prefsCancel").onclick = () => $("#dlgPrefs").close();
+// 🧑 spec 6.1: kanaal-ID opzoeken (alleen een link naar YouTube; geen streambediening, §8). Nieuw venster, werkt ook in het app-venster
+$("#ytFindId").onclick = () => window.open("https://www.youtube.com/account_advanced", "_blank", "noopener");
 $("#prefsSave").onclick = async () => {
   const chan = $("#ytChannel").value.trim();
   if (chan !== ((cfg.youtube || {}).channel || "")) {
@@ -4634,7 +4643,7 @@ const TOUR_STEPS = [
   { target: ["#followWrap"], title: ic("link") + " Remote control: meewisselen", text: () => `<p>Staat de schakelaar aan (tegel indigo), dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
       <p>Het bolletje is <b>groen</b> zolang de verbinding met de app goed is.</p>` },
   { target: ["#ytWrap"], title: ic("tv") + " YouTube-livestream", text: () => `<p>De app kijkt elke minuut of het ingestelde kanaal live is. De knop wordt dan rood (<b>LIVE</b>) en de stream verschijnt in een klein venster.</p>
-      <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream).</p>
+      <p>In dit menu: venster tonen/verbergen (<kbd>Y</kbd>), grootte, automatisch plaatsen, geluid, automatisch openen, nu controleren en het <b>kanaal instellen</b> (kan altijd, ook tijdens een stream). Weet je het kanaal-ID niet, dan opent <b>Kanaal-ID opzoeken op YouTube</b> in dat venster de pagina waar het staat.</p>
       <p>Het venster kun je slepen aan de titelbalk en groter maken met de hoek rechtsonder. Starten en stoppen van de stream gebeurt buiten deze app.</p>` },
   { target: ["#btnSongBar", "#btnPad"], title: ic("music") + " Liederenvenster", text: () => `<p>Is ProPresenter of de Voordienst app gekoppeld, dan staat hier het nummer dat <b>nu op het scherm</b> staat. Klik erop (of toets <kbd>${esc(keyLabel(keyOf("songs")))}</kbd>) voor een klein venster met <b>Nu</b>, <b>Hierna</b> en de hele playlist.</p><p>Net als het YouTube-venster kun je het verslepen aan de titelbalk en groter maken met het hoekje rechtsonder; elk scherm onthoudt zijn eigen plek. Met ⇄ wissel je tussen ProPresenter en de Voordienst app. Koppelen doe je via <b>Menu → Instellingen → ${ic("music")} Liederen</b>.</p>` },
   { target: ["#wsWrap"], title: ic("pin") + " Workspaces", text: () => `<p>Een workspace is een aparte set camera's, presets, foto's, sneltoetsen, knoppenprofielen en YouTube-kanaal, bijvoorbeeld per locatie.</p>
