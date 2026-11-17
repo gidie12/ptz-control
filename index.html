@@ -277,6 +277,37 @@
   .padprofcard select { flex: 1; }
   #dlgMap .padset { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
   #padMap .hit { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+  .padbtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  /* 🧑 Sticks afstellen (#dlgCal) */
+  #dlgCal { width: min(640px, 95vw); }
+  .caltabs { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .caltabs button { border: 0; background: var(--panel); color: var(--text); padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .caltabs button + button { border-left: 1px solid var(--line); }
+  .caltabs button[aria-selected="true"] { background: var(--accent); color: var(--onaccent); }
+  .calgrid { display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: start; margin-bottom: 8px; }
+  @media (max-width: 560px) { .calgrid { grid-template-columns: 1fr; } .calstick { max-width: 180px; margin: 0 auto; } }
+  .calstick { text-align: center; }
+  .calstick svg { width: 100%; max-width: 160px; display: block; margin: 0 auto 4px; }
+  .cl-ring { fill: var(--panel2); stroke: var(--line); stroke-width: 2; }
+  .cl-axis { stroke: var(--line); stroke-width: 1; fill: none; }
+  .cl-dz { fill: none; stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .cl-dot { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+  .calmodes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .calmode { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 9px; padding: 6px 11px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .calmode:hover { background: var(--hover); }
+  .calmode.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--ring), 0 0 0 1px var(--accent) inset; color: var(--accent); }
+  #calGraph { width: 100%; display: block; background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; touch-action: none; }
+  #calGraph .cg-axis { stroke: var(--line); stroke-width: 1; fill: none; }
+  #calGraph .cg-dz { fill: var(--warnbg); }
+  #calGraph .cg-dzl { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  #calGraph .cg-lin { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; fill: none; }
+  #calGraph .cg-curve { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linejoin: round; }
+  #calGraph .cg-soft { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 2 3; fill: none; opacity: .75; }
+  #calGraph .cg-pt { fill: var(--panel); stroke: var(--accent); stroke-width: 2.5; cursor: grab; }
+  #calGraph .cg-pt:focus { outline: none; stroke-width: 3.5; fill: var(--ring); }
+  #calGraph .cg-live { fill: var(--accent); }
+  #calGraph text { fill: var(--muted); font-size: 7px; font-family: inherit; }
+  label.calsl { grid-template-columns: 86px 1fr 40px; }
   /* onderweg naar een preset, status per camera, kleurlabels, verslepen, sneltoets, ongedaan maken */
   .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }
   .tile.moving::after { content: "ONDERWEG…"; position: absolute; top: 6px; left: 6px; background: var(--busy); color: var(--onbusy);
@@ -1153,7 +1184,10 @@
         <label data-tipk="padMax">Max. pan/tilt-snelheid <input type="range" id="padMax" min="4" max="24" value="18" style="flex:1"><span id="padMaxV"></span></label>
       </div>
       <label class="small padprofcard" data-tipk="padProf">Knoppenprofiel <select class="padprof" id="padProfCard"></select></label>
-      <button class="icon" id="btnMap2" data-tipk="padMap" style="margin-top:6px"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling instellen…</button>
+      <div class="padbtns">
+        <button class="icon" id="btnMap2" data-tipk="padMap"><svg class="ic" data-i="gamepad" aria-hidden="true"><use href="#i-gamepad"/></svg> Knoppenindeling instellen…</button>
+        <button class="icon" id="btnCal" data-tipk="padCal"><svg class="ic" data-i="sticks" aria-hidden="true"><use href="#i-sticks"/></svg> Sticks afstellen…</button>
+      </div>
       </div>
     </div>
   </aside>
@@ -1243,6 +1277,36 @@
     <button class="icon" id="padReset">Standaard terugzetten</button>
   </div>
   <div class="actions"><span></span><button class="primary" id="btnMapClose">Sluiten</button></div>
+</dialog>
+
+<dialog id="dlgCal" aria-labelledby="calTitle">
+  <h3 id="calTitle"><svg class="ic" data-i="sticks" aria-hidden="true"><use href="#i-sticks"/></svg> Sticks afstellen</h3>
+  <p class="small" style="margin:0 0 10px">Geldt voor <b>alle schermen en knoppenprofielen</b> (in deze workspace). Zolang dit venster open is, bestuurt de controller niets; beweeg een stick om te zien waar hij staat.</p>
+  <div class="caltabs" role="tablist">
+    <button role="tab" data-side="left" id="calTabL">Linker stick</button><button role="tab" data-side="right" id="calTabR">Rechter stick</button>
+  </div>
+  <p class="small muted" id="calUse" style="margin:8px 0 6px"></p>
+  <div class="calgrid">
+    <div class="calstick">
+      <svg id="calLive" viewBox="0 0 120 120" role="img" aria-label="Stand van de stick">
+        <circle cx="60" cy="60" r="52" class="cl-ring"/><path d="M60 8v104M8 60h104" class="cl-axis"/>
+        <rect id="calDz" class="cl-dz" x="60" y="60" width="0" height="0"/>
+        <circle id="calDot" cx="60" cy="60" r="6" class="cl-dot"/>
+      </svg>
+      <div class="small muted" id="calLiveTxt">Geen controller</div>
+    </div>
+    <div class="calcurve">
+      <div class="calmodes" role="group" aria-label="Curve">
+        <button class="calmode" data-curve="standaard">Standaard</button><button class="calmode" data-curve="vertraagd">Vertraagd</button>
+        <button class="calmode" data-curve="direct">Direct</button><button class="calmode" data-curve="eigen">Eigen</button>
+      </div>
+      <svg id="calGraph" viewBox="0 0 220 150" role="img" aria-label="Stickbeweging naar camerabeweging"></svg>
+      <div class="small muted" id="calGraphTxt"></div>
+    </div>
+  </div>
+  <label class="sl calsl" data-tipk="calDz">Dode zone <input type="range" id="calDzR" min="0" max="40" step="1"><span id="calDzV"></span></label>
+  <label class="sl calsl" data-tipk="calMax">Maximaal <input type="range" id="calMaxR" min="50" max="100" step="5"><span id="calMaxV"></span></label>
+  <div class="actions"><button class="icon" id="calReset">Standaard terugzetten</button><button class="primary" id="calClose">Sluiten</button></div>
 </dialog>
 
 <dialog id="dlgBackup">
@@ -1685,7 +1749,9 @@ async function cmd(action, args = {}, camId = ctrlCam) {
 
 /* ================= config ================= */
 async function loadConfig() {
+  const keepCal = typeof calKeep === "function" ? calKeep() : null;   // sticks afstellen: niet terugspringen tijdens slepen
   cfg = await (await fetch("/api/config")).json();
+  if (keepCal) { cfg.pad_cal = keepCal.cal; cfg.pad_cal_set = keepCal.set; }
   cfg.preset_count ||= 12;
   if (!cfg.tile_size && store.get("ptzTile")) cfg.tile_size = +store.get("ptzTile");
   applyTile(cfg.tile_size || 170); $("#tileCount").value = cfg.preset_count;
@@ -1694,6 +1760,7 @@ async function loadConfig() {
   if (view !== ALL && !camById(view)) view = cfg.cameras[0]?.id ?? null;
   if (!camById(ctrlCam)) ctrlCam = view !== ALL ? view : cfg.cameras[0]?.id ?? null;
   render(); renderBackup(); renderPadProfiles(); renderPadMap(); renderLoad(); renderCap(); renderKeyHints(); trkRender();
+  if ($("#dlgCal").open) calRender();
 }
 async function saveConfig() {
   const clean = JSON.parse(JSON.stringify(cfg));
@@ -2829,7 +2896,8 @@ const pad = {
 };
 const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 // Knopindeling staat in cameras.json (cfg.pad_map), zodat alle schermen dezelfde indeling hebben.
-// Sticks en triggers liggen vast: linker stick pan/tilt, RT/LT zoom, rechter stick ↑↓ focus.
+// Sticks en triggers hebben een vaste functie: linker stick pan/tilt, RT/LT zoom, rechter stick ↑↓ focus (Gescheiden sticks: rechts = tilt).
+// Hoe ze reageren (dode zone, curve, maximaal) staat in cfg.pad_cal (Sticks afstellen, #dlgCal).
 const PAD_BUTTONS = [
   ["A", "A"], ["B", "B"], ["X", "X"], ["Y", "Y"], ["LB", "LB"], ["RB", "RB"],
   ["UP", "D-pad ↑"], ["DOWN", "D-pad ↓"], ["LEFT", "D-pad ←"], ["RIGHT", "D-pad →"],
@@ -2949,6 +3017,134 @@ function padHit(k) {
 $("#padReset").onclick = async () => {
   if (!confirm(`Standaard knopindeling terugzetten in profiel "${padProfileName()}"?`)) return;
   padSetRawMap(JSON.parse(JSON.stringify(PAD_DEFAULT))); await saveConfig(); renderPadMap(); toast("Standaard teruggezet", true);
+};
+/* ---- venster Sticks afstellen (#dlgCal) ---- */
+let calSide = "left", calSaveT = 0, calDirty = 0, calMag = null;
+const calCopy = () => JSON.parse(JSON.stringify(cfg.pad_cal || cfg.pad_cal_default || PAD_CAL_FALLBACK));
+function calKeep() { return calDirty && Date.now() - calDirty < 1500 ? { cal: JSON.parse(JSON.stringify(cfg.pad_cal)), set: Object.assign({}, cfg.pad_cal_set) } : null; }
+const calFocus = () => calSide === "right" && !pad.split;   // rechter stick = focus (tenzij Gescheiden sticks)
+function calUseText() {
+  if (calSide === "left") return pad.split ? "Linker stick = pan (links/rechts), <i>Gescheiden sticks</i> staat aan."
+    : padPanOnlyOn() ? "Linker stick = pan (links/rechts), <i>Pan only</i> staat aan." : "Linker stick = pan en tilt.";
+  return pad.split ? "Rechter stick = tilt (omhoog/omlaag), <i>Gescheiden sticks</i> staat aan." : "Rechter stick ↑/↓ = focus ver/dichtbij.";
+}
+function calOpen() { calSide = "left"; calMag = null; calRender(); $("#dlgCal").showModal(); }
+function calRender() {
+  const c = padCal(calSide);
+  $$(".caltabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.side === calSide ? "true" : "false"));
+  $("#calUse").innerHTML = calUseText();
+  $$(".calmode").forEach(b => { b.classList.toggle("on", b.dataset.curve === c.curve); b.setAttribute("aria-pressed", b.dataset.curve === c.curve ? "true" : "false"); });
+  $("#calDzR").value = Math.round(c.dz * 100); $("#calDzV").textContent = Math.round(c.dz * 100) + "%";
+  $("#calMaxR").value = Math.round(c.max * 100); $("#calMaxV").textContent = Math.round(c.max * 100) + "%";
+  const h = c.dz * 52; Object.entries({ x: 60 - h, y: 60 - h, width: 2 * h, height: 2 * h }).forEach(([k, v]) => $("#calDz").setAttribute(k, v.toFixed(1)));
+  calGraph();
+}
+// grafiek: stickbeweging (0 = midden, 1 = helemaal) → camerabeweging; dode zone gestippeld, lineair als stippellijn
+const CG = { x0: 28, x1: 210, y0: 128, y1: 10 };
+const cgX = (r) => CG.x0 + r * (CG.x1 - CG.x0), cgY = (o) => CG.y0 - o * (CG.y0 - CG.y1);
+function calGraph() {
+  const c = padCal(calSide), focus = calFocus(), soft = !focus && softS() > 0;
+  const path = (sf) => Array.from({ length: 81 }, (_, i) => { const r = i / 80; return `${i ? "L" : "M"}${cgX(r).toFixed(1)} ${cgY(Math.abs(calAxis(r, calSide, focus, sf))).toFixed(1)}`; }).join("");
+  let svg = `<path class="cg-axis" d="M${CG.x0} ${CG.y1}V${CG.y0}H${CG.x1}"/>`
+    + (c.dz > 0 ? `<rect class="cg-dz" x="${CG.x0}" y="${CG.y1}" width="${(cgX(c.dz) - CG.x0).toFixed(1)}" height="${CG.y0 - CG.y1}"/><path class="cg-dzl" d="M${cgX(c.dz).toFixed(1)} ${CG.y1}V${CG.y0}"/>` : "")
+    + `<path class="cg-lin" d="M${CG.x0} ${CG.y0}L${CG.x1} ${CG.y1}"/>`
+    + (soft ? `<path class="cg-soft" d="${path(true)}"/>` : "")
+    + `<path class="cg-curve" d="${path(false)}"/>`
+    + `<text x="${CG.x1}" y="${CG.y0 + 14}" text-anchor="end">stick →</text><text x="4" y="${CG.y1 + 6}">camera</text>`;
+  if (c.curve === "eigen") c.pts.forEach((p, i) => {
+    const r = c.dz + p[0] * (1 - c.dz);
+    svg += `<circle class="cg-pt" data-pt="${i}" cx="${cgX(r).toFixed(1)}" cy="${cgY(p[1] * c.max).toFixed(1)}" r="6" tabindex="0" role="slider"
+      aria-label="Punt ${i + 1} van de eigen curve (pijltjes: verschuiven, Shift = grotere stap)" aria-valuetext="stick ${Math.round(p[0] * 100)}%, camera ${Math.round(p[1] * 100)}%"/>`;
+  });
+  svg += `<circle class="cg-live" id="cgLive" r="4" cx="0" cy="0"${calMag === null ? " hidden" : ""}/>`;
+  const fi = document.activeElement?.closest?.("#calGraph .cg-pt")?.dataset.pt;   // focus op een punt behouden na opnieuw tekenen
+  $("#calGraph").innerHTML = svg;
+  if (fi != null) $(`#calGraph .cg-pt[data-pt="${fi}"]`)?.focus({ preventScroll: true });
+  calLiveDot();
+  $("#calGraphTxt").innerHTML = `Stickbeweging → ${focus ? "focussnelheid" : "camerasnelheid"}. Stippellijn = recht evenredig.`
+    + (soft ? ` Dunne lijn = met <i>Zachte beweging</i> (${pad.soft}%) erbij.` : "");
+}
+function calSet(part, now) {   // wijziging voor de gekozen stick; opslaan na 400 ms (alle schermen krijgen hem via SSE config)
+  const eff = Object.assign({}, padCal(calSide));   // wat nu geldt (ook de 18 %-standaard bij Gescheiden sticks)
+  cfg.pad_cal = calCopy();
+  cfg.pad_cal[calSide] = Object.assign(eff, part);
+  cfg.pad_cal_set = Object.assign({}, cfg.pad_cal_set, { [calSide]: true });
+  calDirty = Date.now(); calRender();
+  clearTimeout(calSaveT);
+  calSaveT = setTimeout(async () => {
+    const j = await post("/api/pad/cal", { cal: { [calSide]: cfg.pad_cal[calSide] } });
+    if (!j || j.ok === false) toast(j?.error || "Opslaan mislukt");
+  }, now ? 0 : 400);
+}
+// eigen curve: punten verslepen (pointer) of met de pijltjes (focus op het punt)
+function calPtMove(i, x, y) {
+  const c = padCal(calSide), pts = c.pts.map(p => p.slice());
+  const lo = i === 0 ? 0.02 : pts[0][0] + 0.05, hi = i === 0 ? pts[1][0] - 0.05 : 0.98;
+  pts[i][0] = +Math.max(lo, Math.min(hi, x)).toFixed(3);
+  pts[i][1] = +Math.max(i === 1 ? pts[0][1] : 0, Math.min(i === 0 ? pts[1][1] : 1, y)).toFixed(3);   // curve loopt niet terug
+  calSet({ pts });
+}
+// (één keer gekoppeld aan de svg, want de inhoud wordt bij elke wijziging opnieuw getekend)
+let calDrag = -1;
+function calPtFocus(i) { requestAnimationFrame(() => $(`#calGraph .cg-pt[data-pt="${i}"]`)?.focus({ preventScroll: true })); }
+(function calPtsInit() {
+  const svg = $("#calGraph");
+  svg.addEventListener("pointerdown", (e) => {
+    const el = e.target.closest?.(".cg-pt"); if (!el) return;
+    e.preventDefault(); calDrag = +el.dataset.pt; svg.setPointerCapture(e.pointerId); calPtFocus(calDrag);
+  });
+  svg.addEventListener("pointermove", (e) => {
+    if (calDrag < 0) return;
+    const m = svg.getScreenCTM(); if (!m) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    const c = padCal(calSide), r = (pt.x - CG.x0) / (CG.x1 - CG.x0), o = (CG.y0 - pt.y) / (CG.y0 - CG.y1);
+    calPtMove(calDrag, (r - c.dz) / Math.max(0.05, 1 - c.dz), o / c.max);
+    calPtFocus(calDrag);
+  });
+  const up = () => { calDrag = -1; };
+  svg.addEventListener("pointerup", up); svg.addEventListener("lostpointercapture", up);
+  svg.addEventListener("keydown", (e) => {
+    const el = e.target.closest?.(".cg-pt"); if (!el) return;
+    const i = +el.dataset.pt, d = e.shiftKey ? 0.1 : 0.02, p = padCal(calSide).pts[i];
+    const k = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, d], ArrowDown: [0, -d] }[e.key];
+    if (!k) return;
+    e.preventDefault(); e.stopPropagation();
+    calPtMove(i, p[0] + k[0], p[1] + k[1]); calPtFocus(i);
+  });
+})();
+// live: stip in de cirkel en op de curve (aangeroepen vanuit padLoop zolang het venster open is)
+function calLive(gp) {
+  const [ax, ay] = calSide === "left" ? [gp.axes[0] || 0, gp.axes[1] || 0] : [gp.axes[2] || 0, gp.axes[3] || 0];
+  $("#calDot").setAttribute("cx", (60 + ax * 52).toFixed(1)); $("#calDot").setAttribute("cy", (60 + ay * 52).toFixed(1));
+  const txt = `x ${ax.toFixed(2)} · y ${ay.toFixed(2)}`.replace(/\./g, ",");
+  if ($("#calLiveTxt").textContent !== txt) $("#calLiveTxt").textContent = txt;
+  // op de grafiek: de as die telt (rechts: alleen ↑/↓; links: de grootste uitslag, met Pan only/Gescheiden alleen ←/→)
+  const mag = calSide === "right" || !(pad.split || padPanOnlyOn()) ? Math.max(calSide === "right" ? 0 : Math.abs(ax), Math.abs(ay)) : Math.abs(ax);
+  const m = Math.round(mag * 100) / 100;
+  if (m !== calMag) { calMag = m; calLiveDot(); }
+}
+function calLiveDot() {   // stip op de curve (alleen de stip bijwerken, niet de hele grafiek)
+  const d = $("#cgLive"); if (!d) return;
+  if (calMag === null) { d.setAttribute("hidden", ""); return; }
+  const o = Math.abs(calAxis(calMag, calSide, calFocus(), true));
+  d.removeAttribute("hidden"); d.setAttribute("cx", cgX(calMag).toFixed(1)); d.setAttribute("cy", cgY(o).toFixed(1));
+}
+$("#btnCal").onclick = calOpen;
+$("#calClose").onclick = () => $("#dlgCal").close();
+$$(".caltabs button").forEach(b => b.onclick = () => { calSide = b.dataset.side; calMag = null; calRender(); });
+$(".caltabs").addEventListener("keydown", (e) => {   // tabs: pijltjes links/rechts
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  e.preventDefault(); e.stopPropagation(); calSide = calSide === "left" ? "right" : "left"; calMag = null; calRender();
+  $(calSide === "left" ? "#calTabL" : "#calTabR").focus();
+});
+$$(".calmode").forEach(b => b.onclick = () => calSet({ curve: b.dataset.curve }));
+$("#calDzR").oninput = () => calSet({ dz: +$("#calDzR").value / 100 });
+$("#calMaxR").oninput = () => calSet({ max: +$("#calMaxR").value / 100 });
+$("#calReset").onclick = async () => {
+  if (!confirm("Beide sticks terugzetten op de standaardafstelling? Dit geldt voor alle schermen.")) return;
+  clearTimeout(calSaveT); calDirty = 0;
+  const j = await post("/api/pad/cal", { reset: true });
+  if (j?.ok) { cfg.pad_cal = j.cal; cfg.pad_cal_set = { left: false, right: false }; calRender(); toast("Standaardafstelling teruggezet", true); } else toast(j?.error || "Mislukt");
 };
 // schakelknop (.padtog) in de Xbox-kaart: indigo + AAN als de optie aan staat
 function padTog(id, on) {
@@ -3100,7 +3296,40 @@ const dz = (v, d = 0.18) => Math.abs(v) < d ? 0 : Math.sign(v) * (Math.abs(v) - 
 const softS = () => Math.max(0, Math.min(1, (+pad.soft || 0) / 100));
 const softExp = (s) => s <= 0.5 ? 2 + 2 * s : 3 + (s - 0.5);
 const softStep = (s, max) => s > 0 ? Math.max(1, Math.round(max / (24 * s))) : Infinity;   // s = 0: geen limiet (direct)
-const curve = (v) => Math.sign(v) * Math.pow(Math.abs(v), softExp(softS()));
+
+/* ---- 🧑 Sticks afstellen (cfg.pad_cal: één afstelling voor alle schermen en knoppenprofielen, per workspace) ----
+   Per stick: dz (dode zone, deel van de uitslag), max (maximaal), curve (standaard/vertraagd/direct/eigen), pts (eigen curve).
+   Volgorde: dode zone → curve → zachte beweging (vorm: macht softExp/2, alleen pan/tilt) → maximaal → optrekken (padLoop).
+   Standaard = precies het oude gedrag: pan/tilt v² met zachte beweging = v^softExp, dode zone 18 %; focus lineair, dode zone 35 %. */
+const PAD_CAL_FALLBACK = { left: { dz: 0.18, max: 1, curve: "standaard", pts: [[0.33, 0.11], [0.67, 0.44]] },
+                           right: { dz: 0.35, max: 1, curve: "standaard", pts: [[0.33, 0.11], [0.67, 0.44]] } };
+// 🧑 rechter stick nog niet zelf afgesteld (pad_cal_set.right false) en Gescheiden sticks aan (= tilt): standaard dode zone 18 % i.p.v. 35 %
+const padCalSplitStd = (side) => side === "right" && pad.split && !(cfg.pad_cal_set && cfg.pad_cal_set.right);
+function padCal(side) {
+  const def = (cfg.pad_cal_default || PAD_CAL_FALLBACK)[side];
+  if (padCalSplitStd(side)) return Object.assign({}, def, { dz: (cfg.pad_cal_default || PAD_CAL_FALLBACK).left.dz });
+  return (cfg.pad_cal && cfg.pad_cal[side]) || def;
+}
+// vorm op v = 0…1 (na de dode zone) → 0…1
+function calShape(c, v, focus) {
+  v = Math.max(0, Math.min(1, v));
+  if (c.curve === "vertraagd") return v * v * v;
+  if (c.curve === "direct") return v;
+  if (c.curve === "eigen") {   // rechte stukken door (0,0), de twee punten en (1,1)
+    const P = [[0, 0], ...(c.pts || PAD_CAL_FALLBACK.left.pts), [1, 1]];
+    for (let i = 1; i < P.length; i++) if (v <= P[i][0]) return P[i - 1][1] + (P[i][1] - P[i - 1][1]) * (v - P[i - 1][0]) / Math.max(1e-6, P[i][0] - P[i - 1][0]);
+    return 1;
+  }
+  return focus ? v : v * v;    // standaard: pan/tilt kwadratisch, focus lineair (zoals altijd)
+}
+// stickwaarde −1…1 → −1…1 voor de camera; soft = false: zonder zachte beweging (voor de grafiek)
+function calAxis(raw, side, focus, soft = true) {
+  const c = padCal(side), a = Math.abs(raw);
+  if (a < c.dz) return 0;
+  let o = calShape(c, (a - c.dz) / (1 - c.dz), focus);
+  if (!focus && soft) o = Math.pow(o, softExp(softS()) / 2);   // zachte beweging: standaard v² → v^softExp (precies als vroeger)
+  return Math.sign(raw) * o * c.max;
+}
 
 function padStopAll() {
   if (pad.last.move) cmd("stop");
@@ -3149,11 +3378,15 @@ function padLoop() {
     pad.idx = any.index; padUI(any);
   }
   const gp = navigator.getGamepads()[pad.idx];
-  if (!gp || !ctrlCam) return;
+  if (!gp) return;
+  if ($("#dlgCal").open) calLive(gp);      // live stickstand, ook zonder camera
+  if (!ctrlCam) return;
   const btn = (i) => !!gp.buttons[i]?.pressed;
   const val = (i) => gp.buttons[i]?.value || 0;
   const down = (i) => btn(i) && !pad.prev[i];
   const busy = anyDialog();
+  // venster open (of rondleiding) terwijl de controller nog iets liet bewegen: één keer alles stoppen, daarna niets meer sturen
+  if (busy && (pad.last.move || pad.last.zoom || pad.last.focus)) { padStopAll(); $("#padBadge").classList.remove("act"); }
   if ($("#dlgMap").open) PAD_BUTTONS.forEach(([k]) => { if (down(B[k])) padHit(k); });
   if ($("#dlgOsd").open && $("#tour").hidden) osdPad(gp, down);
 
@@ -3170,9 +3403,10 @@ function padLoop() {
     // ---- analoog: pan/tilt
     const max = pad.fine ? Math.max(2, Math.round(pad.max / 4)) : pad.max;
     // Gescheiden sticks: x van de linker stick, y van de rechter stick; anders beide van de linker stick (Pan only: geen y)
-    const x = curve(dz(gp.axes[0] || 0));
-    const y = pad.split ? curve(dz(gp.axes[3] || 0)) * (pad.invY ? -1 : 1)
-      : padPanOnlyOn() ? 0 : curve(dz(gp.axes[1] || 0)) * (pad.invY ? -1 : 1);
+    // afstelling per stick (calAxis): dode zone → curve → zachte beweging → maximaal; daarna optrekken (zachte beweging)
+    const x = calAxis(gp.axes[0] || 0, "left");
+    const y = pad.split ? calAxis(gp.axes[3] || 0, "right") * (pad.invY ? -1 : 1)
+      : padPanOnlyOn() ? 0 : calAxis(gp.axes[1] || 0, "left") * (pad.invY ? -1 : 1);
     let move = null;
     if (x || y) {
       const ang = Math.atan2(-y, x) * 180 / Math.PI;          // 0 = rechts, 90 = omhoog
@@ -3196,7 +3430,7 @@ function padLoop() {
       zoom.speed = Math.min(zoom.speed, (pz && pz.dir === zoom.dir ? pz.speed : 0) + softStep(softS(), 7));
     }
     // ---- focus (rechter stick verticaal; niet met Gescheiden sticks, dan is die stick tilt)
-    const fy = pad.split ? 0 : dz(gp.axes[3] || 0, 0.35);
+    const fy = pad.split ? 0 : calAxis(gp.axes[3] || 0, "right", true);
     // knopacties focus_far / focus_near (standaard D-pad ↑/↓): vasthouden = focus met de ingestelde focussnelheid, loslaten = stop
     const fb = held("focus_far") ? "far" : held("focus_near") ? "near" : "";
     const focus = fy ? { dir: fy < 0 ? "far" : "near", speed: Math.max(1, Math.round(Math.abs(fy) * 5)) }
@@ -4743,6 +4977,9 @@ const TIPS = {
   padMax: { t: "Max. pan/tilt-snelheid", d: "Snelheid als je de linker stick helemaal duwt (4–24). Geldt voor dit scherm." },
   padProf: { t: "Knoppenprofiel", d: "Welke knoppenindeling deze controller op dit scherm gebruikt. Elk scherm onthoudt zijn eigen keuze." },
   padMap: { t: "Knoppenindeling", d: "Geef elke knop van de controller een eigen functie, per profiel." },
+  padCal: { t: "Sticks afstellen", d: "Per stick de dode zone, het maximum en de curve (Standaard, Vertraagd, Direct of een eigen curve) instellen, met de stand van de stick live erbij. Geldt voor alle schermen en knoppenprofielen." },
+  calDz: { t: "Dode zone", d: "Zo ver kun je de stick duwen zonder dat de camera beweegt (tegen kruipen van een stick die niet precies in het midden terugveert). Standaard 18%; rechter stick als focus 35% (met <i>Gescheiden sticks</i> = tilt: 18%, zolang je hem niet zelf afstelt)." },
+  calMax: { t: "Maximaal", d: "Hoeveel van de maximale snelheid de stick helemaal uitgeduwd geeft. De max. pan/tilt-snelheid in de Xbox-kaart (per scherm) telt daar nog bij." },
 };
 (function tipInit() {
   const tip = $("#tip"), WAIT = 2000;
@@ -4814,6 +5051,7 @@ const TOUR_STEPS = [
       <p>Verbonden = groen <b>● Verbonden</b> in de titel. Per apparaat: <b>Zachte beweging</b> (schuif), <b>Gescheiden sticks</b>, <b>Pan only</b>, <b>Tilt omkeren</b> (indigo = aan) en de max. snelheid.</p>` },
   { target: ["#padSplit"], title: ic("sticks") + " Gescheiden sticks", text: () => `<p>Met <b>Gescheiden sticks</b> (indigo = aan) draait de <b>linker stick alleen links/rechts</b> en de <b>rechter stick alleen omhoog/omlaag</b>, zoals bij veel camera- en droneregelaars. Focus zit dan niet meer op de rechter stick.</p><p>Zolang dit aan staat is <i>Pan only</i> uitgeschakeld; <i>Tilt omkeren</i> werkt dan op de rechter stick. Standaard uit, geldt voor dit scherm. Ook op een controllerknop te zetten (<i>Gescheiden sticks aan/uit</i>).</p>` },
   { target: ["#padPanOnly"], title: ic("width") + " Pan only", text: () => `<p>Klik om <b>Pan only</b> aan of uit te zetten; aan = knop indigo met <b>AAN</b>. De linker stick draait de camera dan alleen <b>links en rechts</b>, voor <b>alle camera's</b>; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt voor dit scherm. Je kunt het ook op een controllerknop zetten (<i>Pan only aan/uit</i> in de knoppenindeling).</p>` },
+  { target: ["#btnCal"], title: ic("sticks") + " Sticks afstellen", text: () => `<p>Reageert een stick te snel, te traag of kruipt de camera als je hem loslaat? In <b>Sticks afstellen</b> stel je per stick de <b>dode zone</b>, het <b>maximum</b> en de <b>curve</b> in: <i>Standaard</i>, <i>Vertraagd</i> (fijner rond het midden), <i>Direct</i> of <i>Eigen</i> met twee punten die je versleept. Je ziet live waar de stick staat.</p><p>Eén afstelling voor alle schermen en knoppenprofielen. <i>Zachte beweging</i> werkt er nog bovenop.</p>` },
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
   { target: ["#followWrap"], title: ic("link") + " Remote control: meewisselen", text: () => `<p>Staat de schakelaar aan (tegel indigo), dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>

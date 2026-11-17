@@ -105,6 +105,7 @@ with sync_playwright() as p:
     pg.screenshot(path=f"{OUT}/automatische-back-up.png"); pg.click("#bkClose")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnKeys"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/sneltoetsen.png"); pg.click("#keysCancel")
     pg.click("#btnMap2"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/knoppenindeling.png"); pg.click("#btnMapClose")
+    pg.click("#btnCal"); pg.wait_for_timeout(400); pg.locator("#dlgCal").screenshot(path=f"{OUT}/sticks-afstellen.png"); pg.click("#calClose")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnBackup"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/back-up.png"); pg.keyboard.press("Escape")
     pg.evaluate("setWall(true)"); pg.wait_for_timeout(600); pg.screenshot(path=f"{OUT}/volledig-scherm.png")
     pg.keyboard.press("Shift+Slash"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/hulp.png"); pg.click("#helpClose")

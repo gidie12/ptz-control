@@ -259,7 +259,15 @@ De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). He
 
 **Pan only** (knop in de Xbox-kaart, indigo met *AAN* als hij actief is): de linker stick draait dan alleen links/rechts, voor alle camera's tegelijk; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt per scherm, net als de andere Xbox-opties. In de knoppenindeling kun je er ook een controllerknop voor kiezen (*Pan only aan/uit*).
 
-Sticks en triggers liggen vast. De knoppen stel je per knop in via **Knoppenindeling instellen…** in de Xbox-kaart (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
+**Sticks afstellen…** (knop in de Xbox-kaart, naast *Knoppenindeling instellen…*): per stick (tabs *Linker stick* / *Rechter stick*) stel je in hoe hij reageert, zoals in de Xbox Accessories-app:
+- **Dode zone** (0–40%, standaard 18%; rechter stick als focus 35%, met *Gescheiden sticks* (tilt) 18% zolang je hem niet zelf afstelt): zo ver kun je duwen zonder dat de camera beweegt. Handig als een stick niet precies in het midden terugveert en de camera gaat kruipen.
+- **Maximaal** (50–100%): hoeveel van de topsnelheid je krijgt als je de stick helemaal duwt.
+- **Curve**: *Standaard* (zoals altijd), *Vertraagd* (nog fijner rond het midden), *Direct* (recht evenredig) of *Eigen*: sleep de twee punten in de grafiek (of gebruik de pijltjestoetsen op een punt).
+Links zie je live waar de stick staat (de stippellijn is de dode zone), rechts de grafiek *stickbeweging → camerabeweging*. *Zachte beweging* werkt er nog bovenop (dunne lijn in de grafiek). De afstelling geldt voor **alle schermen en alle knoppenprofielen** (per workspace) en staat in de back-up. Zolang het venster open is, bestuurt de controller niets (een beweging die nog liep stopt meteen; dat geldt voor elk venster). *Standaard terugzetten* zet beide sticks terug.
+
+<img src="docs/screenshots/sticks-afstellen.png" width="560" alt="Sticks afstellen">
+
+Sticks en triggers hebben een vaste functie. De knoppen stel je per knop in via **Knoppenindeling instellen…** in de Xbox-kaart (druk in dat venster op een knop van de controller en de regel licht op); die indeling staat in `cameras.json` en geldt dus voor alle schermen. Standaard:
 
 | Controller | Functie |
 |---|---|
