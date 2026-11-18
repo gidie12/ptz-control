@@ -28,7 +28,7 @@
     --text: #e6e9f2; --muted: #9098ad; --accent: #6366f1; --accentdark: #4f46e5; --ring: rgba(129,140,248,.25);
     --live: #ef4444; --ok: #22c55e; --warn: #f59e0b; --busy: #f97316; --onbusy: #ffffff;
     --img: #0b0d18; --imgtxt: #343b55; --onaccent: #ffffff; --onwarn: #1c1206;
-    --okbg: #0f2e1b; --oktxt: #86efac; --okline: #166534; --warnbg: #3a2a0c; --warntxt: #fcd34d; --errbg: #3a1416; --errline: #6b2a2c; --errtxt: #fca5a5;
+    --okbg: #0f2e1b; --oktxt: #86efac; --okline: #166534; --warnbg: #3a2a0c; --warntxt: #fcd34d; --adjline: #8a6d33; --errbg: #3a1416; --errline: #6b2a2c; --errtxt: #fca5a5;
     --shadow: rgba(0,0,0,.45); --backdrop: rgba(5,6,12,.6);
     --cardshadow: 0 1px 3px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
     --modalshadow: 0 24px 64px rgba(0,0,0,.5);
@@ -46,7 +46,7 @@
     --text: #1c2333; --muted: #6b7488; --accent: #4f46e5; --accentdark: #4338ca; --ring: rgba(79,70,229,.12);
     --live: #dc2626; --ok: #16a34a; --warn: #d97706; --busy: #ea580c; --onbusy: #ffffff;
     --img: #e8ebf2; --imgtxt: #b4bccb; --onaccent: #ffffff; --onwarn: #1c1206;
-    --okbg: #dcfce7; --oktxt: #166534; --okline: #bbf7d0; --warnbg: #fef3c7; --warntxt: #92400e; --errbg: #fee2e2; --errline: #f3c4c4; --errtxt: #991b1b;
+    --okbg: #dcfce7; --oktxt: #166534; --okline: #bbf7d0; --warnbg: #fef3c7; --warntxt: #92400e; --adjline: #e2c27f; --errbg: #fee2e2; --errline: #f3c4c4; --errtxt: #991b1b;
     --shadow: rgba(20,25,45,.12); --backdrop: rgba(15,18,33,.45);
     --cardshadow: 0 1px 3px rgba(20,25,45,.08), 0 8px 24px rgba(20,25,45,.05);
     --modalshadow: 0 24px 64px rgba(15,18,33,.3);
@@ -843,7 +843,8 @@
   .tile.live { border-color: var(--live); box-shadow: 0 0 0 2px var(--live); }
   .tile.live::after { border-radius: 999px; padding: 2px 8px; }
   .tile.chosen { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-  .tile.adj { border-color: transparent; outline: 2px dashed var(--warn); outline-offset: -1px; }   /* outline: tegel wordt niet groter */
+  /* 🧑 18 nov 2026: subtieler (was 2px --warn, "te geel"): dunne stippelrand in een gedempte amber (--adjline, beide thema's) */
+  .tile.adj { border-color: transparent; outline: 1.5px dashed var(--adjline); outline-offset: -1px; }   /* outline: tegel wordt niet groter */
   .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }   /* onderweg gaat voor LIVE */
   .chip, .trk, .icon { border-radius: 9px; }
   .chip { background: var(--panel); font-weight: 500; }
