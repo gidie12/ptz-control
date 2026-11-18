@@ -929,6 +929,8 @@
   .mview { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 6px 6px 10px; }
   .mview > span { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
   .mview .mtog { justify-content: center; }
+  /* 🧑 Instellingen ▸ Weergave: schakelaars per apparaat (Xbox-knop, Labels) */
+  .subview { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; }
   .mtog { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
     border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; white-space: nowrap; }
   .mtog:hover { background: var(--hover); }
@@ -1070,6 +1072,9 @@
         <button class="mi" id="btnAccess" role="menuitem" title="Pincode instellen: zonder pincode kun je alleen meekijken"><svg class="ic" data-i="lock" aria-hidden="true"><use href="#i-lock"/></svg> Toegang (pincode)</button>
         <button class="mi" id="btnBackup" role="menuitem" title="Presets en camera-instellingen bewaren en terugzetten"><svg class="ic" data-i="save" aria-hidden="true"><use href="#i-save"/></svg> Back-up</button>
         <button class="mi" id="btnCap" role="menuitem" title="Testen hoeveel presets elke camera echt kan opslaan"><svg class="ic" data-i="flask" aria-hidden="true"><use href="#i-flask"/></svg> Presetaantal testen</button>
+        <div class="mview subview" id="setView"><span>Weergave</span>
+        <button class="mtog" id="btnPadPin" title="Knopje in de kolomkop om de Xbox-controller vast op die camera te zetten (dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg> Xbox-knop: uit</button>
+        </div>
       </div>
       <button class="mi sub" id="miHelp" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-controls="subHelp"><svg class="ic" data-i="help" aria-hidden="true"><use href="#i-help"/></svg> Hulp<svg class="ic subcaret" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
       <div class="menu submenu" id="subHelp" hidden role="menu" aria-label="Hulp">
@@ -1080,7 +1085,6 @@
       <div class="mview" id="menuView"><span>Weergave</span>
         <button class="mtog" id="btnTheme" title="Wisselen tussen licht en donker (dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg> Licht</button>
         <button class="mtog" id="btnTablet" title="Tabletweergave: grote tegels en camerakeuze onderin (automatisch → aan → uit, dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-tablet"/></svg> Tablet: auto</button>
-        <button class="mtog" id="btnPadPin" title="Knopje in de kolomkop om de Xbox-controller vast op die camera te zetten (dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg> Xbox-knop: uit</button>
       </div>
       <div class="msep"></div>
       <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)"><svg class="ic" data-i="power" aria-hidden="true"><use href="#i-power"/></svg> PTZ Control afsluiten</button>
@@ -5038,7 +5042,7 @@ const TIPS = {
   spFocus: { t: "Focussnelheid", d: "Hoe snel <i>Focus ver</i> en <i>Focus dichtbij</i> (en de toetsen) scherpstellen (1–7). Geldt voor dit scherm." },
   padSoft: { t: "Zachte beweging", d: "Hoe geleidelijk de camera optrekt en hoe fijn de stick rond het midden reageert. <i>Uit</i> = direct op snelheid; 50% ≈ 1 s naar topsnelheid; 100% (extra zacht) ≈ 2 s. Stoppen gaat altijd direct. Geldt voor dit scherm." },
   padSplit: { t: "Gescheiden sticks", d: "Linker stick alleen links/rechts (pan), rechter stick alleen omhoog/omlaag (tilt). Focus zit dan niet meer op de rechter stick. <i>Pan only</i> is uitgeschakeld zolang dit aan staat; <i>Tilt omkeren</i> werkt op de rechter stick. Geldt voor dit scherm." },
-  padCam: { t: "Bestuurt", d: "Welke camera de Xbox-controller bestuurt. Klik op een camera = de controller blijft op die camera, ook als je op het scherm een andere camera, tegel of tabblad kiest (label XBOX in de kolomkop). <i>Wisselt mee</i> = de controller volgt de camera die je op het scherm kiest (standaard). Met <i>Xbox-knop</i> aan (Menu → Weergave) ook via een knopje in de kolomkop. D-pad ←/→ wisselt in de vaste stand alleen de controllercamera. Geldt voor dit scherm." },
+  padCam: { t: "Bestuurt", d: "Welke camera de Xbox-controller bestuurt. Klik op een camera = de controller blijft op die camera, ook als je op het scherm een andere camera, tegel of tabblad kiest (label XBOX in de kolomkop). <i>Wisselt mee</i> = de controller volgt de camera die je op het scherm kiest (standaard). Met <i>Xbox-knop</i> aan (Menu → Instellingen → Weergave) ook via een knopje in de kolomkop. D-pad ←/→ wisselt in de vaste stand alleen de controllercamera. Geldt voor dit scherm." },
   padPanOnly: { t: "Pan only", d: "De linker stick draait alleen links/rechts; omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm. Niet beschikbaar zolang <i>Gescheiden sticks</i> aan staat." },
   padInvY: { t: "Tilt omkeren", d: "Stick omhoog = camera omlaag (met <i>Gescheiden sticks</i>: de rechter stick). Niet beschikbaar zolang <i>Pan only</i> aan staat." },
   padMax: { t: "Max. pan/tilt-snelheid", d: "Snelheid als je de linker stick helemaal duwt (4–24). Geldt voor dit scherm." },
