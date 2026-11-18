@@ -261,9 +261,13 @@ De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). He
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
+**Welke camera de controller bestuurt** kies je in de Xbox-kaart bij **Bestuurt**: een knop per camera, met onderaan **Wisselt mee**. Standaard staat *Wisselt mee* aan: de controller bedient de camera die je op het scherm kiest (tabblad, kolomkop, tegel, sneltoets of *Meewisselen*). Tik je op een camera, dan blijft de controller op die camera, ook als je op het scherm een andere camera kiest of een preset van een andere camera aanklikt. Nog sneller tijdens de dienst: zet in **Menu → Instellingen → Weergave** de schakelaar **Xbox-knop** aan (per apparaat, standaard uit). Dan krijgt elke kolomkop een **controllerknopje** (tik = vast op die camera, nog een keer = weer meewisselen). De vaste camera krijgt in de kolomkop en op het tabblad het label **XBOX**. De presetknoppen, home, volgen en *Alles stoppen* op de controller gaan dan ook naar die camera, en met D-pad ←/→ wissel je alleen de controllercamera (niet de selectie op het scherm). Elk scherm onthoudt zijn eigen keuze.
+
+<img src="docs/screenshots/xbox-vaste-camera.png" width="300" alt="Kolomkop met het label XBOX: de controller bestuurt vast deze camera">
+
 **Gescheiden sticks**, **Pan only** en **Tilt omkeren** zijn knoppen in de Xbox-kaart: klik om ze aan of uit te zetten; aan = indigo met *AAN*. **Zachte beweging** is een schuif van *Uit* tot *Extra zacht* (0–100%).
 
-<img src="docs/screenshots/xbox-kaart.png" width="300" alt="Xbox-kaart met Gescheiden sticks aan (Pan only n.v.t.)">
+<img src="docs/screenshots/xbox-kaart.png" width="300" alt="Xbox-kaart met Bestuurt: Vast: Midden en Gescheiden sticks aan (Pan only n.v.t.)">
 
 **Zachte beweging** (standaard 50%): de camera trekt geleidelijk op en de stick reageert fijner rond het midden. Op 50% duurt het ongeveer 1 seconde tot topsnelheid, op 100% (*Extra zacht*) ongeveer 2 seconden en is de stick rond het midden nog fijner; op *Uit* gaat de camera direct op volle snelheid. Daartussen werkt het traploos. Stoppen gaat altijd direct. Elk scherm onthoudt zijn eigen stand; wie eerder zachte beweging uit had staan, begint op *Uit*.
 

@@ -71,14 +71,18 @@ with sync_playwright() as p:
     pg.evaluate("$('#ctrlCard details').open = true; const a = $('#spAccel'); a.value = 40; a.dispatchEvent(new Event('input')); zsShow(67)"); pg.wait_for_timeout(300)
     pg.locator("#ctrlCard").screenshot(path=f"{OUT}/snelheden.png")
     pg.evaluate("const a = $('#spAccel'); a.value = 0; a.dispatchEvent(new Event('input')); $('#ctrlCard details').open = false"); pg.wait_for_timeout(200)
-    # Xbox-kaart met Gescheiden sticks aan (Pan only dan n.v.t.)
-    pg.click("#padSplit"); pg.wait_for_timeout(300); pg.locator("#padCard").screenshot(path=f"{OUT}/xbox-kaart.png"); pg.click("#padSplit"); pg.wait_for_timeout(200)
+    # Xbox-kaart met Gescheiden sticks aan (Pan only dan n.v.t.) en vaste controllercamera (Bestuurt: Vast: Midden, label XBOX)
+    pg.evaluate("setPadCam('midden')"); pg.click("#padSplit"); pg.wait_for_timeout(300); pg.locator("#padCard").screenshot(path=f"{OUT}/xbox-kaart.png"); pg.click("#padSplit")
+    pg.locator("#presetArea .col:nth-child(2) .colhead").screenshot(path=f"{OUT}/xbox-vaste-camera.png")
+    pg.evaluate("store.set('padPin','1'); padPinApply(); renderPresets();"); pg.wait_for_timeout(200)
+    b2 = pg.locator("#presetArea .cols").bounding_box(); pg.screenshot(path=f"{OUT}/xbox-knop-kolomkop.png", clip={"x": b2["x"], "y": b2["y"], "width": b2["width"], "height": 90})
+    pg.evaluate("store.set('padPin','0'); padPinApply(); renderPresets();"); pg.evaluate("setPadCam('')"); pg.wait_for_timeout(200)
     z = pg.locator('[data-tipk="zoom_in"]').bounding_box(); pg.mouse.move(z["x"] + z["width"] / 2, z["y"] + z["height"] / 2); pg.wait_for_timeout(2400)   # 🧑 tooltip na 2 s stilstaan
     sb = pg.locator("aside").bounding_box(); tb = pg.locator("#tip").bounding_box() or sb; x0 = min(sb["x"], tb["x"]) - 12   # uitsnede zijbalk + ballon
     pg.screenshot(path=f"{OUT}/tooltip.png", clip={"x": x0, "y": sb["y"], "width": sb["x"] + sb["width"] + 8 - x0, "height": min(560, 900 - sb["y"])}); pg.mouse.move(5, 5); pg.wait_for_timeout(200)
     pg.click("#btnYt"); pg.wait_for_timeout(300); pg.screenshot(path=f"{OUT}/youtube-menu.png", clip={"x": 640, "y": 0, "width": 800, "height": 520}); pg.keyboard.press("Escape")
     pg.evaluate("openPrefs()"); pg.wait_for_timeout(300); pg.locator("#dlgPrefs").screenshot(path=f"{OUT}/youtube-kanaal.png"); pg.click("#prefsCancel")   # kanaal + knop Kanaal-ID opzoeken
-    pg.click("#btnPad"); pg.hover("#miSet"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/menu.png", clip={"x": 640, "y": 0, "width": 800, "height": 540}); pg.keyboard.press("Escape"); pg.keyboard.press("Escape")   # menu met Instellingen ▸ open
+    pg.click("#btnPad"); pg.hover("#miSet"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/menu.png", clip={"x": 640, "y": 0, "width": 800, "height": 640}); pg.keyboard.press("Escape"); pg.keyboard.press("Escape")   # menu met Instellingen ▸ open
     pg.click("#presetArea .tile .edit"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/preset-bewerken.png"); pg.click("#pCancel")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnSettings"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/cameras.png"); pg.click("#btnCancel")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnSettings"); pg.wait_for_timeout(300); pg.click("#btnWizard"); pg.wait_for_timeout(500)
