@@ -68,6 +68,10 @@ for ci, (cid, name, ps) in enumerate(cams):
                            "preset_colors": {str(i + 1): c for i, (n, _) in enumerate(ps)
                                              for c in [("blauw" if "otaal" in n or "emeente" in n else "oranje" if n in ("Preekstoel", "Spreker close", "Kansel")
                                                         else "paars" if n in ("Band", "Piano", "Drums", "Gitaar", "Zang", "Zangers", "Band breed") else "")] if c}})
+    # 🧑 focus per preset: uitgelezen posities (autofocus; band = handmatige focus) voor het presetvenster
+    cfg["cameras"][-1]["saved_positions"] = {str(i + 1): {"pan": 100 * i, "tilt": 0, "pt_nibbles": [4, 4], "zoom": 0x800 * i,
+                                                          "af": k not in ("band", "drums"), "focus": 1200 + 50 * i, "_captured": "2026-11-15 10:00"}
+                                             for i, (_, k) in enumerate(ps)}
     for i, (_, k) in enumerate(ps):
         scene(k, ci * 10 + i).save(f"{out}/thumbs/{cid}_{i + 1}.jpg", quality=86)
 # 🎵 liederen: nep-ProPresenter (docs/tools/nep_propresenter.py, poort 50001) + nep-Voordienst app (nep_voordienst.py, poort 50020)

@@ -245,6 +245,12 @@ Gebruik:
 - Volgen kost alleen rekenkracht zolang het aan staat: de detector bekijkt hooguit **8 beelden per seconde** per camera (genoeg voor een lopende spreker; instelbaar per camera onder **Kader… → Afstelling**, of voor alle camera's met de omgevingsvariabele `PTZ_TRACK_FPS`). YOLO gebruikt de GPU van de Apple-chip, YOLOX in de losse app de processor.
 - Camera's per camera (knop **Extra** naast de camera klapt ze uit, samen met gebruiker/wachtwoord): **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
 
+### Focus per preset (autofocus bewaren)
+
+Bij het opslaan van een preset onthoudt de app of **autofocus** of **handmatige focus** aan stond (en de focusstand). Roep je de preset later op, dan zet de app dat weer zo: stond autofocus aan, dan gaat autofocus aan; was de focus handmatig, dan gaat autofocus vóór het oproepen uit zodat de camera de focus van de preset houdt (en klopt die na aankomst niet, dan zet de app de bewaarde stand terug). Dat werkt ook via sneltoetsen en de Xbox-controller, en de knoppen *AF auto* / *AF hand* tonen daarna de juiste stand.
+
+In het presetvenster (✎) kies je per preset bij **Focus bij oproepen**: *Zoals bij opslaan* (standaard, met tussen haakjes wat er bewaard is), *Altijd autofocus*, *Handmatige focus* of *Niet aanpassen*. Presets die je nog niet in deze app hebt opgeslagen (of een camera zonder VISCA) houden hun focus zoals hij is; sla de preset opnieuw op om de huidige stand te bewaren. Focus gaat via VISCA (poort 5678), zoals de AF-knoppen; lukt dat niet, dan gaat de preset gewoon door en zie je een melding.
+
 ![Preset bewerken](docs/screenshots/preset-bewerken.png)
 
 ![Camera's instellen](docs/screenshots/cameras.png)
