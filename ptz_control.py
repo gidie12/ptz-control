@@ -474,10 +474,10 @@ def http_get(cam, path, binary=False):
         return (data, r.headers.get("Content-Type", "image/jpeg")) if binary else data.decode(errors="replace")
 
 
-def visca_send(cam, hexstr):
+def visca_send(cam, hexstr, timeout=None):
     payload = bytes.fromhex(hexstr.replace(" ", ""))
     port = int(cam.get("visca_port") or 5678)
-    with socket.create_connection((cam["host"].split(":")[0], port), timeout=TIMEOUT) as s:
+    with socket.create_connection((cam["host"].split(":")[0], port), timeout=timeout or TIMEOUT) as s:
         s.sendall(payload)
         s.settimeout(0.4)
         try:
@@ -795,6 +795,33 @@ def lock_error(cam):
                       "Bewegen met de controller kan wel (slot uit: slotje in de kolomkop).")
 
 
+# ---------------------------------------------------------------- focus per preset
+# 🧑 Autofocus bewaren en toepassen op een preset (18 nov 2026). Per preset cfg.cameras[i].preset_focus = {n: modus}:
+#   (ontbreekt) = zoals bij opslaan: saved_positions[n].af (uitgelezen bij preset_set, back-up of laden van de camera)
+#   "auto" = altijd autofocus · "manual" = handmatige focus (stand van de preset) · "off" = focus niet aanpassen
+# Altijd via VISCA (zoals de AF-knoppen). Lukt VISCA niet, dan gaat de preset gewoon door (info["af_error"]).
+PRESET_FOCUS_MODES = ("auto", "manual", "off")
+
+
+def preset_focus_plan(cam, n):
+    """(af, focus): af True = autofocus, False = handmatig, None = niets doen; focus = bewaarde stand (handmatig) of None."""
+    mode = str((cam.get("preset_focus") or {}).get(str(n)) or "")
+    saved = (cam.get("saved_positions") or {}).get(str(n)) or {}
+    if mode == "off":
+        return None, None
+    if mode == "auto":
+        return True, None
+    if mode == "manual":
+        return False, saved.get("focus") if "focus" in saved else None
+    if "af" not in saved:
+        return None, None                 # nooit uitgelezen (bv. HTTP-camera zonder VISCA): niets veranderen
+    return (True, None) if saved["af"] else (False, saved.get("focus"))
+
+
+def _focus_visca(cam, on):
+    visca_send(cam, "81 01 04 38 02 FF" if on else "81 01 04 38 03 FF", timeout=1.0)   # kort: de preset mag niet wachten
+
+
 def do_action(cam, action, args, info=None):
     """Voer een commando uit en houd alle schermen (en thumbnails) bij.
     Bij preset_set komt in info["thumb_error"] waarom de thumbnail niet lukte ("" = gelukt)."""
@@ -821,12 +848,28 @@ def do_action(cam, action, args, info=None):
                         tilt=max(1, round(clamp(args.get("tilt"), 1, 20) * sc)))
         if info is not None:
             info["speed_scale"] = None if sc is None else round(sc * 100)
+    af_plan = preset_focus_plan(cam, clamp(args.get("n"), 0, 254)) if action == "preset_call" else (None, None)
+    af_err = ""
+    if af_plan[0] is False:
+        try:                              # handmatig vóór het oproepen: de camera gaat dan niet zelf scherpstellen
+            _focus_visca(cam, False)
+        except Exception as e:  # noqa: BLE001
+            af_err = str(e)
     try:
         res = run_command(cam, action, args)
     except (urllib.error.URLError, OSError) as e:
         camstatus_set(cam["id"], False, str(e))
         raise
     camstatus_set(cam["id"], True)
+    if af_plan[0] is True:
+        try:
+            _focus_visca(cam, True)
+        except Exception as e:  # noqa: BLE001
+            af_err = str(e)
+    if action == "preset_call" and info is not None and af_plan[0] is not None:
+        info["af"] = None if af_err else af_plan[0]
+        if af_err:
+            info["af_error"] = f"Focus niet ingesteld (VISCA): {af_err}"
     if action in ("move", "zoom", "focus"):   # doorlopende beweging: bij afsluiten stoppen (shutdown)
         key = (cam["id"], "move" if action == "move" else action)
         if action == "move" or args.get("dir") != "stop":
@@ -847,7 +890,7 @@ def do_action(cam, action, args, info=None):
     if action == "preset_call":
         n = clamp(args.get("n"), 0, 254)
         broadcast({"type": "preset", "cam": cam["id"], "n": n})
-        moving_watch(cam, n)
+        moving_watch(cam, n, focus=af_plan[1] if af_plan[0] is False and not af_err else None)
         if n in (cam.get("track_presets") or []) and not tracking_error():
             follow_after_preset(cam)
     elif action == "preset_set":
@@ -873,7 +916,8 @@ def moving_cancel(cam_id):
         broadcast({"type": "moving", "cam": cam_id, "moving": False})
 
 
-def moving_watch(cam, n):
+def moving_watch(cam, n, focus=None):
+    """focus = bewaarde handmatige focusstand: na aankomst zetten als de camera hem niet zelf terugzette."""
     if JOB.get("running"):
         return                                  # back-up/test gebruikt VISCA al; niet storen
     token = object()
@@ -897,6 +941,11 @@ def moving_watch(cam, n):
                     key = (p["pan"], p["tilt"], p["zoom"], p.get("focus"))
                     if key == last and time.time() - start >= 0.8:
                         exact = True
+                        if focus is not None and p.get("focus") is not None and abs(p["focus"] - focus) > 2:
+                            try:          # 🧑 handmatige focus van de preset terugzetten
+                                _backup.visca_cmd(sock, f"81 01 04 48 {_backup.to_nib(int(focus), 4)} FF")
+                            except Exception:  # noqa: BLE001
+                                pass
                         break
                     last = key
         except Exception:  # noqa: BLE001  (geen VISCA: vaste tijd)

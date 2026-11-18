@@ -249,6 +249,12 @@ Gebruik:
 - Volgen kost alleen rekenkracht zolang het aan staat: de detector bekijkt hooguit **8 beelden per seconde** per camera (genoeg voor een lopende spreker; instelbaar per camera onder **Kader… → Afstelling**, of voor alle camera's met de omgevingsvariabele `PTZ_TRACK_FPS`). YOLO gebruikt de GPU van de Apple-chip, YOLOX in de losse app de processor.
 - Camera's per camera (knop **Extra** naast de camera klapt ze uit, samen met gebruiker/wachtwoord): **Volg-stream** (standaard `rtsp://IP:554/2`, de lichte substream), **max. volgsnelheid** en **pan omgekeerd** voor een ondersteboven gemonteerde camera.
 
+### Focus per preset (autofocus bewaren)
+
+Bij het opslaan van een preset onthoudt de app of **autofocus** of **handmatige focus** aan stond (en de focusstand). Roep je de preset later op, dan zet de app dat weer zo: stond autofocus aan, dan gaat autofocus aan; was de focus handmatig, dan gaat autofocus vóór het oproepen uit zodat de camera de focus van de preset houdt (en klopt die na aankomst niet, dan zet de app de bewaarde stand terug). Dat werkt ook via sneltoetsen en de Xbox-controller, en de knoppen *AF auto* / *AF hand* tonen daarna de juiste stand.
+
+In het presetvenster (✎) kies je per preset bij **Focus bij oproepen**: *Zoals bij opslaan* (standaard, met tussen haakjes wat er bewaard is), *Altijd autofocus*, *Handmatige focus* of *Niet aanpassen*. Presets die je nog niet in deze app hebt opgeslagen (of een camera zonder VISCA) houden hun focus zoals hij is; sla de preset opnieuw op om de huidige stand te bewaren. Focus gaat via VISCA (poort 5678), zoals de AF-knoppen; lukt dat niet, dan gaat de preset gewoon door en zie je een melding.
+
 ![Preset bewerken](docs/screenshots/preset-bewerken.png)
 
 ![Camera's instellen](docs/screenshots/cameras.png)
@@ -259,9 +265,13 @@ De controllerstatus staat in de Xbox-kaart in de zijbalk (groen *Verbonden*). He
 
 **Knoppenprofielen (per persoon):** in de Xbox-kaart kies je bij *Knoppenprofiel* welke knoppenindeling deze controller gebruikt. In *Knoppenindeling instellen…* maak je een nieuw profiel (begint als kopie van het huidige), hernoem of verwijder je het. Elk scherm onthoudt zelf welk profiel actief is; de profielen staan in de back-up.
 
+**Welke camera de controller bestuurt** kies je in de Xbox-kaart bij **Bestuurt**: een knop per camera, met onderaan **Wisselt mee**. Standaard staat *Wisselt mee* aan: de controller bedient de camera die je op het scherm kiest (tabblad, kolomkop, tegel, sneltoets of *Meewisselen*). Tik je op een camera, dan blijft de controller op die camera, ook als je op het scherm een andere camera kiest of een preset van een andere camera aanklikt. Nog sneller tijdens de dienst: zet in **Menu → Instellingen → Weergave** de schakelaar **Xbox-knop** aan (per apparaat, standaard uit). Dan krijgt elke kolomkop een **controllerknopje** (tik = vast op die camera, nog een keer = weer meewisselen). De vaste camera krijgt in de kolomkop en op het tabblad het label **XBOX**. De presetknoppen, home, volgen en *Alles stoppen* op de controller gaan dan ook naar die camera, en met D-pad ←/→ wissel je alleen de controllercamera (niet de selectie op het scherm). Elk scherm onthoudt zijn eigen keuze.
+
+<img src="docs/screenshots/xbox-vaste-camera.png" width="300" alt="Kolomkop met het label XBOX: de controller bestuurt vast deze camera">
+
 **Gescheiden sticks**, **Pan only** en **Tilt omkeren** zijn knoppen in de Xbox-kaart: klik om ze aan of uit te zetten; aan = indigo met *AAN*. **Zachte beweging** is een schuif van *Uit* tot *Extra zacht* (0–100%).
 
-<img src="docs/screenshots/xbox-kaart.png" width="300" alt="Xbox-kaart met Gescheiden sticks aan (Pan only n.v.t.)">
+<img src="docs/screenshots/xbox-kaart.png" width="300" alt="Xbox-kaart met Bestuurt: Vast: Midden en Gescheiden sticks aan (Pan only n.v.t.)">
 
 **Zachte beweging** (standaard 50%): de camera trekt geleidelijk op en de stick reageert fijner rond het midden. Op 50% duurt het ongeveer 1 seconde tot topsnelheid, op 100% (*Extra zacht*) ongeveer 2 seconden en is de stick rond het midden nog fijner; op *Uit* gaat de camera direct op volle snelheid. Daartussen werkt het traploos. Stoppen gaat altijd direct. Elk scherm onthoudt zijn eigen stand; wie eerder zachte beweging uit had staan, begint op *Uit*.
 
