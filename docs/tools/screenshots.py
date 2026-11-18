@@ -71,8 +71,9 @@ with sync_playwright() as p:
     pg.evaluate("$('#ctrlCard details').open = true; const a = $('#spAccel'); a.value = 40; a.dispatchEvent(new Event('input')); zsShow(67)"); pg.wait_for_timeout(300)
     pg.locator("#ctrlCard").screenshot(path=f"{OUT}/snelheden.png")
     pg.evaluate("const a = $('#spAccel'); a.value = 0; a.dispatchEvent(new Event('input')); $('#ctrlCard details').open = false"); pg.wait_for_timeout(200)
-    # Xbox-kaart met Gescheiden sticks aan (Pan only dan n.v.t.)
-    pg.click("#padSplit"); pg.wait_for_timeout(300); pg.locator("#padCard").screenshot(path=f"{OUT}/xbox-kaart.png"); pg.click("#padSplit"); pg.wait_for_timeout(200)
+    # Xbox-kaart met Gescheiden sticks aan (Pan only dan n.v.t.) en vaste controllercamera (Bestuurt: Vast: Midden, label XBOX)
+    pg.select_option("#padCamSel", "midden"); pg.click("#padSplit"); pg.wait_for_timeout(300); pg.locator("#padCard").screenshot(path=f"{OUT}/xbox-kaart.png"); pg.click("#padSplit")
+    pg.locator("#presetArea .col:nth-child(2) .colhead").screenshot(path=f"{OUT}/xbox-vaste-camera.png"); pg.select_option("#padCamSel", ""); pg.wait_for_timeout(200)
     z = pg.locator('[data-tipk="zoom_in"]').bounding_box(); pg.mouse.move(z["x"] + z["width"] / 2, z["y"] + z["height"] / 2); pg.wait_for_timeout(2400)   # 🧑 tooltip na 2 s stilstaan
     sb = pg.locator("aside").bounding_box(); tb = pg.locator("#tip").bounding_box() or sb; x0 = min(sb["x"], tb["x"]) - 12   # uitsnede zijbalk + ballon
     pg.screenshot(path=f"{OUT}/tooltip.png", clip={"x": x0, "y": sb["y"], "width": sb["x"] + sb["width"] + 8 - x0, "height": min(560, 900 - sb["y"])}); pg.mouse.move(5, 5); pg.wait_for_timeout(200)
