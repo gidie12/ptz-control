@@ -82,7 +82,7 @@ with sync_playwright() as p:
     pg.screenshot(path=f"{OUT}/tooltip.png", clip={"x": x0, "y": sb["y"], "width": sb["x"] + sb["width"] + 8 - x0, "height": min(560, 900 - sb["y"])}); pg.mouse.move(5, 5); pg.wait_for_timeout(200)
     pg.click("#btnYt"); pg.wait_for_timeout(300); pg.screenshot(path=f"{OUT}/youtube-menu.png", clip={"x": 640, "y": 0, "width": 800, "height": 520}); pg.keyboard.press("Escape")
     pg.evaluate("openPrefs()"); pg.wait_for_timeout(300); pg.locator("#dlgPrefs").screenshot(path=f"{OUT}/youtube-kanaal.png"); pg.click("#prefsCancel")   # kanaal + knop Kanaal-ID opzoeken
-    pg.click("#btnPad"); pg.hover("#miSet"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/menu.png", clip={"x": 640, "y": 0, "width": 800, "height": 540}); pg.keyboard.press("Escape"); pg.keyboard.press("Escape")   # menu met Instellingen ▸ open
+    pg.click("#btnPad"); pg.hover("#miSet"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/menu.png", clip={"x": 640, "y": 0, "width": 800, "height": 640}); pg.keyboard.press("Escape"); pg.keyboard.press("Escape")   # menu met Instellingen ▸ open
     pg.click("#presetArea .tile .edit"); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/preset-bewerken.png"); pg.click("#pCancel")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnSettings"); pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/cameras.png"); pg.click("#btnCancel")
     pg.click("#btnPad"); pg.click("#miSet"); pg.click("#btnSettings"); pg.wait_for_timeout(300); pg.click("#btnWizard"); pg.wait_for_timeout(500)

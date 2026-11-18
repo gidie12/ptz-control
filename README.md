@@ -66,7 +66,7 @@ De laatst gekozen preset van elke camera krijgt een markering op de tegel:
 
 <img src="docs/screenshots/presetstatus.png" width="720" alt="Links in beeld (LIVE), Midden geselecteerd (indigo rand), Rechts aangepast (indigo stippelrand)">
 
-Liever ook tekst bij de rand? Zet in **Menu → Weergave** de schakelaar **Labels** aan (per apparaat). Dan staat er **GESELECTEERD** of **AANGEPAST** op de tegel, en in de kolomkop *Geselecteerd: naam* of *Aangepast (was naam)*.
+Liever ook tekst bij de rand? Zet in **Menu → Instellingen → Weergave** de schakelaar **Labels** aan (per apparaat). Dan staat er **GESELECTEERD** of **AANGEPAST** op de tegel, en in de kolomkop *Geselecteerd: naam* of *Aangepast (was naam)*.
 
 <img src="docs/screenshots/presetstatus-labels.png" width="720" alt="Zelfde scherm met Labels aan: GESELECTEERD en AANGEPAST op de tegels">
 
