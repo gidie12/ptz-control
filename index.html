@@ -140,8 +140,16 @@
   .tile.live::after { content: "LIVE"; position: absolute; top: 6px; left: 6px; background: var(--live); color: #fff;
     font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .05em; }
   /* 🧑 laatst gekozen preset van een camera die níet in beeld is (videomixer), of zonder videomixer: indigo rand + ring.
-     🧑 18 nov 2026: geen tekstlabel GESELECTEERD/AANGEPAST meer op de tegel (en niet in de kolomkop), alleen de markering. */
+     🧑 18 nov 2026: standaard geen tekstlabel GESELECTEERD/AANGEPAST (alleen de markering); aan te zetten per scherm
+     met Menu → Weergave → Labels (body.tlabels, store tileLabels). */
   .tile.chosen { border-color: var(--accent); }
+  body.tlabels .tile.chosen::after { content: "GESELECTEERD"; position: absolute; top: 6px; left: 6px; background: var(--accent); color: var(--onaccent);
+    font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; letter-spacing: .02em;
+    max-width: calc(100% - 42px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.tlabels .col .tile.chosen::after { font-size: 10px; }   /* kleinere tegels in Alle camera's: woord past dan nog */
+  body.tlabels .tile.adj::after { content: "AANGEPAST"; position: absolute; top: 6px; left: 6px; background: var(--warn); color: var(--onwarn);
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: .03em;
+    max-width: calc(100% - 42px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile.busy { opacity: .6; }
   .storing .tile { border-style: dashed; border-color: var(--live); }
   .storing .tile .edit { display: none; }
@@ -156,6 +164,8 @@
   .colhead .key { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
   .colhead .livename { margin-left: auto; font-size: 12px; color: var(--live); font-weight: 600; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; }
+  .colhead .livename.chosen { color: var(--accent); }
+  .colhead .livename.adj { color: var(--warn); }
   .colhead .ctl { font-size: 11px; color: var(--accent); }
   .col .grid { --tile: var(--ctile, 115px); gap: 8px; }
   .col .tile .meta { padding: 5px 7px; }
@@ -1053,6 +1063,7 @@
       <div class="mview" id="menuView"><span>Weergave</span>
         <button class="mtog" id="btnTheme" title="Wisselen tussen licht en donker (dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg> Licht</button>
         <button class="mtog" id="btnTablet" title="Tabletweergave: grote tegels en camerakeuze onderin (automatisch → aan → uit, dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-tablet"/></svg> Tablet: auto</button>
+        <button class="mtog" id="btnLabels" title="Tekst GESELECTEERD/AANGEPAST op de tegels tonen (dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg> Labels: uit</button>
       </div>
       <div class="msep"></div>
       <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)"><svg class="ic" data-i="power" aria-hidden="true"><use href="#i-power"/></svg> PTZ Control afsluiten</button>
@@ -1873,7 +1884,7 @@ function renderPresets() {
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
         ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}
         ${presetLocked(c.id) ? `<span class="locktag" title="In beeld en op slot: presets en home zijn geblokkeerd, bewegen met de controller kan wel">${ic("lock")}SLOT</span>` : ""}
-        <span class="livename${lst ? " " + lst : ""}">${ln && lst === "live" ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : ""}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
+        <span class="livename${lst ? " " + lst : ""}">${!ln ? "" : lst === "live" ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : !tileLabels() ? "" : lst === "adj" ? `Aangepast (was ${esc(c.presets[ln] || "preset " + ln)})` : "Geselecteerd: " + esc(c.presets[ln] || "preset " + ln)}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
         if (e.target.closest(".lockbtn")) { e.stopPropagation(); return toggleLock(c.id); }
@@ -4504,6 +4515,20 @@ function renderTabBar() {
     bar.appendChild(b);
   });
 }
+/* ---- 🏷 Labels GESELECTEERD/AANGEPAST (op verzoek, 18 nov 2026): standaard uit (alleen rand), per apparaat aan te zetten ---- */
+function tileLabels() { return store.get("tileLabels") === "1"; }
+function labelsApply() {
+  const on = tileLabels();
+  document.body.classList.toggle("tlabels", on);
+  $("#btnLabels").innerHTML = ic("eye") + " Labels: " + (on ? "aan" : "uit");
+  $("#btnLabels").classList.toggle("on", on);
+  $("#btnLabels").setAttribute("aria-pressed", on ? "true" : "false");
+}
+$("#btnLabels").onclick = () => {
+  store.set("tileLabels", tileLabels() ? "0" : "1"); labelsApply(); renderPresets();
+  toast(tileLabels() ? "Labels GESELECTEERD/AANGEPAST aan" : "Labels uit: alleen de rand", true);
+};
+labelsApply();
 $("#btnTablet").onclick = () => {
   const next = { auto: "on", on: "off", off: "auto" }[tabletMode()];
   store.set("tabletMode", next); tabletApply(); render();
@@ -5074,6 +5099,7 @@ const TOUR_STEPS = [
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnCap"], menu: "main", title: ic("flask") + " Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
   { target: ["#btnTheme"], menu: "main", title: ic("sun") + " Licht en donker", text: () => `<p>Onder <b>Weergave</b>: tik om te wisselen tussen licht en donker. De knop toont het huidige thema. Dit geldt alleen voor dit apparaat.</p>` },
+  { target: ["#btnLabels"], menu: "main", title: ic("eye") + " Labels op de tegels", text: () => `<p>De laatst gekozen preset krijgt een indigo rand, na bijsturen een amber stippelrand. Met <b>Labels</b> zet je daar per apparaat ook de tekst <b>GESELECTEERD</b> en <b>AANGEPAST</b> bij (en in de kolomkop de naam van de preset). Standaard uit; <b>LIVE</b> staat er altijd.</p>` },
   { target: ["#btnTablet"], menu: "main", title: ic("tablet") + " Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; met deze schakelaar zet je hem per apparaat op automatisch, aan of uit (indigo = aan).</p>` },
   { target: ["#miHelp"], menu: "main", sub: "subHelp", title: ic("help") + " Hulp", text: () => `<p>Deze rondleiding opnieuw starten en kijken of er een nieuwe versie is.</p>` },
   { target: ["#btnTour"], menu: "main", title: ic("cap") + " Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },

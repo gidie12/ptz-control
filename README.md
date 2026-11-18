@@ -66,6 +66,10 @@ De laatst gekozen preset van elke camera krijgt een markering op de tegel:
 
 <img src="docs/screenshots/presetstatus.png" width="720" alt="Links in beeld (LIVE), Midden geselecteerd (indigo rand), Rechts aangepast (amber stippelrand)">
 
+Liever ook tekst bij de rand? Zet in **Menu → Weergave** de schakelaar **Labels** aan (per apparaat). Dan staat er **GESELECTEERD** of **AANGEPAST** op de tegel, en in de kolomkop *Geselecteerd: naam* of *Aangepast (was naam)*.
+
+<img src="docs/screenshots/presetstatus-labels.png" width="720" alt="Zelfde scherm met Labels aan: GESELECTEERD en AANGEPAST op de tegels">
+
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Instellingen → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
 Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
 
