@@ -61,10 +61,10 @@ Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom 
 De laatst gekozen preset van elke camera krijgt een markering op de tegel:
 - **Indigo rand**: de camera staat op deze preset, maar is niet in beeld (zonder videomixer-koppeling zie je altijd deze). Geen tekst op de tegel.
 - **LIVE** (rood): de camera staat op deze preset én is volgens de videomixer **in beeld** (*LIVE: naam* in de kolomkop).
-- **Dunne amber stippelrand**: na de preset is de camera bewogen met de pijlen, het toetsenbord, de controller of home, of door *persoon volgen*. Hij staat dus niet meer precies op de preset. Zoomen en scherpstellen tellen niet mee. Een preset kiezen of opslaan zet het weer gewoon. Dit is op alle schermen gelijk.
+- **Indigo stippelrand** (zelfde kleur als geselecteerd, maar gestippeld): na de preset is de camera bewogen met de pijlen, het toetsenbord, de controller of home, of door *persoon volgen*. Hij staat dus niet meer precies op de preset. Zoomen en scherpstellen tellen niet mee. Een preset kiezen of opslaan zet het weer gewoon. Dit is op alle schermen gelijk.
 - **ONDERWEG…** (oranje) gaat voor alles: de camera beweegt nog naar de preset.
 
-<img src="docs/screenshots/presetstatus.png" width="720" alt="Links in beeld (LIVE), Midden geselecteerd (indigo rand), Rechts aangepast (amber stippelrand)">
+<img src="docs/screenshots/presetstatus.png" width="720" alt="Links in beeld (LIVE), Midden geselecteerd (indigo rand), Rechts aangepast (indigo stippelrand)">
 
 Liever ook tekst bij de rand? Zet in **Menu → Weergave** de schakelaar **Labels** aan (per apparaat). Dan staat er **GESELECTEERD** of **AANGEPAST** op de tegel, en in de kolomkop *Geselecteerd: naam* of *Aangepast (was naam)*.
 

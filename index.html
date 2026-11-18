@@ -28,7 +28,7 @@
     --text: #e6e9f2; --muted: #9098ad; --accent: #6366f1; --accentdark: #4f46e5; --ring: rgba(129,140,248,.25);
     --live: #ef4444; --ok: #22c55e; --warn: #f59e0b; --busy: #f97316; --onbusy: #ffffff;
     --img: #0b0d18; --imgtxt: #343b55; --onaccent: #ffffff; --onwarn: #1c1206;
-    --okbg: #0f2e1b; --oktxt: #86efac; --okline: #166534; --warnbg: #3a2a0c; --warntxt: #fcd34d; --adjline: #8a6d33; --errbg: #3a1416; --errline: #6b2a2c; --errtxt: #fca5a5;
+    --okbg: #0f2e1b; --oktxt: #86efac; --okline: #166534; --warnbg: #3a2a0c; --warntxt: #fcd34d; --errbg: #3a1416; --errline: #6b2a2c; --errtxt: #fca5a5;
     --shadow: rgba(0,0,0,.45); --backdrop: rgba(5,6,12,.6);
     --cardshadow: 0 1px 3px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
     --modalshadow: 0 24px 64px rgba(0,0,0,.5);
@@ -46,7 +46,7 @@
     --text: #1c2333; --muted: #6b7488; --accent: #4f46e5; --accentdark: #4338ca; --ring: rgba(79,70,229,.12);
     --live: #dc2626; --ok: #16a34a; --warn: #d97706; --busy: #ea580c; --onbusy: #ffffff;
     --img: #e8ebf2; --imgtxt: #b4bccb; --onaccent: #ffffff; --onwarn: #1c1206;
-    --okbg: #dcfce7; --oktxt: #166534; --okline: #bbf7d0; --warnbg: #fef3c7; --warntxt: #92400e; --adjline: #e2c27f; --errbg: #fee2e2; --errline: #f3c4c4; --errtxt: #991b1b;
+    --okbg: #dcfce7; --oktxt: #166534; --okline: #bbf7d0; --warnbg: #fef3c7; --warntxt: #92400e; --errbg: #fee2e2; --errline: #f3c4c4; --errtxt: #991b1b;
     --shadow: rgba(20,25,45,.12); --backdrop: rgba(15,18,33,.45);
     --cardshadow: 0 1px 3px rgba(20,25,45,.08), 0 8px 24px rgba(20,25,45,.05);
     --modalshadow: 0 24px 64px rgba(15,18,33,.3);
@@ -843,8 +843,8 @@
   .tile.live { border-color: var(--live); box-shadow: 0 0 0 2px var(--live); }
   .tile.live::after { border-radius: 999px; padding: 2px 8px; }
   .tile.chosen { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-  /* 🧑 18 nov 2026: subtieler (was 2px --warn, "te geel"): dunne stippelrand in een gedempte amber (--adjline, beide thema's) */
-  .tile.adj { border-color: transparent; outline: 1.5px dashed var(--adjline); outline-offset: -1px; }   /* outline: tegel wordt niet groter */
+  /* 🧑 18 nov 2026: zelfde kleur als geselecteerd (indigo --accent), maar gestippeld (was 2px --warn, "te geel") */
+  .tile.adj { border-color: transparent; outline: 2px dashed var(--accent); outline-offset: -1px; }   /* outline: tegel wordt niet groter */
   .tile.moving { border-color: var(--busy); box-shadow: 0 0 0 2px var(--busy); }   /* onderweg gaat voor LIVE */
   .chip, .trk, .icon { border-radius: 9px; }
   .chip { background: var(--panel); font-weight: 500; }
@@ -5035,7 +5035,7 @@ const TOUR_STEPS = [
       <p class="muted">Gebruik <kbd>→</kbd>/<kbd>Enter</kbd> voor volgende, <kbd>←</kbd> voor vorige en <kbd>Esc</kbd> om te stoppen. Later opnieuw starten kan via <b>Menu → Hulp → ${ic("cap")} Rondleiding</b>.</p>` },
   { target: ["#tabs"], title: "Camera's en weergave", text: () => `<p>Kies hier één camera, of <b>Alle camera's</b> om alle presetrasters naast elkaar te zien.</p>
       <p>In <i>Alle camera's</i> kies je met de cameratoets (standaard <kbd>Shift</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>) welke camera je bedient; die kolom licht op.</p>` },
-  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt een <b>indigo rand</b>; staat die camera op de videomixer <b>in beeld</b>, dan is het een rood <b>LIVE</b>. Beweeg je de camera daarna met de pijlen, toetsen, controller of home (of draait <i>persoon volgen</i> hem), dan krijgt de tegel een <b>amber stippelrand</b>: de camera staat niet meer precies op de preset. Zoom en focus tellen niet mee.</p>
+  { target: ["#presetArea .tile", "#presetArea"], title: "Presets oproepen", text: () => `<p>Dit is de kern van de app. <b>Tik op een tegel</b> en de camera gaat naar die preset. De laatst opgeroepen preset krijgt een <b>indigo rand</b>; staat die camera op de videomixer <b>in beeld</b>, dan is het een rood <b>LIVE</b>. Beweeg je de camera daarna met de pijlen, toetsen, controller of home (of draait <i>persoon volgen</i> hem), dan wordt die rand <b>gestippeld</b>: de camera staat niet meer precies op de preset. Zoom en focus tellen niet mee.</p>
       <p>Met het toetsenbord: <kbd>1</kbd>–<kbd>9</kbd> roept preset 1–9 op van de camera die je bedient; de toets staat klein rechtsonder op de tegel.</p>
       <p>Na het oproepen staat er <b>ONDERWEG…</b> op de tegel tot de camera stilstaat. Dan kun je veilig op de mixer overschakelen.</p>
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
@@ -5100,7 +5100,7 @@ const TOUR_STEPS = [
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnCap"], menu: "main", title: ic("flask") + " Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
   { target: ["#btnTheme"], menu: "main", title: ic("sun") + " Licht en donker", text: () => `<p>Onder <b>Weergave</b>: tik om te wisselen tussen licht en donker. De knop toont het huidige thema. Dit geldt alleen voor dit apparaat.</p>` },
-  { target: ["#btnLabels"], menu: "main", title: ic("eye") + " Labels op de tegels", text: () => `<p>De laatst gekozen preset krijgt een indigo rand, na bijsturen een amber stippelrand. Met <b>Labels</b> zet je daar per apparaat ook de tekst <b>GESELECTEERD</b> en <b>AANGEPAST</b> bij (en in de kolomkop de naam van de preset). Standaard uit; <b>LIVE</b> staat er altijd.</p>` },
+  { target: ["#btnLabels"], menu: "main", title: ic("eye") + " Labels op de tegels", text: () => `<p>De laatst gekozen preset krijgt een indigo rand, na bijsturen een indigo stippelrand. Met <b>Labels</b> zet je daar per apparaat ook de tekst <b>GESELECTEERD</b> en <b>AANGEPAST</b> bij (en in de kolomkop de naam van de preset). Standaard uit; <b>LIVE</b> staat er altijd.</p>` },
   { target: ["#btnTablet"], menu: "main", title: ic("tablet") + " Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; met deze schakelaar zet je hem per apparaat op automatisch, aan of uit (indigo = aan).</p>` },
   { target: ["#miHelp"], menu: "main", sub: "subHelp", title: ic("help") + " Hulp", text: () => `<p>Deze rondleiding opnieuw starten en kijken of er een nieuwe versie is.</p>` },
   { target: ["#btnTour"], menu: "main", title: ic("cap") + " Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
