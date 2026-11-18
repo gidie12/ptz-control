@@ -58,13 +58,13 @@ Later nog eens bekijken: **Menu → Hulp → Rondleiding**.
 ## Meerdere camera's tegelijk
 Met 2 of meer camera's opent de app in **Alle camera's**: elke camera een kolom met de laatst gekozen preset en alle presettegels.
 
-De laatst gekozen preset van elke camera krijgt een label op de tegel en staat in de kopregel van de kolom:
-- **GESELECTEERD** (indigo rand): de camera staat op deze preset, maar is niet in beeld. Zonder videomixer-koppeling zie je altijd dit label.
+De laatst gekozen preset van elke camera krijgt een markering op de tegel:
+- **Indigo rand**: de camera staat op deze preset, maar is niet in beeld (zonder videomixer-koppeling zie je altijd deze). Geen tekst op de tegel.
 - **LIVE** (rood): de camera staat op deze preset én is volgens de videomixer **in beeld** (*LIVE: naam* in de kolomkop).
-- **AANGEPAST** (amber stippelrand): na de preset is de camera bewogen met de pijlen, het toetsenbord, de controller of home, of door *persoon volgen*. Hij staat dus niet meer precies op de preset (*Aangepast (was naam)* in de kolomkop). Zoomen en scherpstellen tellen niet mee. Een preset kiezen of opslaan zet het weer gewoon. Dit is op alle schermen gelijk.
+- **Amber stippelrand**: na de preset is de camera bewogen met de pijlen, het toetsenbord, de controller of home, of door *persoon volgen*. Hij staat dus niet meer precies op de preset. Zoomen en scherpstellen tellen niet mee. Een preset kiezen of opslaan zet het weer gewoon. Dit is op alle schermen gelijk.
 - **ONDERWEG…** (oranje) gaat voor alles: de camera beweegt nog naar de preset.
 
-<img src="docs/screenshots/presetstatus.png" width="720" alt="Links in beeld (LIVE), Midden GESELECTEERD, Rechts AANGEPAST">
+<img src="docs/screenshots/presetstatus.png" width="720" alt="Links in beeld (LIVE), Midden geselecteerd (indigo rand), Rechts aangepast (amber stippelrand)">
 
 Klik op de kopregel van een kolom, of druk **Shift+1/2/3**, om te kiezen welke camera je bedient; je blijft in *Alle camera's*. Daarna roept **1–9** die preset op die camera op. Snel wisselen gaat dus zo: **Shift+1, 4** (camera 1 → preset 4), **Shift+2, 1** (camera 2 → preset 1). Werkt ook in volledig scherm. De toets per camera is instelbaar via **Menu → Instellingen → Sneltoetsen** (klik in het veld en druk bijv. F1 of Num 1; Backspace = terug naar Shift+N). Daar staat ook een overzicht van alle vaste toetsen. Een rood veld betekent dat de toets al in gebruik is.
 Met de schakelaar **Remote control · Meewisselen** (rechtsboven) wisselen alle geopende schermen mee als ergens anders (of met de controller) een andere camera gekozen wordt. Uit = dit scherm blijft op zijn eigen camera; de Xbox-controller blijft gewoon werken. Het bolletje op de tegel is groen zolang de verbinding met de app goed is.
@@ -318,7 +318,7 @@ Sluit de V-1HD met een **USB-kabel** aan op de computer waar PTZ Control draait 
 - Vink **Koppeling met de videomixer aan** aan. Bovenin staat of de mixer gevonden is.
 - Het venster toont beide rijen van de mixer (A en B, elk knop 1–4). Beide rijen kiezen uit dezelfde vier HDMI-ingangen, dus je kiest per ingang één keer welke camera erop zit. Druk je op de mixer op een knop, dan licht hij in het venster op; de gekozen ingang op de live rij is rood, net als op de mixer.
 - De camera die op de mixer gekozen is, krijgt in de app een **rode rand** en **IN BEELD** (in de kolom en op het tabblad). Zo zie je meteen welke camera je niet moet verplaatsen.
-- Alleen bij die camera wordt de laatst gekozen preset een rood **LIVE**; bij de andere camera's heet hij **GESELECTEERD** (indigo).
+- Alleen bij die camera wordt de laatst gekozen preset een rood **LIVE**; bij de andere camera's krijgt hij alleen een indigo rand.
 - **Slot**: zet je een camera op slot (het **slotje** in de kolomkop, of *Slot* per ingang in dit venster), dan kan er **geen preset en geen home** worden gekozen zolang die camera in beeld is: niet met een klik op een tegel, niet met de toetsen 1–9 en niet met de presetknoppen van de Xbox-controller. **Bijsturen met de controller** (stick, zoom, focus) en het toetsenbord kan wel. De kolom krijgt dan een oranje **SLOT** en de tegels worden grijs. Zodra je op de mixer naar een andere camera schakelt, werkt alles weer. Presets *opslaan* kan op slot wel. Het slot geldt voor alle schermen (de server weigert de opdracht ook). Een slot kan alleen voor een camera die aan een ingang van de mixer hangt; anders is het slotje grijs.
 - **Fader**: helemaal naar **A** (0) = rij A live, helemaal naar **B** (127) = rij B live, **ertussen = beide rijen live** (beide camera's krijgen IN BEELD, en een slot geldt dan voor allebei). In het venster staat *live* bij de rij(en) die live zijn. De app vraagt de faderstand elke halve seconde op bij de mixer; zolang de mixer nog geen stand heeft gegeven, geldt rij A als live.
 - **Verkenning**: legt alles vast wat de mixer via MIDI stuurt. Start, druk op de knoppen van beide rijen en kies een memory, en klik **Log downloaden**. Handig als de koppeling niet klopt.
