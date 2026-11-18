@@ -490,6 +490,18 @@
   .colhead .padtag, .tab .padtag { background: var(--accent); color: var(--onaccent); font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px; display: inline-flex; align-items: center; gap: 3px; }
   .padtag .ic { width: 11px; height: 11px; }
   .tab .padtag { margin-left: 6px; }
+  /* 🧑 knop in de kolomkop: controller vast op deze camera (aan = indigo met XBOX) */
+  .colhead .padpin { margin-left: 6px; display: inline-flex; align-items: center; gap: 3px; height: 26px; min-width: 28px; justify-content: center; padding: 0 6px;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--muted); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .colhead .padpin .ic { width: 15px; height: 15px; }
+  .colhead .padpin:hover { border-color: var(--accent); color: var(--text); }
+  .colhead .padpin.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); }
+  body.viewonly .colhead .padpin { display: none !important; }
+  /* 🧑 Bestuurt: camera's als knoppen, "Wisselt mee" onderaan */
+  .padcam { margin-top: 8px; }
+  .padcam .pclbl { margin-bottom: 5px; }
+  .padcams { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 5px; margin-bottom: 5px; }
+  .padcams .padtog { justify-content: center; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   #dlgOsd { width: min(520px, 94vw); }
   .osdtop { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .osdtop select { width: auto !important; min-width: 160px; }
@@ -1068,6 +1080,7 @@
       <div class="mview" id="menuView"><span>Weergave</span>
         <button class="mtog" id="btnTheme" title="Wisselen tussen licht en donker (dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg> Licht</button>
         <button class="mtog" id="btnTablet" title="Tabletweergave: grote tegels en camerakeuze onderin (automatisch → aan → uit, dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-tablet"/></svg> Tablet: auto</button>
+        <button class="mtog" id="btnPadPin" title="Knopje in de kolomkop om de Xbox-controller vast op die camera te zetten (dit apparaat)"><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg> Xbox-knop: uit</button>
       </div>
       <div class="msep"></div>
       <button class="mi danger" id="btnQuit" role="menuitem" title="Stopt PTZ Control op deze computer (alle schermen verliezen de verbinding)"><svg class="ic" data-i="power" aria-hidden="true"><use href="#i-power"/></svg> PTZ Control afsluiten</button>
@@ -1174,7 +1187,11 @@
       <div id="padBody" class="foldbody">
       <p class="small" id="padInfo" style="margin:8px 0 0">Verbind de controller via Bluetooth of USB en druk op een knop.</p>
       <div class="small" id="padLive" style="margin-top:4px"></div>
-      <label class="small padprofcard" data-tipk="padCam">Bestuurt <select id="padCamSel" aria-label="Welke camera de Xbox-controller bestuurt"></select></label>
+      <div class="padcam" id="padCamBox" data-tipk="padCam" role="group" aria-label="Welke camera de Xbox-controller bestuurt">
+        <div class="pclbl small">Bestuurt</div>
+        <div class="padcams" id="padCamBtns"></div>
+        <button class="padtog" id="padCamFollow" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> Wisselt mee <span class="pstate">aan</span></button>
+      </div>
       <div class="padset">
         <div class="padtogs">
         <div class="padsoft" id="padSoftBox" data-tipk="padSoft">
@@ -1887,12 +1904,14 @@ function renderPresets() {
       const col = document.createElement("div"); col.className = "col" + (c.id === ctrlCam ? " sel" : "") + (midiOnAir(c.id) ? " onair" : "") + (presetLocked(c.id) ? " locked" : "");
       const ln = lastPreset[c.id], lst = ln ? presetState(c.id, ln) : "";
       col.innerHTML = `<div class="colhead" title="Klik om deze camera met de pijltjes of de controller te bedienen">
-        ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}${padFixed() === c.id ? `<span class="padtag" title="De Xbox-controller bestuurt vast deze camera (instelbaar in de Xbox-kaart: Bestuurt)">${ic("gamepad")}XBOX</span>` : ""}
+        ${camDot(c.id)}<b>${esc(c.name)}</b>${camst[c.id] && !camst[c.id].ok ? '<span class="offline">niet bereikbaar</span>' : ""}${camHotkey(c, i) ? `<span class="key" title="Sneltoets om deze camera te kiezen (instelbaar bij Sneltoetsen in het menu)">${esc(keyLabel(camHotkey(c, i)))}</span>` : ""}${c.id === ctrlCam ? '<span class="ctl" title="Deze camera wordt bediend">●</span>' : ""}${midiOnAir(c.id) ? '<span class="onair" title="Deze camera is op de videomixer gekozen (rode knop)">IN BEELD</span>' : ""}${osdOpen[c.id] ? '<span class="osdtag" title="Het OSD-menu van deze camera staat open (ook in de livestream)">OSD-MENU</span>' : ""}${padPinOn() ? `<button class="padpin${padFixed() === c.id ? " on" : ""}" title="${padFixed() === c.id ? "De Xbox-controller bestuurt vast deze camera. Klik = weer meewisselen met de selectie" : "Klik = de Xbox-controller vast op deze camera zetten (blijft hier, ook als je op het scherm een andere camera kiest)"}" aria-label="Xbox-controller vast op ${esc(c.name)}" aria-pressed="${padFixed() === c.id}">${ic("gamepad")}${padFixed() === c.id ? "XBOX" : ""}</button>`
+          : padFixed() === c.id ? `<span class="padtag" title="De Xbox-controller bestuurt vast deze camera (instelbaar in de Xbox-kaart: Bestuurt)">${ic("gamepad")}XBOX</span>` : ""}
         ${presetLocked(c.id) ? `<span class="locktag" title="In beeld en op slot: presets en home zijn geblokkeerd, bewegen met de controller kan wel">${ic("lock")}SLOT</span>` : ""}
         <span class="livename${lst ? " " + lst : ""}">${!ln ? "" : lst === "adj" ? `Aangepast (was ${esc(c.presets[ln] || "preset " + ln)})` : (lst === "live" ? "LIVE: " : "Geselecteerd: ") + esc(c.presets[ln] || "preset " + ln)}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
         if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
         if (e.target.closest(".lockbtn")) { e.stopPropagation(); return toggleLock(c.id); }
+        if (e.target.closest(".padpin")) { e.stopPropagation(); return setPadCam(padFixed() === c.id ? "" : c.id, true); }
         ctrlCam = c.id; renderPresets(); renderSide();
       };
       const g = document.createElement("div"); g.className = "grid";
@@ -2907,11 +2926,12 @@ const pad = {
 function padFixed() { try { return pad.cam && camById(pad.cam) ? pad.cam : ""; } catch { return ""; } }   // try: render() kan vóór "pad" lopen
 function padCamId() { return padFixed() || ctrlCam; }
 function renderPadCam() {
-  const sel = $("#padCamSel"); if (!sel) return;
+  const box = $("#padCamBtns"); if (!box) return;
   const cur = padFixed();
-  sel.innerHTML = `<option value="">Geselecteerde camera (wisselt mee)</option>` +
-    (cfg.cameras || []).map(c => `<option value="${esc(c.id)}"${c.id === cur ? " selected" : ""}>Vast: ${esc(c.name)}</option>`).join("");
-  sel.value = cur;
+  box.innerHTML = (cfg.cameras || []).map(c =>
+    `<button class="padtog${c.id === cur ? " on" : ""}" data-cam="${esc(c.id)}" aria-pressed="${c.id === cur}" title="Controller vast op ${esc(c.name)}">${esc(c.name)}</button>`).join("");
+  box.querySelectorAll("button").forEach(b => b.onclick = () => setPadCam(b.dataset.cam === padFixed() ? "" : b.dataset.cam, true));
+  padTog("#padCamFollow", !cur);
 }
 function setPadCam(id, say) {
   if (id && !camById(id)) id = "";
@@ -3214,7 +3234,7 @@ function setSplit(on, say) {
 }
 padTogsState();
 $("#padPanOnly").onclick = () => setPanOnly(!pad.panOnly);
-$("#padCamSel").onchange = () => setPadCam($("#padCamSel").value, true);
+$("#padCamFollow").onclick = () => setPadCam("", true);
 $("#padSplit").onclick = () => setSplit(!pad.split);
 $("#padMax").oninput = () => { pad.max = +$("#padMax").value; $("#padMaxV").textContent = pad.max; store.set("padMax", pad.max); };
 function setMenu(open) {
@@ -4548,6 +4568,19 @@ function renderTabBar() {
     bar.appendChild(b);
   });
 }
+/* ---- 🎮 Xbox-knop in de kolomkop (op verzoek, 18 nov 2026: "optie om aan te zetten"): standaard uit, per apparaat ---- */
+function padPinOn() { return store.get("padPin") === "1"; }
+function padPinApply() {
+  const on = padPinOn();
+  $("#btnPadPin").innerHTML = ic("gamepad") + " Xbox-knop: " + (on ? "aan" : "uit");
+  $("#btnPadPin").classList.toggle("on", on);
+  $("#btnPadPin").setAttribute("aria-pressed", on ? "true" : "false");
+}
+$("#btnPadPin").onclick = () => {
+  store.set("padPin", padPinOn() ? "0" : "1"); padPinApply(); renderPresets();
+  toast(padPinOn() ? "Xbox-knop in de kolomkop aan" : "Xbox-knop in de kolomkop uit (kiezen in de Xbox-kaart)", true);
+};
+padPinApply();
 $("#btnTablet").onclick = () => {
   const next = { auto: "on", on: "off", off: "auto" }[tabletMode()];
   store.set("tabletMode", next); tabletApply(); render();
@@ -5005,7 +5038,7 @@ const TIPS = {
   spFocus: { t: "Focussnelheid", d: "Hoe snel <i>Focus ver</i> en <i>Focus dichtbij</i> (en de toetsen) scherpstellen (1–7). Geldt voor dit scherm." },
   padSoft: { t: "Zachte beweging", d: "Hoe geleidelijk de camera optrekt en hoe fijn de stick rond het midden reageert. <i>Uit</i> = direct op snelheid; 50% ≈ 1 s naar topsnelheid; 100% (extra zacht) ≈ 2 s. Stoppen gaat altijd direct. Geldt voor dit scherm." },
   padSplit: { t: "Gescheiden sticks", d: "Linker stick alleen links/rechts (pan), rechter stick alleen omhoog/omlaag (tilt). Focus zit dan niet meer op de rechter stick. <i>Pan only</i> is uitgeschakeld zolang dit aan staat; <i>Tilt omkeren</i> werkt op de rechter stick. Geldt voor dit scherm." },
-  padCam: { t: "Bestuurt", d: "Welke camera de Xbox-controller bestuurt. <i>Geselecteerde camera</i> = wisselt mee met de camera die je op het scherm kiest (zoals altijd). <i>Vast</i> = de controller blijft op die camera, ook als je op het scherm een andere camera, tegel of tabblad kiest; die krijgt het label XBOX. D-pad ←/→ wisselt dan alleen de controllercamera. Geldt voor dit scherm." },
+  padCam: { t: "Bestuurt", d: "Welke camera de Xbox-controller bestuurt. Klik op een camera = de controller blijft op die camera, ook als je op het scherm een andere camera, tegel of tabblad kiest (label XBOX in de kolomkop). <i>Wisselt mee</i> = de controller volgt de camera die je op het scherm kiest (standaard). Met <i>Xbox-knop</i> aan (Menu → Weergave) ook via een knopje in de kolomkop. D-pad ←/→ wisselt in de vaste stand alleen de controllercamera. Geldt voor dit scherm." },
   padPanOnly: { t: "Pan only", d: "De linker stick draait alleen links/rechts; omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm. Niet beschikbaar zolang <i>Gescheiden sticks</i> aan staat." },
   padInvY: { t: "Tilt omkeren", d: "Stick omhoog = camera omlaag (met <i>Gescheiden sticks</i>: de rechter stick). Niet beschikbaar zolang <i>Pan only</i> aan staat." },
   padMax: { t: "Max. pan/tilt-snelheid", d: "Snelheid als je de linker stick helemaal duwt (4–24). Geldt voor dit scherm." },
@@ -5089,7 +5122,7 @@ const TOUR_STEPS = [
   { target: ["#padSplit"], title: ic("sticks") + " Gescheiden sticks", text: () => `<p>Met <b>Gescheiden sticks</b> (indigo = aan) draait de <b>linker stick alleen links/rechts</b> en de <b>rechter stick alleen omhoog/omlaag</b>, zoals bij veel camera- en droneregelaars. Focus zit dan niet meer op de rechter stick.</p><p>Zolang dit aan staat is <i>Pan only</i> uitgeschakeld; <i>Tilt omkeren</i> werkt dan op de rechter stick. Standaard uit, geldt voor dit scherm. Ook op een controllerknop te zetten (<i>Gescheiden sticks aan/uit</i>).</p>` },
   { target: ["#padPanOnly"], title: ic("width") + " Pan only", text: () => `<p>Klik om <b>Pan only</b> aan of uit te zetten; aan = knop indigo met <b>AAN</b>. De linker stick draait de camera dan alleen <b>links en rechts</b>, voor <b>alle camera's</b>; per ongeluk omhoog of omlaag duwen verandert de hoogte niet. Geldt voor dit scherm. Je kunt het ook op een controllerknop zetten (<i>Pan only aan/uit</i> in de knoppenindeling).</p>` },
   { target: ["#btnCal"], title: ic("sticks") + " Sticks afstellen", text: () => `<p>Reageert een stick te snel, te traag of kruipt de camera als je hem loslaat? In <b>Sticks afstellen</b> stel je per stick de <b>dode zone</b>, het <b>maximum</b> en de <b>curve</b> in: <i>Standaard</i>, <i>Vertraagd</i> (fijner rond het midden), <i>Direct</i> of <i>Eigen</i> met twee punten die je versleept. Je ziet live waar de stick staat.</p><p>Eén afstelling voor alle schermen en knoppenprofielen. <i>Zachte beweging</i> werkt er nog bovenop.</p>` },
-  { target: ["#padCamSel"], parent: "label", title: ic("gamepad") + " Welke camera bestuurt de controller?", text: () => `<p>Bij <b>Bestuurt</b> kies je welke camera de Xbox-controller bedient. Standaard <b>wisselt hij mee</b> met de camera die je op het scherm selecteert.</p><p>Kies je <b>Vast: &lt;camera&gt;</b>, dan blijft de controller op die camera, ook als je op het scherm een andere camera, tegel of tabblad aanklikt. De kolom krijgt dan het label <b>XBOX</b>. Met D-pad ←/→ wissel je alleen de controllercamera. Geldt voor dit scherm.</p>` },
+  { target: ["#padCamBox"], title: ic("gamepad") + " Welke camera bestuurt de controller?", text: () => `<p>Bij <b>Bestuurt</b> tik je op een camera: de Xbox-controller blijft dan op die camera, ook als je op het scherm een andere camera, tegel of tabblad aanklikt. Die kolom krijgt het label <b>XBOX</b>. <b>Wisselt mee</b> (onderaan, standaard) laat de controller de camera volgen die je op het scherm kiest.</p><p>Met D-pad ←/→ wissel je in de vaste stand alleen de controllercamera. Geldt voor dit scherm.</p>` },
   { target: ["#padProfCard"], parent: "label", title: "Knoppenprofiel", text: () => `<p>Iedereen kan een eigen knoppenindeling hebben. Kies hier welk <b>profiel</b> deze controller op dit scherm gebruikt; elk scherm onthoudt zijn eigen keuze.</p>` },
   { target: ["#btnMap2"], title: "Knoppenindeling", text: () => `<p>Wil je andere knoppen? Hier geef je elke controllerknop een eigen functie. Je kunt ook een <b>nieuw profiel</b> maken (begint als kopie), en profielen hernoemen of verwijderen.</p>` },
   { target: ["#followWrap"], title: ic("link") + " Remote control: meewisselen", text: () => `<p>Staat de schakelaar aan (tegel indigo), dan wisselt dit scherm mee als op een ander scherm of met de controller een andere camera gekozen wordt.</p>
@@ -5120,6 +5153,7 @@ const TOUR_STEPS = [
       <p>Je kunt ook de <b>presetposities en beeldinstellingen uit de camera's lezen</b> en later terugzetten, bijvoorbeeld na een fabrieksreset.</p><p>Daarnaast maakt PTZ Control <b>elke dag en vóór elke update zelf een back-up</b> (de laatste 10). Die vind je onderaan in dit venster en kun je terugzetten.</p>` },
   { target: ["#btnCap"], menu: "main", title: ic("flask") + " Presetaantal testen", text: () => `<p>Test hoeveel presets elke camera echt kan bewaren. Bestaande presets blijven daarbij behouden. De camera's bewegen tijdens de test.</p>` },
   { target: ["#btnTheme"], menu: "main", title: ic("sun") + " Licht en donker", text: () => `<p>Onder <b>Weergave</b>: tik om te wisselen tussen licht en donker. De knop toont het huidige thema. Dit geldt alleen voor dit apparaat.</p>` },
+  { target: ["#btnPadPin"], menu: "main", title: ic("gamepad") + " Xbox-knop in de kolomkop", text: () => `<p>Zet je <b>Xbox-knop</b> aan (per apparaat), dan krijgt elke kolomkop een <b>controllerknopje</b>: tik erop en de Xbox-controller blijft vast op die camera, nog een keer tikken = weer meewisselen. Handig tijdens de dienst; standaard uit (dan kies je het in de Xbox-kaart bij <i>Bestuurt</i>).</p>` },
   { target: ["#btnTablet"], menu: "main", title: ic("tablet") + " Tabletweergave", text: () => `<p>Grote tegels en onderin een balk om de camera te kiezen, handig op een iPad of tablet. Gaat op een aanraakscherm vanzelf aan; met deze schakelaar zet je hem per apparaat op automatisch, aan of uit (indigo = aan).</p>` },
   { target: ["#miHelp"], menu: "main", sub: "subHelp", title: ic("help") + " Hulp", text: () => `<p>Deze rondleiding opnieuw starten en kijken of er een nieuwe versie is.</p>` },
   { target: ["#btnTour"], menu: "main", title: ic("cap") + " Rondleiding", text: () => `<p>Hiermee start je deze rondleiding later opnieuw.</p>` },
