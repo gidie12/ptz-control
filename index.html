@@ -275,6 +275,10 @@
   .padprofrow select, .padprofcard select { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
   .padprofcard { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .padprofcard select { flex: 1; }
+  /* 🧑 focus per preset (presetvenster) */
+  .pfocus { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .pfocus select { flex: 1; padding: 5px 8px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
+  #pFocusInfo { margin-top: 4px; }
   #dlgMap .padset { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
   #padMap .hit { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
   .padbtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -1201,6 +1205,14 @@
   <div class="pcolors small" id="pColors">Kleur <button data-col="" title="Geen kleur"><svg class="ic" data-i="x" aria-hidden="true"><use href="#i-x"/></svg></button></div>
   <label class="small" style="display:flex;gap:8px;align-items:center;margin-top:10px">
     <input type="checkbox" id="pTrack"> <svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Na oproepen automatisch volgen (alleen pan)</label>
+  <label class="small pfocus" data-tipk="pFocus">Focus bij oproepen
+    <select id="pFocus">
+      <option value="" id="pFocusSaved">Zoals bij opslaan</option>
+      <option value="auto">Altijd autofocus</option>
+      <option value="manual">Handmatige focus (stand van de preset)</option>
+      <option value="off">Niet aanpassen</option>
+    </select></label>
+  <div class="small muted" id="pFocusInfo"></div>
   <div class="stackbtn">
     <button class="icon" id="pRecall"><svg class="ic" data-i="play" aria-hidden="true"><use href="#i-play"/></svg> Oproepen</button>
     <button class="icon" id="pStore"><svg class="ic" data-i="target" aria-hidden="true"><use href="#i-target"/></svg> Huidige camerapositie hier opslaan</button>
@@ -1953,7 +1965,9 @@ async function presetClick(camId, n, el) {
   if (hand.dir && hand.cam === camId) handHalt(false);   // preset kiezen: optrekken/afremmen direct stoppen (preset neemt het over)
   lastPreset[camId] = n; delete adjusted[camId];   // direct feedback; server bevestigt via event
   renderPresets(); renderSide();
-  await cmd("preset_call", { n }, camId);
+  const r = await cmd("preset_call", { n }, camId);
+  if (r?.af_error) toast(r.af_error);
+  else if (r && typeof r.af === "boolean" && camId === ctrlCam) setAF(r.af);   // 🧑 focus van de preset toegepast: AF-knoppen bijwerken
 }
 
 // na het vastzetten van een positie: melden of de thumbnail ook gelukt is
@@ -1979,6 +1993,7 @@ function openPreset(camId, n, focusName = false) {
   $("#pTitle").textContent = `${c.name} · preset ${n}`;
   $("#pName").value = c.presets[n] || "";
   $("#pTrack").checked = (c.track_presets || []).includes(n);
+  $("#pFocus").value = (c.preset_focus || {})[n] || ""; pFocusRender();
   editColor = (c.preset_colors || {})[n] || ""; renderPColors();
   $("#pTrack").disabled = !!cfg.tracking_error;
   updatePresetImg();
@@ -1990,6 +2005,25 @@ function updatePresetImg() {
   if (hasThumb(c, edit.n)) { el.style.backgroundImage = `url('${thumbUrl(edit.camId, edit.n)}')`; el.textContent = ""; }
   else { el.style.backgroundImage = ""; el.textContent = "Geen thumbnail"; }
 }
+/* 🧑 Focus bij oproepen: wat bij opslaan is uitgelezen (saved_positions[n].af / focus) en wat er bij oproepen gebeurt */
+function pFocusSaved(c, n) {
+  const sp = (c.saved_positions || {})[n];
+  if (!sp || !("af" in sp)) return null;
+  return sp.af ? "autofocus" : "handmatige focus" + ("focus" in sp ? ` (stand ${sp.focus})` : "");
+}
+function pFocusRender() {
+  if (!edit) return;
+  const c = camById(edit.camId), saved = pFocusSaved(c, edit.n), v = $("#pFocus").value;
+  $("#pFocusSaved").textContent = `Zoals bij opslaan (${saved || "onbekend"})`;
+  $("#pFocusInfo").textContent =
+    v === "auto" ? "Na het oproepen gaat autofocus aan."
+    : v === "manual" ? ("Autofocus gaat uit vóór het oproepen; de camera houdt de focus van de preset." +
+        ((c.saved_positions || {})[edit.n]?.focus !== undefined ? " Klopt die na aankomst niet, dan zet de app de bewaarde stand terug." : ""))
+    : v === "off" ? "De focusinstelling van de camera blijft zoals hij is."
+    : saved ? `Bij opslaan stond ${saved} aan; dat wordt bij oproepen weer ingesteld. Opnieuw opslaan bewaart de huidige stand.`
+    : "Nog onbekend (preset niet in deze app opgeslagen, of de camera geeft geen VISCA-antwoord): de focus wordt niet aangepast. Sla de preset opnieuw op om de huidige stand te bewaren.";
+}
+$("#pFocus").onchange = pFocusRender;
 $("#pCancel").onclick = () => $("#dlgPreset").close();
 $("#pSave").onclick = async () => {
   const c = camById(edit.camId), v = $("#pName").value.trim();
@@ -1999,6 +2033,8 @@ $("#pSave").onclick = async () => {
   const tp = new Set(c.track_presets || []);
   $("#pTrack").checked ? tp.add(edit.n) : tp.delete(edit.n);
   c.track_presets = [...tp].sort((a, b) => a - b);
+  c.preset_focus ||= {};
+  if ($("#pFocus").value) c.preset_focus[edit.n] = $("#pFocus").value; else delete c.preset_focus[edit.n];
   $("#dlgPreset").close(); await saveConfig();
 };
 $("#pName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#pSave").click(); });
@@ -4972,6 +5008,7 @@ const TIPS = {
   spFocus: { t: "Focussnelheid", d: "Hoe snel <i>Focus ver</i> en <i>Focus dichtbij</i> (en de toetsen) scherpstellen (1–7). Geldt voor dit scherm." },
   padSoft: { t: "Zachte beweging", d: "Hoe geleidelijk de camera optrekt en hoe fijn de stick rond het midden reageert. <i>Uit</i> = direct op snelheid; 50% ≈ 1 s naar topsnelheid; 100% (extra zacht) ≈ 2 s. Stoppen gaat altijd direct. Geldt voor dit scherm." },
   padSplit: { t: "Gescheiden sticks", d: "Linker stick alleen links/rechts (pan), rechter stick alleen omhoog/omlaag (tilt). Focus zit dan niet meer op de rechter stick. <i>Pan only</i> is uitgeschakeld zolang dit aan staat; <i>Tilt omkeren</i> werkt op de rechter stick. Geldt voor dit scherm." },
+  pFocus: { t: "Focus bij oproepen", d: "Wat er met de focus gebeurt als je deze preset oproept. <i>Zoals bij opslaan</i> (standaard): autofocus of handmatige focus zoals die stond toen de preset werd opgeslagen. <i>Altijd autofocus</i>, <i>Handmatige focus</i> (focus van de preset vasthouden) of <i>Niet aanpassen</i>. Geldt op alle schermen." },
   padPanOnly: { t: "Pan only", d: "De linker stick draait alleen links/rechts; omhoog/omlaag doet niets. Geldt voor alle camera's op dit scherm. Niet beschikbaar zolang <i>Gescheiden sticks</i> aan staat." },
   padInvY: { t: "Tilt omkeren", d: "Stick omhoog = camera omlaag (met <i>Gescheiden sticks</i>: de rechter stick). Niet beschikbaar zolang <i>Pan only</i> aan staat." },
   padMax: { t: "Max. pan/tilt-snelheid", d: "Snelheid als je de linker stick helemaal duwt (4–24). Geldt voor dit scherm." },
@@ -5026,7 +5063,7 @@ const TOUR_STEPS = [
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
   { target: ["#presetArea .tile .edit", "#presetArea"], title: "Preset bewerken", text: () => `<p>Het potlood (of rechtsklik op een tegel) opent het presetvenster:</p>
       <ul><li>naam en <b>kleur</b> geven (een gekleurde streep bovenop de tegel, bijv. per soort shot)</li><li>oproepen of de huidige positie hier opslaan</li><li>thumbnail vernieuwen</li>
-      <li>${ic("track")} <i>na oproepen automatisch volgen</i></li><li>naam en foto wissen</li></ul>` },
+      <li>${ic("track")} <i>na oproepen automatisch volgen</i></li><li><b>Focus bij oproepen</b>: standaard zet de app autofocus of handmatige focus terug zoals die stond toen je de preset opsloeg; of kies <i>altijd autofocus</i>, <i>handmatig</i> of <i>niet aanpassen</i></li><li>naam en foto wissen</li></ul>` },
   { target: ["#btnStore"], title: "Preset opslaan", text: () => `<p>Zet de camera goed, klik op <b>＋ Preset opslaan</b> en tik op de tegel waar de positie moet komen. Er wordt meteen een foto gemaakt voor de tegel.</p>
       <p>Met de Xbox-controller: <b>Menu</b>-knop vasthouden en een presetknop indrukken.</p>
       <p>Per ongeluk overschreven? Onderin verschijnt even <b>${ic("undo")} Ongedaan maken</b>: de camera gaat terug naar de oude positie en de preset en foto worden zoals ze waren.</p>` },

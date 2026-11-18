@@ -49,6 +49,7 @@ class Cam:
         self.label = label                    # bijv. "OEFENEN" in het beeld
         self.pos = {"pan": 0, "tilt": 0, "zoom": 0, "focus": 1000}
         self.target = dict(self.pos)
+        self.af = True                        # focusmodus: True = autofocus (81 01 04 38 02), False = handmatig (03)
         self.presets = {}
         self.vel = (0, 0, 0)                  # pan/tilt/zoom per tik bij handbediening
         self.lock = threading.Lock()
@@ -280,6 +281,9 @@ def visca_server(cam, port=0):
             with cam.lock:
                 cam.target["zoom"] = unnib(m[4:8])
             return ack
+        if m[:4] == b"\x81\x01\x04\x38" and len(m) >= 5 and m[4] in (2, 3):   # autofocus aan/uit
+            cam.af = m[4] == 2
+            return ack
         if m[:4] == b"\x81\x01\x04\x48" and len(m) >= 8:          # focus direct
             with cam.lock:
                 cam.target["focus"] = unnib(m[4:8])
@@ -293,7 +297,7 @@ def visca_server(cam, port=0):
         if m == b"\x81\x09\x04\x48":
             return b"\x90\x50" + nib(p["focus"], 4) + b"\xff"
         if m == b"\x81\x09\x04\x38":
-            return b"\x90\x50\x02\xff"
+            return b"\x90\x50" + (b"\x02" if cam.af else b"\x03") + b"\xff"
         return ack
 
     def loop():
