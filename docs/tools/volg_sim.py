@@ -12,7 +12,7 @@ Aannames: beeldhoek = 1 eenheid wereld, 1 snelheidsstap = 4°/s (zoals de eerder
 Omgeving: PTZ_SIM_LAT = vertraging van het beeld in s (RTSP-buffer; standaard 0), PTZ_SIM_FOV = beeldhoek in graden
 (standaard 58 = uitgezoomd; 15 = ingezoomd), PTZ_SIM_DEG = graden/s per snelheidsstap (standaard 4),
 PTZ_SIM_STEP = beeldbreedte/s per snelheidsstap (standaard PTZ_SIM_DEG / PTZ_SIM_FOV), PTZ_SIM_NOVISCA=1 = de camera
-geeft geen positie (de regelaar volgt dan op schatting). De nagebootste VISCA-poort geeft pan en zoom in de eenheden
+geeft geen positie en PTZ_SIM_NOZOOM=1 = wel de pan maar niet de zoom (de regelaar volgt dan op schatting). De nagebootste VISCA-poort geeft pan en zoom in de eenheden
 die tracker.py aanneemt (14,4 tellen per graad, beeldhoek uit de zoom).
 
 Snel en zonder klok (alleen de regelaar, veel situaties achter elkaar): docs/tools/volg_test.py.
@@ -134,7 +134,7 @@ class SimGrabber(threading.Thread):
                 buf.pop(0)
             if buf[0][0] <= time.time() - LAT:
                 with self.lock:
-                    self.frame, self.ts = buf[0][1], time.time()
+                    self.frame, self.ts = buf[0][1], tracker.clock()
             time.sleep(1 / 12)
 
     def latest(self):
@@ -207,6 +207,8 @@ def visca_server():
                         p = round(SIM.step()[1] * FOV * tracker.COUNTS_PER_DEG) & 0xFFFF
                         nib = bytes((p >> s) & 0xF for s in (12, 8, 4, 0))
                         c.sendall(b"\x90\x50" + nib + b"\x00\x00\x00\x00\xff")
+                    elif msg == bytes.fromhex("81090447") and os.environ.get("PTZ_SIM_NOZOOM") == "1":
+                        c.sendall(b"\x90\x60\x02\xff")      # syntaxfout: deze camera geeft zijn zoom niet
                     elif msg == bytes.fromhex("81090447"):
                         c.sendall(b"\x90\x50" + znib + b"\xff")
                     else:

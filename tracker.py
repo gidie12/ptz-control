@@ -80,7 +80,7 @@ class FrameGrabber(threading.Thread):
                     continue
                 fails = 0
                 with self.lock:
-                    self.frame, self.ts = frame, time.time()
+                    self.frame, self.ts = frame, clock()
             cap.release()
             if self.running:
                 time.sleep(1)
@@ -318,6 +318,9 @@ def norm_frame(f):
 
 
 # ---------------------------------------------------------------- afstelling van de pan-regelaar (per camera)
+clock = time.monotonic   # alle tijden in deze module: loopt altijd vooruit, ook als Windows de klok gelijkzet
+
+
 def _envf(name, default):
     try:
         return float(os.environ.get(name) or default)
@@ -362,10 +365,10 @@ def norm_limits(v):
 
 # ---------------------------------------------------------------- beeldhoek en eenheden van de camera
 # ⚠️ Aannames (zoals `VISCAUnits.ptzOptics` in Churchfront Video; het cameramodel is niet bekend):
-WIDE_FOV = _envf("PTZ_TRACK_FOV", 58.0)          # horizontale beeldhoek helemaal uitgezoomd (graden)
-ZOOM_RATIO = _envf("PTZ_TRACK_ZOOMX", 20.0)      # optische zoom (20x); de beeldhoek loopt gelijkmatig terug
-COUNTS_PER_DEG = _envf("PTZ_TRACK_CPD", 14.4)    # VISCA-pantellen per graad (0x0990 tellen = 170 graden)
-DEG_PER_STEP = _envf("PTZ_TRACK_DEGSTEP", 4.0)   # graden/s per pan-snelheidsstap, als beginwaarde: wordt gemeten
+WIDE_FOV = max(5.0, _envf("PTZ_TRACK_FOV", 58.0))          # horizontale beeldhoek helemaal uitgezoomd (graden)
+ZOOM_RATIO = max(1.01, _envf("PTZ_TRACK_ZOOMX", 20.0))      # optische zoom (20x); de beeldhoek loopt gelijkmatig terug
+COUNTS_PER_DEG = max(0.1, _envf("PTZ_TRACK_CPD", 14.4))    # VISCA-pantellen per graad (0x0990 tellen = 170 graden)
+DEG_PER_STEP = max(0.1, _envf("PTZ_TRACK_DEGSTEP", 4.0))   # graden/s per pan-snelheidsstap, als beginwaarde: wordt gemeten
 
 
 def fov_of(zoom, zoom_max=16384):
@@ -401,6 +404,7 @@ class CameraPoller(threading.Thread):
         self.vel = 0.0
         self.polls = []               # [(tijd, pan)]
         self.error = ""
+        self.zoom_error = ""          # zoom niet te lezen: de beeldhoek is dan onbekend
         self.lock = threading.Lock()
 
     def set_limits(self, limits):
@@ -430,7 +434,7 @@ class CameraPoller(threading.Thread):
         while self.running:
             try:
                 p = self.read_pan()
-                t = time.time()
+                t = clock()
                 with self.lock:
                     if last_p is not None and t > last_t:
                         v = (p - last_p) / (t - last_t)
@@ -448,8 +452,9 @@ class CameraPoller(threading.Thread):
                         z = self.read_zoom()
                         with self.lock:
                             self.zoom = z
-                    except Exception:  # noqa: BLE001
-                        pass          # zoom onbekend: de regelaar houdt de laatste beeldhoek aan
+                        self.zoom_error = ""
+                    except Exception as e:  # noqa: BLE001
+                        self.zoom_error = f"zoom niet te lezen ({e})"   # de regelaar houdt de laatste beeldhoek aan
             except Exception as e:  # noqa: BLE001
                 fails += 1
                 with self.lock:
@@ -502,6 +507,7 @@ class PanFollower:
         self.sign = 0          # telt de camera op (+1) of af (−1) bij commando rechts? 0 = (nog) onbekend
         self._votes = 0
         self.fov = WIDE_FOV
+        self.fov_known = False # is de zoom (dus de beeldhoek) ooit gelezen? Zo niet: positie niet bruikbaar
         self.sent = 0          # laatst gegeven snelheidsstap, met teken
         self.sent_log = [(0.0, 0)]
         self.rate = 0.0        # gevraagde camerasnelheid (beeldbreedte/s), vóór afronden op een stap
@@ -512,7 +518,8 @@ class PanFollower:
         self.move = 0.0        # zijn echte snelheid (beeldbreedte/s, rechts positief)
         self.walk_dir, self.walk_since = 0, 0.0
         self.last_pos = None   # laatst verwerkte positiemeting
-        self._m0 = None        # begin van een beweging: (tijd, img_v), voor meten zonder positie
+        self._stuck = None     # sinds wanneer hij wil draaien maar onder de kleinste stap blijft
+        self._lead = None
         self.obs = []          # (tijd, x) van de laatste 2,5 s, voor het meten van de beeldvertraging
         self._lat_at = 0.0
         self.dbg = {}
@@ -521,7 +528,13 @@ class PanFollower:
     def set_tune(self, tune):
         t = norm_tune(tune)
         self.k, self.walk_min = t["speed"], t["walk"]
-        self.lat = t["lead"]     # zoveel loopt het beeld achter (s): beginwaarde, wordt daarna gemeten
+        if t["lead"] != self._lead:      # alleen als de beginwaarde zelf verandert: anders blijft de meting staan
+            self._lead = self.lat = t["lead"]   # zoveel loopt het beeld achter (s); wordt daarna gemeten
+
+    def uses_position(self):
+        """Rekent de regelaar met de gemeten camerapositie? Alleen als de telrichting bekend is én de zoom
+        gelezen is: zonder beeldhoek zeggen pantellen niets over het beeld."""
+        return bool(self.sign) and self.fov_known
 
     # --- wat de camera echt doet
     def _asked(self, t0, t1):
@@ -537,7 +550,9 @@ class PanFollower:
     def observe(self, polls, zoom, zoom_max=16384):
         """Nieuwe positiemetingen [(tijd, pan)]: beeldhoek, telrichting en echte draaisnelheid leren."""
         if zoom is not None:
-            self.fov = fov_of(zoom, zoom_max)
+            self.fov, self.fov_known = fov_of(zoom, zoom_max), True
+        if not self.fov_known:
+            return          # geen beeldhoek: volgen op schatting (alles wordt dan aan het beeld gemeten)
         for t, pan in polls:
             last = self.last_pos
             if last is None or t - last[0] > 1.5:
@@ -564,7 +579,7 @@ class PanFollower:
     def _cam_rate(self, now, polls):
         """Hoe snel de camera draaide (beeldbreedte/s) toen het beeld van nu gemaakt werd."""
         ta = now - self.lat + 0.05
-        if self.sign and polls:
+        if self.uses_position() and polls:
             before = [p for p in polls if p[0] <= ta]
             if len(before) >= 2 and ta - before[-1][0] < 0.6:
                 # over de laatste drie metingen, zodat starten en stoppen van de camera zelf er niet uitzien
@@ -584,7 +599,7 @@ class PanFollower:
         achter: zonder dit stuurt de regelaar op waar de persoon WAS en schiet hij voorbij (slingeren)."""
         ta = now - self.lat
         per_step = DEG_PER_STEP * self.gain / self.fov
-        if self.sign and polls and now - polls[-1][0] < 0.5 and polls[0][0] <= ta:
+        if self.uses_position() and polls and now - polls[-1][0] < 0.5 and polls[0][0] <= ta:
             pan_then = polls[0][1]
             for (t0, p0), (t1, p1) in zip(polls, polls[1:]):
                 if t0 <= ta <= t1:
@@ -597,71 +612,97 @@ class PanFollower:
             return turned + self._asked(polls[-1][0] - self.REACT, now - self.REACT) * per_step
         return self._asked(ta - self.REACT, now - self.REACT) * per_step
 
-    def _cam_pos(self, polls, t0):
-        """Functie t -> stand van de camera (beeldbreedtes, willekeurig nulpunt) vanaf t0: gemeten als de
-        positie bekend is, anders opgeteld uit wat we zelf vroegen."""
-        if self.sign and polls and polls[0][0] <= t0:
-            k = self.sign / (COUNTS_PER_DEG * self.fov)
-
-            def measured(t):
-                for (ta, pa), (tb, pb) in zip(polls, polls[1:]):
-                    if ta <= t <= tb:
-                        return k * (pa + (pb - pa) * ((t - ta) / (tb - ta) if tb > ta else 0))
-                return k * (polls[-1][1] if t > polls[-1][0] else polls[0][1])
-            return measured
-        if self.sent_log[0][0] > t0 - self.REACT:
-            return None
-        per_step = DEG_PER_STEP * self.gain / self.fov
-        return lambda t: self._asked(t0 - self.REACT, t - self.REACT) * per_step
-
-    def _measure_lat(self, now, x, polls):
-        """Hoeveel loopt het beeld achter? Eens per seconde, over de laatste 2,5 s: de plek van de persoon in
-        het beeld plus de stand van de camera op het moment dat het beeld gemaakt werd is zijn echte plek, en
-        die verloopt vloeiend. Bij de juiste vertraging valt het draaien van de camera precies weg; bij een
-        verkeerde blijft elke start en stop van de camera als knik zichtbaar. Alleen als de camera in die tijd
-        duidelijk van snelheid veranderde en één vertraging duidelijk het best past."""
+    def _measure(self, now, x, polls):
+        """Eens per seconde, over de laatste 2,5 s: hoeveel loopt het beeld achter, en (zonder camerapositie) hoe
+        snel draait de camera echt? De plek van de persoon in het beeld plus de stand van de camera op het moment
+        dat het beeld gemaakt werd is zijn echte plek, en die verloopt vloeiend. Bij de juiste vertraging (en
+        draaisnelheid) valt het draaien van de camera precies weg; anders blijft elke start en stop van de camera
+        als knik zichtbaar. Alleen als de camera in die tijd duidelijk van snelheid veranderde en één uitkomst
+        duidelijk het best past.
+        - Met positie: de camerastand is gemeten, alleen de vertraging wordt gezocht.
+        - Zonder positie: de camerastand is wat we zelf vroegen (in stappen); de draaisnelheid per stap (`gain`,
+          dan met de onbekende zoom erin) wordt per vertraging uitgerekend als de waarde die het best past."""
         self.obs.append((now, x))
         while self.obs and now - self.obs[0][0] > 2.5:
             self.obs.pop(0)
         if now - self._lat_at < 1.0 or len(self.obs) < 10 or now - self.obs[0][0] < 1.8:
             return
         self._lat_at = now
-        pos = self._cam_pos(polls, self.obs[0][0] - 1.5)
-        if pos is None:
-            return
+        t0 = self.obs[0][0] - 1.5
+        measured = self.uses_position() and polls and polls[0][0] <= t0
+        if measured:
+            k = self.sign / (COUNTS_PER_DEG * self.fov)
+
+            def pos(t):
+                for (ta, pa), (tb, pb) in zip(polls, polls[1:]):
+                    if ta <= t <= tb:
+                        return k * (pa + (pb - pa) * ((t - ta) / (tb - ta) if tb > ta else 0))
+                return k * (polls[-1][1] if t > polls[-1][0] else polls[0][1])
+        elif self.uses_position() or self.sent_log[0][0] > t0 - self.REACT:
+            return          # nog te weinig metingen of geschiedenis
+        else:
+            unit = DEG_PER_STEP / self.fov           # beeldbreedte per stap·seconde, zonder gain
+
+            def pos(t):
+                return self._asked(t0 - self.REACT, t - self.REACT) * unit
+
         ts = [t - self.obs[0][0] for t, _ in self.obs]
         n, mt = len(ts), sum(ts) / len(ts)
         var = sum((t - mt) ** 2 for t in ts)
 
-        def knik(vals):       # wat overblijft na een rechte lijn (constante snelheid)
+        def rest(vals):       # wat overblijft na een rechte lijn (constante snelheid)
             mv = sum(vals) / n
             b = sum((t - mt) * (v - mv) for t, v in zip(ts, vals)) / var
-            return sum((v - mv - b * (t - mt)) ** 2 for t, v in zip(ts, vals)) / n
+            return [v - mv - b * (t - mt) for t, v in zip(ts, vals)]
 
-        if knik([pos(t - self.lat) for t, _ in self.obs]) < 0.0004:     # camera stond stil of draaide gelijkmatig
-            return
+        xr = rest([xx for _, xx in self.obs])
         cands = [0.05 * i for i in range(31)]          # 0 … 1,5 s
-        res = [knik([xx + pos(t - c) for t, xx in self.obs]) for c in cands]
-        best = min(range(len(res)), key=res.__getitem__)
-        if res[best] < 0.5 * sorted(res)[len(res) // 2] and best < len(res) - 1:
-            self.lat += (cands[best] - self.lat) * 0.3
+        res, gains = [], []
+        for c in cands:
+            cr = rest([pos(t - c) for t, _ in self.obs])
+            cc = sum(v * v for v in cr) / n
+            if measured:
+                g = 1.0
+            else:
+                g = -sum(a * b for a, b in zip(xr, cr)) / (cc * n) if cc > 1e-9 else 0.0
+            gains.append(g)
+            res.append(sum((a + g * b) ** 2 for a, b in zip(xr, cr)) / n if cc >= 0.0004 * (1 if measured else 0.05)
+                       else float("inf"))
+        low = min(res)
+        if low == float("inf"):
+            return          # camera stond stil of draaide gelijkmatig: niets te meten
+        # de KLEINSTE vertraging die (bijna) het best past: bij heen en weer draaien past een hele slag later
+        # even goed, en een te hoog geschatte vertraging laat de regelaar zelf slingeren
+        best = next(i for i, r in enumerate(res) if r <= low * 1.25 + 1e-9)
+        if best >= len(res) - 1:
+            return
+        # tegen de huidige schatting afgezet: omhoog alleen bij duidelijk bewijs (een te hoge vertraging laat de
+        # regelaar zelf heen en weer draaien, en dat heen en weer draaien lijkt dan weer op een hoge vertraging)
+        ci = min(range(len(cands)), key=lambda i: abs(cands[i] - self.lat))
+        cur = res[ci]
+        lat_ok = best == ci or cur == float("inf") or res[best] <= cur * (0.4 if cands[best] > self.lat else 0.85)
+        if not lat_ok:
+            if measured or cur == float("inf"):
+                return
+            best = ci       # de vertraging blijft staan; de draaisnelheid is bij de huidige schatting wel te meten
+        finite = sorted(r for r in res if r != float("inf"))
+        if res[best] >= 0.5 * finite[len(finite) // 2]:
+            return          # geen duidelijke winnaar
+        if measured:
+            self._lat_to(cands[best])
+            return
+        g = gains[best]
+        moved = sum(v * v for v in xr) / n
+        if not 0.05 <= g <= 25.0 or moved < 0.0001 or res[best] > 0.3 * moved:
+            return          # het draaien van de camera verklaart het beeld niet (de persoon bewoog zelf)
+        self.gain += (g - self.gain) * (0.5 if not self.gain_known else 0.3)
+        self.gain_known = True
+        if lat_ok:
+            self._lat_to(cands[best])
 
-    def _learn_from_picture(self, now):
-        """Zonder positie van de camera: de echte snelheid meten aan het beeld. Eén keer per beweging, een
-        tijdje na de start: zoveel is de persoon in het beeld gaan verschuiven door het draaien."""
-        if self.sign or self._m0 is None or self.sent == 0:
-            return
-        t0, v0 = self._m0
-        if now - t0 < self.lat + 0.4:
-            return
-        self._m0 = None
-        w1 = now - self.lat - self.REACT
-        asked = self._asked(w1 - 0.3, w1) / 0.3 * DEG_PER_STEP / self.fov   # beeldbreedte/s, zonder gain
-        seen = -(self.img_v - v0)          # camera naar rechts = persoon schuift naar links
-        if abs(asked) > 0.01 and seen * asked > 0:
-            g = max(0.1, min(25.0, seen / asked))
-            self.gain = g if not self.gain_known else self.gain + (g - self.gain) * 0.5
-            self.gain_known = True
+    def _lat_to(self, seen):
+        """Omlaag snel, omhoog voorzichtig: te laag geschat geeft wat achterlopen, te hoog geschat slingeren."""
+        self.lat += (seen - self.lat) * (0.5 if seen < self.lat else 0.2)
 
     # --- sturen
     @staticmethod
@@ -687,8 +728,6 @@ class PanFollower:
 
     def _set(self, now, step):
         if step != self.sent:
-            if self.sent == 0 and step != 0:
-                self._m0 = (now, self.img_v)
             self.sent = step
             self.sent_log.append((now, step))
             del self.sent_log[:-40]
@@ -707,8 +746,7 @@ class PanFollower:
             if dt > 0.02:
                 self.img_v += ((x - self.last_x[0]) / dt - self.img_v) * self._blend(0.35, dt_frame)
         self.last_x = (x, now)
-        self._measure_lat(now, x, polls)
-        self._learn_from_picture(now)
+        self._measure(now, x, polls)
 
         # hoe snel hij echt loopt: zijn verschuiving in het beeld plus hoe snel de camera toen draaide
         cam = self._cam_rate(now, polls)
@@ -721,7 +759,7 @@ class PanFollower:
         # waar hij NU staat: waar het (achterlopende) beeld hem toont, min wat de camera sindsdien draaide,
         # plus wat hij zelf liep
         own = self.move * self.lat if (self.panning or walk != 0) else 0.0   # stilstaan en wiegen telt niet
-        shift = own - self._cam_shift(now, polls)
+        shift = max(-0.5, min(0.5, own - self._cam_shift(now, polls)))
         here = self.eye + shift
         x1, x2 = x1 + shift, x2 + shift
         ex = here - tx                     # rechts van de doelpositie: naar rechts draaien
@@ -770,45 +808,103 @@ class PanFollower:
         else:
             n = max(1, min(top, int(round(a))))
         step = n if raw > 0 else -n
+        if self.panning and n == 0 and outside and not self.uses_position():
+            # wil draaien maar blijft onder de kleinste stap: de draaisnelheid is te hoog geschat
+            if self._stuck is None:
+                self._stuck = now
+            elif now - self._stuck > 1.5:
+                self.gain, self._stuck = max(0.1, self.gain * 0.8), now
+        else:
+            self._stuck = None
         self._set(now, step)
         self.dbg = {"x": here, "err": ex, "img_v": self.img_v, "move": self.move, "cam": cam, "want": want,
-                    "fov": self.fov, "gain": self.gain, "lat": self.lat, "step": step, "urgency": urgency,
+                    "fov": self.fov, "gain": self.gain, "lat": self.lat, "step": step,
+                    "pos": self.uses_position(), "urgency": urgency,
                     "panning": int(self.panning), "x1": x1, "x2": x2}
         return step
 
 
 class TrackLog:
     """Meetlog van het volgen, één regel per bekeken beeld, om af te stellen: wat de tracker zag en deed.
-    Zoals `TrackLog` in Churchfront Video. Begint opnieuw na 20.000 regels (ruim een half uur volgen)."""
-    HEAD = ("tijd,camera,x,afwijking,beeld_v,persoon_v,camera_v,gewenst_v,beeldhoek,gain,vertraging,stap,rand,"
-            "draait,box_links,box_rechts\n")
-    MAX_LINES = 20000
+    Zoals `TrackLog` in Churchfront Video. Puntkomma's en decimale komma's (met BOM), zodat het bestand in een
+    Nederlandstalige Excel direct in kolommen opent. Gaat door na een herstart van de app; na MAX_LINES regels
+    (ruim 2,5 uur volgen met twee camera's) schuift het bestand door naar `<naam>.1.csv` en begint een nieuw."""
+    COLS = ("tijd;klok;camera;x;afwijking;beeld_v;persoon_v;camera_v;gewenst_v;beeldhoek;gain;vertraging;stap;rand;"
+            "draait;box_links;box_rechts;positie")
+    HEAD = "\ufeff" + COLS + "\n"
+    MAX_LINES = 150000
+    RETRY = 30.0         # s wachten na een schrijffout (bestand open in Excel op Windows) voor we het opnieuw proberen
 
     def __init__(self, path):
         self.path = path
         self.lock = threading.Lock()
         self.f = None
         self.lines = 0
+        self.failed_at = None
+
+    @staticmethod
+    def _num(v, digits):
+        return ("%.*f" % (digits, v)).replace(".", ",")
+
+    def _open(self):
+        """Bestaand log van deze opzet voortzetten; een ander (ouder) formaat of een vol bestand schuift door."""
+        lines, keep = 0, False
+        try:
+            with open(self.path, "r", encoding="utf-8-sig") as f:
+                keep = f.readline().strip() == self.COLS
+                lines = sum(1 for _ in f) if keep else 0
+        except OSError:
+            pass
+        try:
+            empty = os.path.getsize(self.path) == 0
+        except OSError:
+            empty = True
+        if not empty and (not keep or lines >= self.MAX_LINES):
+            old = os.path.splitext(self.path)[0] + ".1.csv"
+            try:
+                os.replace(self.path, old)
+                keep, lines = False, 0
+            except OSError:
+                # vorige log staat open (Excel): niets weggooien, in het huidige bestand doorschrijven
+                if not keep:
+                    raise
+                lines = 0         # pas na nog een vol bestand opnieuw proberen
+        elif empty:
+            keep, lines = False, 0
+        self.f = open(self.path, "a" if keep else "w", encoding="utf-8", newline="")
+        if not keep:
+            self.f.write(self.HEAD)
+        self.lines = lines
 
     def write(self, cam, d):
         if not self.path or not d:
             return
-        row = "%.3f,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.2f,%.2f,%d,%.2f,%d,%.3f,%.3f\n" % (
-            time.time(), str(cam).replace(",", " "), d["x"], d["err"], d["img_v"], d["move"], d["cam"],
-            d["want"], d["fov"], d["gain"], d["lat"], d["step"], d["urgency"], d["panning"], d["x1"], d["x2"])
+        n = self._num
+        row = ";".join([n(time.time(), 3), time.strftime("%H:%M:%S"), str(cam).replace(";", " "), n(d["x"], 3),
+                        n(d["err"], 3), n(d["img_v"], 3), n(d["move"], 3), n(d["cam"], 3), n(d["want"], 3),
+                        n(d["fov"], 1), n(d["gain"], 2), n(d["lat"], 2), str(int(d["step"])), n(d["urgency"], 2),
+                        str(int(d["panning"])), n(d["x1"], 3), n(d["x2"], 3), str(int(d["pos"]))]) + "\n"
         with self.lock:
+            if self.failed_at is not None and clock() - self.failed_at < self.RETRY:
+                return
             try:
-                if self.f is None or self.lines > self.MAX_LINES:
+                if self.f is None or self.lines >= self.MAX_LINES:
                     if self.f:
                         self.f.close()
-                    self.f = open(self.path, "w", encoding="utf-8")
-                    self.f.write(self.HEAD)
-                    self.lines = 0
+                        self.f = None
+                    self._open()
                 self.f.write(row)
                 self.f.flush()
                 self.lines += 1
+                self.failed_at = None
             except OSError:
-                self.path = None      # niet schrijfbaar: het volgen gaat gewoon door
+                # niet schrijfbaar (bv. open in Excel): het volgen gaat gewoon door, straks opnieuw proberen
+                try:
+                    if self.f:
+                        self.f.close()
+                except OSError:
+                    pass
+                self.f, self.failed_at = None, clock()
 
 
 _LOGS = {}
@@ -855,8 +951,10 @@ class CameraTracker(threading.Thread):
         self.frame_cfg = norm_frame(settings.get("frame") or DEFAULT_FRAME)
         self.log = track_log(settings.get("log"))
         self.lock = threading.Lock()
+        self.ctrl_lock = threading.RLock()   # de regelaar wordt ook vanuit de CameraPoller-thread stilgezet (grens)
         self.running = True
         self.halt_on_exit = True
+        self.retry_at = 0.0       # een mislukt commando niet vaker dan eens per seconde opnieuw sturen
         self.target = None        # x van het doel in het laatste beeld waarin hij gezien is
         self.box = None           # laatste box van het doel (cx, cy, w, h)
         self.gallery = []         # hoe hij eruitziet: de eerste `anchors` blijven, de rest zijn de nieuwste
@@ -890,8 +988,9 @@ class CameraTracker(threading.Thread):
 
     def set_tune(self, tune):
         tune = norm_tune(tune)
-        with self.lock:
+        with self.ctrl_lock:
             self.ctrl.set_tune(tune)
+        with self.lock:
             self.MAX_FPS = tune["fps"]
 
     def set_limits(self, limits):
@@ -904,23 +1003,18 @@ class CameraTracker(threading.Thread):
 
     def _guard_block(self, direction):
         """Vanuit de CameraPoller: draaien we die kant op, dan nu stoppen."""
-        if self.sent and self.sent[0] == direction:
+        if self.running and self.sent and self.sent != "?" and self.sent[0] == direction:
             self.at_limit = direction
-            self.ctrl.hold(time.time())
-            self._cmd(0)
+            with self.ctrl_lock:
+                self.ctrl.hold(clock())
+                self._cmd(0)
 
     def pick(self, cx, hist):
         """Volg deze persoon (aangeklikt in een beeld van zojuist)."""
         with self.lock:
-            self.pending = (float(cx), hist, time.time())
+            self.pending = (float(cx), hist, clock())
             self.picked = True
         self._status("zoekt gekozen persoon", force=True)
-
-    def picked_look(self):
-        """(x, uiterlijk) van een aangeklikt doel, om hem na een herstart van de tracker terug te vinden."""
-        if self.picked and self.target is not None and self.gallery:
-            return self.target, self.gallery[0]
-        return None
 
     def release(self):
         """Terug naar automatisch: de grootste persoon in beeld."""
@@ -936,18 +1030,31 @@ class CameraTracker(threading.Thread):
 
     def target_box(self):
         """Box van het huidige doel als het net gezien is, anders None."""
-        return self.box if self.box and time.time() - self.last_seen < 1.0 else None
+        return self.box if self.box and clock() - self.last_seen < 1.0 else None
 
     def _status(self, status, force=False, problem=False, detail=""):
         """problem=True → de UI toont dit als fout (rood), niet als gewone voortgang."""
+        if self.sent == "?" and not problem:
+            if not force:
+                return            # besturing mislukt: de fout blijft staan tot een commando weer aankomt
+            status, problem = self.status, self.problem
         if status != self.status or problem != self.problem or force:
             self.status, self.problem = status, problem
-            note = getattr(self.detector, "note", "")
-            if self.poller and self.poller.error:
-                note = (note + " · " if note else "") + "camerapositie niet te lezen via VISCA: volgt op schatting"
+            c = self.ctrl
+            # waarom de regelaar niet met de camerapositie rekent (dan volgt hij op schatting: minder strak)
+            guess = ""
+            if not self.poller:
+                guess = "camerapositie lezen staat uit"
+            elif self.poller.error:
+                guess = "camerapositie niet te lezen via VISCA"
+            elif not c.fov_known and self.poller.zoom_error:
+                guess = "zoom van de camera niet te lezen via VISCA"
             self.on_status({"status": status, "problem": problem, "detail": detail,
                             "fps": round(self.fps, 1), "detector": self.detector.kind,
-                            "note": note, "picked": self.picked, "frame": self.frame_cfg})
+                            "note": getattr(self.detector, "note", ""), "picked": self.picked,
+                            "frame": self.frame_cfg, "guess": guess,
+                            "meas": {"lat": round(c.lat, 2), "gain": round(c.gain, 2), "fov": round(c.fov, 1),
+                                     "pos": c.uses_position() and not guess, "known": c.gain_known}})
 
     def _cmd(self, step):
         """Snelheidsstap met teken (commando-ruimte: positief = rechts) naar de camera; alleen bij verandering."""
@@ -958,12 +1065,15 @@ class CameraTracker(threading.Thread):
         if direction != "stop" and self.poller and self.poller.blocked(direction):
             # grens: niet verder die kant op (de persoon mag dan uit het kader lopen)
             self.at_limit = direction
-            self.ctrl.hold(time.time())
+            with self.ctrl_lock:
+                self.ctrl.hold(clock())
             new = None
         elif direction != "stop":
             self.at_limit = None
         if new == self.sent:
             return
+        if self.sent == "?" and clock() < self.retry_at:
+            return                # vorige commando mislukte: niet bij elk beeld opnieuw proberen
         self.sent = new
         try:
             if new is None:
@@ -971,6 +1081,9 @@ class CameraTracker(threading.Thread):
             else:
                 self.send("move", {"dir": new[0], "pan": new[1], "tilt": 1})
         except Exception as e:  # noqa: BLE001
+            # niet aangekomen: we weten niet wat de camera doet, dus het volgende commando (ook een stop)
+            # gaat hoe dan ook opnieuw de deur uit
+            self.sent, self.retry_at = "?", clock() + 1.0
             self._status(f"camera-fout: {e}", problem=True)
 
     def _learn(self, look, cands, i, sure, reach, gone, now):
@@ -1068,36 +1181,69 @@ class CameraTracker(threading.Thread):
             x, x1, x2 = 1 - x, 1 - x2, 1 - x1
             fc = {"l": 1 - fc["r"], "r": 1 - fc["l"], "x": 1 - fc["x"]}
         polls = None
-        if self.poller:
-            polls, zoom = self.poller.recent()
-            self.ctrl.observe(polls, zoom, self.zoom_max)
-        step = self.ctrl.steer(now, x, x1, x2, fc, polls)
-        if self.ctrl.gain_known and self.ctrl.sign and self.cam_id:
-            GAINS[self.cam_id] = self.ctrl.gain      # alleen de echt gemeten waarde (zonder positie zit de zoom erin)
+        with self.ctrl_lock:
+            if self.poller:
+                polls, zoom = self.poller.recent()
+                self.ctrl.observe(polls, zoom, self.zoom_max)
+            step = self.ctrl.steer(now, x, x1, x2, fc, polls)
+            dbg = self.ctrl.dbg
+            if self.ctrl.gain_known and self.ctrl.uses_position() and self.cam_id:
+                GAINS[self.cam_id] = self.ctrl.gain  # alleen de echt gemeten waarde (zonder positie zit de zoom erin)
         if self.log:
-            self.log.write((self.cam or {}).get("name") or self.cam_id or "?", self.ctrl.dbg)
+            self.log.write((self.cam or {}).get("name") or self.cam_id or "?", dbg)
         return step
 
     def _hold(self):
-        self.ctrl.hold(time.time())
-        self._cmd(0)
+        with self.ctrl_lock:
+            self.ctrl.hold(clock())
+            self._cmd(0)
 
     def run(self):
+        """De volglus, met opruimen wat er ook gebeurt: stopt de lus door een onverwachte fout, dan staat de
+        camera stil, zijn beeld- en positielezer gestopt en toont de UI de fout (niet eeuwig *volgt*)."""
+        crashed = None
+        try:
+            self._loop()
+        except Exception as e:  # noqa: BLE001
+            crashed = e
+        finally:
+            if crashed is not None or self.halt_on_exit:
+                if crashed is not None and self.sent is not None:
+                    self.sent = "?"                           # hoe dan ook een stop sturen
+                self.retry_at = 0.0       # de laatste stop wacht niet op de pauze na een mislukt commando
+                try:
+                    self._hold()
+                except Exception:  # noqa: BLE001
+                    pass
+            self.running = False
+            self.grabber.stop()
+            if self.poller:
+                self.poller.stop()
+            if crashed is not None:
+                try:
+                    self._status(f"volgen gestopt door een fout: {crashed}", force=True, problem=True,
+                                 detail=f"{type(crashed).__name__}: {crashed}")
+                except Exception:  # noqa: BLE001
+                    pass
+
+    def _loop(self):
         self.grabber.start()
         if self.poller:
             self.poller.start()
         self._status("verbinden…")
-        last_ts, frames, t0, last_det = 0.0, 0, time.time(), 0.0
+        last_ts, frames, t0, last_det = 0.0, 0, clock(), 0.0
+        started = clock()
         while self.running:
-            wait = last_det + 1.0 / self.MAX_FPS - time.time()
+            wait = last_det + 1.0 / self.MAX_FPS - clock()
             if wait > 0:
                 time.sleep(min(wait, 0.2))
                 continue
             frame, ts = self.grabber.latest()
-            age = time.time() - ts
+            age = clock() - ts
             if frame is None or age > self.STALE:
                 self._hold()                 # beeld valt weg: meteen stilstaan
-                if frame is None or age > 1.5 or self.grabber.error:
+                # fout pas tonen (en loggen) als het echt mis is: niet bij het verbinden of een hapering
+                if self.grabber.error or (age > 1.5 if frame is not None else clock() - started > 4.0):
                     self._status(self.grabber.error or "geen beeld van de camera",
                                  problem=True, detail=self.grabber.error_detail)
                 time.sleep(0.1)
@@ -1106,7 +1252,7 @@ class CameraTracker(threading.Thread):
                 time.sleep(0.01)
                 continue
             last_ts = ts
-            last_det = time.time()
+            last_det = clock()
             try:
                 people = self.detector.detect(frame)
             except Exception as e:  # noqa: BLE001
@@ -1117,12 +1263,12 @@ class CameraTracker(threading.Thread):
             if not self.running:
                 break
             frames += 1
-            if time.time() - t0 >= 2:
-                self.fps = frames / (time.time() - t0)
-                frames, t0 = 0, time.time()
+            if clock() - t0 >= 2:
+                self.fps = frames / (clock() - t0)
+                frames, t0 = 0, clock()
                 self._status(self.status, force=True)
 
-            now = time.time()
+            now = clock()
             hit = self._pick(people, frame, now)
             if hit:
                 if now - self.last_seen > self.LOST_STOP:
@@ -1130,7 +1276,9 @@ class CameraTracker(threading.Thread):
                 self.target = hit[0]
                 self.last_seen = now
                 self.box = tuple(float(v) for v in hit[:4])
-                self._cmd(self._steer(hit, now))
+                step = self._steer(hit, now)
+                with self.ctrl_lock:
+                    self._cmd(step)
                 base = "volgt gekozen persoon" if self.picked else "volgt"
                 lim = self.at_limit if self.at_limit and self.poller and self.poller.blocked(self.at_limit) else None
                 self._status(base + (f" · grens {'links' if lim == 'left' else 'rechts'} bereikt" if lim else ""))
@@ -1141,11 +1289,6 @@ class CameraTracker(threading.Thread):
                 self._status("zoekt gekozen persoon" if waiting
                              else "gekozen persoon kwijt" if self.picked and self.target is not None
                              else "zoekt persoon")
-        if self.halt_on_exit:
-            self._hold()
-        self.grabber.stop()
-        if self.poller:
-            self.poller.stop()
 
     def stop(self, halt=True):
         """halt=False als er direct een ander commando (preset/handbediening) volgt."""

@@ -44,7 +44,8 @@ def volg_jpeg():    # getekend podium met drie personen (verzonnen) voor het ven
     b = io.BytesIO(); im.save(b, "JPEG", quality=85)
     return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
 VOLG = """(() => { trkCamId = 'midden'; $('#dlgTrack').showModal();
-  track.midden = {type:'track', cam:'midden', on:true, status:'volgt gekozen persoon', picked:true, fps:11, detector:'yolox'};
+  track.midden = {type:'track', cam:'midden', on:true, status:'volgt gekozen persoon', picked:true, fps:8, detector:'yolox', guess:'',
+    meas:{lat:0.52, gain:1.18, fov:23.4, pos:true, known:true}};
   cfg.cameras.find(c => c.id === 'midden').track_frame = {l: 0.22, r: 0.62, x: 0.36};
   trkLookData = {source:'volgbeeld', aspect:16/9, people:[
     {i:0, cx:0.3125, cy:0.505, w:0.1, h:0.59, target:true}, {i:1, cx:0.583, cy:0.515, w:0.095, h:0.57, target:false},

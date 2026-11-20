@@ -24,8 +24,17 @@ echo "== Shell-scripts"
 bash -n "Start PTZ Control.command" || fout=1
 bash -n "PTZ Control.app/Contents/MacOS/PTZ Control" || fout=1
 
+echo "== Regelaar van persoon volgen"
+if python3 -c "import numpy, cv2" 2>/dev/null; then
+  uit="$(python3 docs/tools/tracker_test.py 2>&1)" || { echo "$uit" | grep -v '^OK '; fout=1; }
+  uit="$(python3 docs/tools/volg_test.py --check 2>&1)" || fout=1
+  echo "$uit" | tail -2
+else
+  echo "overgeslagen (numpy/opencv niet geïnstalleerd)"
+fi
+
 echo "== Geen geheimen of lokale data in git"
-for p in cameras.json thumbs toegang.json workspaces.json activiteit.log; do
+for p in cameras.json thumbs toegang.json workspaces.json activiteit.log volgen.csv volgen.1.csv; do
   if git ls-files --error-unmatch "$p" >/dev/null 2>&1; then echo "FOUT: $p staat in git"; fout=1; fi
 done
 

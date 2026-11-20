@@ -101,7 +101,17 @@ jobs:
         run: pip install -r packaging/requirements-build.txt
 
       - name: Snelle controle
-        run: python -m py_compile ptz_control.py tracker.py backup.py youtube.py
+        run: python -m py_compile ptz_control.py tracker.py backup.py youtube.py updater.py wininstall.py midi.py roland_v1hd.py actlog.py oefen.py liederen.py
+
+      - name: Regelaar van persoon volgen testen (nagebootste camera)
+        env:
+          PYTHONUTF8: "1"
+        run: python docs/tools/volg_test.py --check
+
+      - name: Volgmodule testen (opruimen na fouten, meetlog)
+        env:
+          PYTHONUTF8: "1"
+        run: python docs/tools/tracker_test.py
 
       - name: Persoonsdetector ophalen en testen (half silhouet)
         shell: bash
