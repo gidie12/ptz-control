@@ -1234,7 +1234,6 @@
     </select></label>
   <div class="small muted" id="pFocusInfo"></div>
   <div class="stackbtn">
-    <button class="icon" id="pRecall"><svg class="ic" data-i="play" aria-hidden="true"><use href="#i-play"/></svg> Oproepen</button>
     <button class="icon" id="pStore"><svg class="ic" data-i="target" aria-hidden="true"><use href="#i-target"/></svg> Huidige camerapositie hier opslaan</button>
     <button class="icon" id="pThumb"><svg class="ic" data-i="camera" aria-hidden="true"><use href="#i-camera"/></svg> Thumbnail vernieuwen (van huidig beeld)</button>
     <button class="icon danger" id="pClear"><svg class="ic" data-i="trash" aria-hidden="true"><use href="#i-trash"/></svg> Naam en thumbnail wissen</button>
@@ -2060,7 +2059,6 @@ $("#pSave").onclick = async () => {
   $("#dlgPreset").close(); await saveConfig();
 };
 $("#pName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#pSave").click(); });
-$("#pRecall").onclick = () => { $("#dlgPreset").close(); presetClick(edit.camId, edit.n); };
 $("#pStore").onclick = async () => {
   if (!confirm("Huidige camerapositie op deze preset opslaan?")) return;
   const r = await cmd("preset_set", { n: edit.n }, edit.camId);
@@ -5150,7 +5148,7 @@ const TOUR_STEPS = [
       <p>Na het oproepen staat er <b>ONDERWEG…</b> op de tegel tot de camera stilstaat. Dan kun je veilig op de mixer overschakelen.</p>
       <p class="muted">Presets 90–99 zijn van de camera zelf (o.a. 95 = OSD-menu) en worden overgeslagen.</p>` },
   { target: ["#presetArea .tile .edit", "#presetArea"], title: "Preset bewerken", text: () => `<p>Het potlood (of rechtsklik op een tegel) opent het presetvenster:</p>
-      <ul><li>naam en <b>kleur</b> geven (een gekleurde streep bovenop de tegel, bijv. per soort shot)</li><li>oproepen of de huidige positie hier opslaan</li><li>thumbnail vernieuwen</li>
+      <ul><li>naam en <b>kleur</b> geven (een gekleurde streep bovenop de tegel, bijv. per soort shot)</li><li>de huidige camerapositie hier opslaan</li><li>thumbnail vernieuwen</li>
       <li>${ic("track")} <i>na oproepen automatisch volgen</i></li><li><b>Focus bij oproepen</b>: standaard zet de app autofocus of handmatige focus terug zoals die stond toen je de preset opsloeg; of kies <i>altijd autofocus</i>, <i>handmatig</i> of <i>niet aanpassen</i></li><li>naam en foto wissen</li></ul>` },
   { target: ["#btnStore"], title: "Preset opslaan", text: () => `<p>Zet de camera goed, klik op <b>＋ Preset opslaan</b> en tik op de tegel waar de positie moet komen. Er wordt meteen een foto gemaakt voor de tegel.</p>
       <p>Met de Xbox-controller: <b>Menu</b>-knop vasthouden en een presetknop indrukken.</p>
