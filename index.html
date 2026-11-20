@@ -480,9 +480,7 @@
     padding: 1px 6px; white-space: nowrap; flex-shrink: 0; align-self: center; display: inline-flex; gap: 3px; align-items: center; }
   .locktag .ic { width: 11px; height: 11px; }
   .tab .locktag { margin-left: 6px; }
-  .col.locked .grid .tile { opacity: .5; cursor: not-allowed; filter: grayscale(.6); }
-  .col.locked .grid .tile .edit { cursor: pointer; }
-  .storing .col.locked .grid .tile { opacity: 1; filter: none; cursor: pointer; }
+  /* 🧑 slot: tegels zien er gewoon uit (20 nov 2026: niet grijs, geen slotjes; opslaan/bewerken kan wel); het slot staat alleen in de kolomkop (SLOT) */
   body.viewonly .colhead .lockbtn { display: none !important; }
   .mixlock { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
   .mixlock input:disabled + span { opacity: .5; }
