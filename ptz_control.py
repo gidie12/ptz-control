@@ -1188,6 +1188,12 @@ FOLLOW_TIMERS = {}
 STOPS_TRACKING = {"move", "stop", "home", "preset_call", "preset_set"}
 
 
+# 🧑 Meetlog van het volgen (om af te stellen): één regel per bekeken beeld in DATA_DIR/volgen.csv, begint opnieuw
+# na 20.000 regels. PTZ_TRACK_LOG=0 zet het uit. Download: GET /api/track/log.csv.
+TRACK_LOG = os.environ.get("PTZ_TRACK_LOG", "1") != "0"
+TRACK_LOG_PATH = os.path.join(DATA_DIR, "volgen.csv")
+
+
 def tracking_error():
     if _tracker is None:
         return "tracker.py niet gevonden"
@@ -1226,7 +1232,7 @@ def track_tune(cam):
 
 
 class PanReader:
-    """Panpositie via VISCA met één blijvende verbinding (opnieuw verbinden na een fout)."""
+    """Panpositie (en zoom) via VISCA met één blijvende verbinding (opnieuw verbinden na een fout)."""
 
     def __init__(self, cam):
         self.cam = cam
@@ -1237,6 +1243,16 @@ class PanReader:
             if self.sock is None:
                 self.sock = _backup.visca_session(self.cam)
             return _backup.read_pan(self.sock)
+        except Exception:
+            self.close()
+            raise
+
+    def zoom(self):
+        """Zoomstand (0 = uitgezoomd … ZOOM_MAX), voor de beeldhoek bij volgen."""
+        try:
+            if self.sock is None:
+                self.sock = _backup.visca_session(self.cam)
+            return _backup.nib(_backup.visca_inq(self.sock, "81 09 04 47 FF"))
         except Exception:
             self.close()
             raise
@@ -1277,10 +1293,13 @@ def start_tracking(cam, pick=None):
                     "invert": bool(cam.get("track_invert")),
                     "frame": track_frame(cam),
                     "tune": track_tune(cam),
-                    "pick": pick}
-        limits = _tracker.norm_limits(cam.get("track_limits"))
-        if limits:
-            settings["limits"], settings["read_pan"] = limits, PanReader(cam)
+                    "pick": pick,
+                    # de regelaar leest altijd de positie en zoom (echte draaisnelheid, beeldhoek); lukt dat
+                    # niet via VISCA, dan volgt hij op schatting (status-event `note`)
+                    "read_pan": PanReader(cam),
+                    "limits": _tracker.norm_limits(cam.get("track_limits")),
+                    "zoom_max": ZOOM_MAX,
+                    "log": TRACK_LOG_PATH if TRACK_LOG else None}
         t = _tracker.CameraTracker(
             cam, stream_url(cam), det,
             send=lambda a, args, c=cam: _track_send(c, a, args),
@@ -1345,8 +1364,8 @@ def track_limit_info(cam):
     lim = cam.get("track_limits") or {}
     info = {"limits": {k: lim[k] for k in ("left", "right") if isinstance(lim.get(k), int)}, "pan": None, "pan_error": ""}
     t = TRACKERS.get(cam["id"])
-    if t and t.guard and t.guard.pan is not None:
-        info["pan"] = t.guard.pan
+    if t and t.pan() is not None:
+        info["pan"] = t.pan()
     elif time.time() - PAN_FAIL.get(cam["id"], (0, ""))[0] < 60:
         info["pan_error"] = PAN_FAIL[cam["id"]][1]    # net mislukt: niet bij elk beeld 2 s wachten
     else:
@@ -1385,12 +1404,7 @@ def set_track_limit(cam, side):
         _write(cfg)
     t = TRACKERS.get(cam["id"])
     if t:
-        if t.guard:
-            t.set_limits(lim)
-        elif _tracker.norm_limits(lim):
-            # tracker liep zonder grenzen: opnieuw starten met grenzen (zelfde gekozen persoon zoeken)
-            pick = (t.target, t.model) if t.picked and t.target is not None else None
-            start_tracking(find_camera(cam["id"]), pick=pick)
+        t.set_limits(lim)
     broadcast({"type": "config"})
     return {"ok": True, **track_limit_info(find_camera(cam["id"]))}
 
@@ -2299,6 +2313,17 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/log.txt":
             name = f"ptz-control-activiteit-{datetime.date.today().isoformat()}.txt"
             return self._send(200, ACTLOG.text(), "text/plain; charset=utf-8",
+                              {"Content-Disposition": f'attachment; filename="{name}"'})
+        if u.path == "/api/track/log.csv":   # meetlog van het volgen (geen geheimen: posities en snelheden)
+            try:
+                with open(TRACK_LOG_PATH, "rb") as f:
+                    data = f.read()
+            except OSError:
+                data = b""
+            if not data:
+                return self._send(404, {"ok": False, "error": "Nog geen meetlog: zet eerst persoon volgen aan."})
+            name = f"ptz-control-volgen-{datetime.date.today().isoformat()}.csv"
+            return self._send(200, data, "text/csv; charset=utf-8",
                               {"Content-Disposition": f'attachment; filename="{name}"'})
         if u.path == "/api/zoomscale":   # 🧑 snelheid volgt de zoom: huidige factor van een camera (wacht op een meting)
             try:

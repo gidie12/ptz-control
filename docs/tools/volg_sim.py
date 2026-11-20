@@ -8,9 +8,14 @@ bovenlijf) gaat wel door de echte code van tracker.py, net als het kader en de p
     python docs/tools/volg_sim.py /tmp/ptz-volg            # bediening op http://127.0.0.1:8080
     curl http://127.0.0.1:8091/state                        # toestand van de simulatie (JSON)
 
-Aannames: beeldhoek = 1 eenheid wereld, 1 snelheidsstap = 4°/s bij 60° beeldhoek (zoals de eerdere simulaties).
-Omgeving: PTZ_SIM_LAT = vertraging van het beeld in s (RTSP-buffer; standaard 0), PTZ_SIM_STEP = beeldbreedte/s
-per snelheidsstap (standaard 4/60; ingezoomd hoger, bv. 0.27 bij 15° beeldhoek).
+Aannames: beeldhoek = 1 eenheid wereld, 1 snelheidsstap = 4°/s (zoals de eerdere simulaties).
+Omgeving: PTZ_SIM_LAT = vertraging van het beeld in s (RTSP-buffer; standaard 0), PTZ_SIM_FOV = beeldhoek in graden
+(standaard 58 = uitgezoomd; 15 = ingezoomd), PTZ_SIM_DEG = graden/s per snelheidsstap (standaard 4),
+PTZ_SIM_STEP = beeldbreedte/s per snelheidsstap (standaard PTZ_SIM_DEG / PTZ_SIM_FOV), PTZ_SIM_NOVISCA=1 = de camera
+geeft geen positie (de regelaar volgt dan op schatting). De nagebootste VISCA-poort geeft pan en zoom in de eenheden
+die tracker.py aanneemt (14,4 tellen per graad, beeldhoek uit de zoom).
+
+Snel en zonder klok (alleen de regelaar, veel situaties achter elkaar): docs/tools/volg_test.py.
 """
 import json
 import math
@@ -46,7 +51,8 @@ import ptz_control  # noqa: E402
 
 W, H = 640, 360
 SKIN = (140, 170, 225)          # BGR; de detector zoekt precies deze kleur
-STEP = float(os.environ.get("PTZ_SIM_STEP") or 4.0 / 60.0)   # wereld-eenheden per seconde per snelheidsstap
+FOV = float(os.environ.get("PTZ_SIM_FOV") or 58.0)             # beeldhoek in graden (1 wereld-eenheid)
+STEP = float(os.environ.get("PTZ_SIM_STEP") or float(os.environ.get("PTZ_SIM_DEG") or 4.0) / FOV)   # wereld/s per snelheidsstap
 LAT = float(os.environ.get("PTZ_SIM_LAT") or 0)                # s vertraging van het beeld
 
 
@@ -175,7 +181,12 @@ tracker.Detector = lambda dirs=None: HeadDetector()
 
 
 def visca_server():
-    """Alleen de positie-inquiry 81 09 06 12 FF: pan = wereld-x × 1000 (rechts = hoger), tilt 0."""
+    """Positie 81 09 06 12 FF (pan in VISCA-tellen: wereld-x × beeldhoek × tellen per graad, rechts = hoger; tilt 0)
+    en zoom 81 09 04 47 FF (de zoomstand waarbij tracker.fov_of() de beeldhoek PTZ_SIM_FOV geeft)."""
+    import math as _m
+    zoom = round(16384 * max(0.0, min(1.0, _m.log(tracker.WIDE_FOV / max(0.1, min(tracker.WIDE_FOV, FOV)))
+                                         / _m.log(tracker.ZOOM_RATIO))))
+    znib = bytes((zoom >> s) & 0xF for s in (12, 8, 4, 0))
     import socket
     srv = socket.socket()
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -193,9 +204,11 @@ def visca_server():
                 while b"\xff" in buf:
                     msg, buf = buf.split(b"\xff", 1)
                     if msg == bytes.fromhex("81090612"):
-                        p = round(SIM.step()[1] * 1000) & 0xFFFF
+                        p = round(SIM.step()[1] * FOV * tracker.COUNTS_PER_DEG) & 0xFFFF
                         nib = bytes((p >> s) & 0xF for s in (12, 8, 4, 0))
                         c.sendall(b"\x90\x50" + nib + b"\x00\x00\x00\x00\xff")
+                    elif msg == bytes.fromhex("81090447"):
+                        c.sendall(b"\x90\x50" + znib + b"\xff")
                     else:
                         c.sendall(bytes.fromhex("906002ff"))
 
@@ -204,7 +217,8 @@ def visca_server():
         threading.Thread(target=client, args=(conn,), daemon=True).start()
 
 
-threading.Thread(target=visca_server, daemon=True).start()
+if os.environ.get("PTZ_SIM_NOVISCA") != "1":
+    threading.Thread(target=visca_server, daemon=True).start()
 
 
 class StateHandler(BaseHTTPRequestHandler):
