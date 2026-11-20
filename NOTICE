@@ -1,0 +1,17 @@
+PTZ Control
+
+Persoon volgen (tracker.py: de klassen PanFollower, Identity en TrackLog) bevat werk dat is overgezet en aangepast
+van Churchfront Video (Sources/CueVideo/Tracker.swift en Identity.swift):
+
+    Churchfront Video
+    Copyright 2026 Churchfront LLC
+    Licensed under the Apache License, Version 2.0
+    https://github.com/Churchfront/churchfront-video
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Wijzigingen ten opzichte van het origineel: van Swift naar Python; alleen de pan-as (geen tilt, zoom of
+kadrering op schotgrootte); VISCA-snelheidsstappen in plaats van graden per seconde; een kleurhistogram in plaats
+van Apple Vision voor het uiterlijk; het volgkader als dode zone; compensatie voor de beeldvertraging.
+"Churchfront" is een geregistreerd merk van Churchfront LLC; PTZ Control is daar niet aan verbonden.
+
+Persoonsdetectie in de losse app: YOLOX-tiny (Megvii Inc., Apache License 2.0).

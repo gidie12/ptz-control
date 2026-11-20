@@ -558,6 +558,7 @@
   .limbar .limnow { position: absolute; top: 4px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--accent); }
   .limbar .limtxt { position: absolute; top: -6px; font-size: 11px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
   .trklim .held { outline: 3px solid var(--accent); }
+  a.icon { text-decoration: none; font: inherit; }
   .tunegrid { display: grid; grid-template-columns: max-content 1fr 4.5em; gap: 8px 12px; align-items: center; margin: 10px 0 4px; }
   .tunegrid label { font-size: 13px; }
   .tunegrid input { width: 100%; }
@@ -1645,8 +1646,8 @@
 </dialog>
 <dialog id="dlgTrack">
   <h3><svg class="ic" data-i="track" aria-hidden="true"><use href="#i-track"/></svg> Volgen instellen</h3>
-  <p class="small">Sleep de <b>oranje lijnen</b> om het kader te zetten: zolang de persoon daarbinnen blijft, staat de camera stil.
-    Loopt hij eruit, dan draait de camera tot hij weer op de <b>witte stippellijn</b> staat. <b>Klik op een persoon</b> om precies die te volgen;
+  <p class="small">Sleep de <b>oranje lijnen</b> om het kader te zetten: staat de persoon stil binnen het kader, dan staat de camera ook stil.
+    Loopt hij, of komt hij eruit, dan loopt de camera mee en houdt hem op de <b>witte stippellijn</b>. <b>Klik op een persoon</b> om precies die te volgen;
     de camera blijft dan bij die persoon (op kleding herkend), ook als iemand anders voorbij loopt. Alleen pan: tilt en zoom blijven staan.</p>
   <div class="trkrow">Camera <select id="trkCam" aria-label="Camera"></select>
     <span class="trkst" id="trkState">Volgen uit</span></div>
@@ -1683,16 +1684,17 @@
     <div class="trkhelp" id="trkLimHelp"></div>
   </div>
   <div class="trklim" id="trkTune">
-    <h4><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Afstelling (tegen heen en weer slingeren)</h4>
-    <div class="trkhelp" style="margin-top:4px">Slingert de camera nog heen en weer? Zet de beginsnelheid lager of laat hem langer rusten na een stop.
-      Loopt hij te ver achter de persoon aan? Zet de beginsnelheid hoger. Geldt voor deze camera, ook tijdens het volgen.</div>
+    <h4><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Afstelling</h4>
+    <div class="trkhelp" style="margin-top:4px">De camera loopt mee met de persoon en houdt hem op de witte stippellijn; staat hij stil binnen het kader, dan staat de camera ook stil.
+      Te onrustig? Zet de volgsnelheid lager of <i>Meelopen vanaf</i> hoger. Loopt hij achter? Volgsnelheid hoger. Geldt voor deze camera, ook tijdens het volgen.</div>
     <div class="tunegrid">
-      <label for="tuScale" title="Lager als de camera nog heen en weer gaat, hoger als hij achter de persoon aan loopt. Standaard 50%.">Beginsnelheid</label><input type="range" id="tuScale" data-k="scale0" min="0.1" max="1" step="0.05" title="Lager als de camera nog heen en weer gaat, hoger als hij achter de persoon aan loopt. Standaard 50%."><span id="tuScaleV"></span>
-      <label for="tuSettle" title="Hoe lang de camera na een stop minstens stilstaat. Langer = rustiger beeld, maar later bijdraaien. Standaard 0,4 s.">Rust na een stop</label><input type="range" id="tuSettle" data-k="settle" min="0" max="3" step="0.1" title="Hoe lang de camera na een stop minstens stilstaat. Langer = rustiger beeld, maar later bijdraaien. Standaard 0,4 s."><span id="tuSettleV"></span>
-      <label for="tuLead" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf. Hoger als hij bij de start nog doorschiet. Standaard 0,5 s.">Vertraging beeld (begin)</label><input type="range" id="tuLead" data-k="lead" min="0.1" max="1.5" step="0.1" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf. Hoger als hij bij de start nog doorschiet. Standaard 0,5 s."><span id="tuLeadV"></span>
+      <label for="tuSpeed" title="Hoe stevig de camera naar de persoon toe draait. Lager = rustiger beeld, hoger = strakker gevolgd. Standaard 100%.">Volgsnelheid</label><input type="range" id="tuSpeed" data-k="speed" min="0.5" max="2" step="0.1" title="Hoe stevig de camera naar de persoon toe draait. Lager = rustiger beeld, hoger = strakker gevolgd. Standaard 100%."><span id="tuSpeedV"></span>
+      <label for="tuLead" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf tijdens het volgen. Standaard 0,45 s.">Vertraging beeld (begin)</label><input type="range" id="tuLead" data-k="lead" min="0.1" max="1.5" step="0.05" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf tijdens het volgen. Standaard 0,45 s."><span id="tuLeadV"></span>
+      <label for="tuWalk" title="Beweegt de persoon sneller dan dit (deel van de beeldbreedte per seconde), dan telt het als lopen en loopt de camera mee. Lager = eerder meelopen, hoger = rustiger bij wiegen. Standaard 12%.">Meelopen vanaf</label><input type="range" id="tuWalk" data-k="walk" min="0.05" max="0.4" step="0.01" title="Beweegt de persoon sneller dan dit (deel van de beeldbreedte per seconde), dan telt het als lopen en loopt de camera mee. Lager = eerder meelopen, hoger = rustiger bij wiegen. Standaard 12%."><span id="tuWalkV"></span>
       <label for="tuFps" title="Hoe vaak per seconde de app naar de persoon kijkt. Meer = iets nauwkeuriger, maar kost meer rekenkracht van de computer. Standaard 8.">Detecties per seconde</label><input type="range" id="tuFps" data-k="fps" min="1" max="25" step="1" title="Hoe vaak per seconde de app naar de persoon kijkt. Meer = iets nauwkeuriger, maar kost meer rekenkracht van de computer. Standaard 8."><span id="tuFpsV"></span>
     </div>
     <div class="trkrow"><span class="trkhelp" id="trkTuneHelp" style="margin:0"></span><span style="flex:1"></span>
+      <a class="icon" id="trkLogDl" href="/api/track/log.csv" download title="Meetlog van het volgen (CSV): wat de app zag en deed, om af te stellen"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Meetlog</a>
       <button class="icon" id="trkTuneReset" title="Afstelling terug naar de standaard"><svg class="ic" data-i="reset" aria-hidden="true"><use href="#i-reset"/></svg> Afstelling standaard</button></div>
   </div>
   <div class="actions"><span></span><button class="icon" id="trkDone">Sluiten</button></div>
@@ -2874,18 +2876,20 @@ async function trkSaveFrame() {
   if (!r.ok) toast(r.error || "Kader niet opgeslagen"); else c.track_frame = r.frame;
   trkRender();
 }
-/* ---- afstelling van de regelaar (tegen slingeren), per camera in cameras.json (track_tune) */
-const TUNE_DEFAULT = { scale0: 0.5, settle: 0.4, lead: 0.5, fps: 8 };
+/* ---- afstelling van de regelaar, per camera in cameras.json (track_tune) */
+const TUNE_DEFAULT = { speed: 1, lead: 0.45, walk: 0.12, fps: 8 };
 let trkTuneDef = { ...TUNE_DEFAULT }, trkTuneT = null;
-const TUNE_FMT = { scale0: v => Math.round(v * 100) + "%", settle: v => (+v).toFixed(1) + " s", lead: v => (+v).toFixed(1) + " s", fps: v => Math.round(v) + "/s" };
-const trkTune = () => ({ ...trkTuneDef, ...(camById(trkCamId)?.track_tune || {}) });
+const TUNE_FMT = { speed: v => Math.round(v * 100) + "%", lead: v => (+v).toFixed(2).replace(".", ",") + " s", walk: v => Math.round(v * 100) + "%/s", fps: v => Math.round(v) + "/s" };
+// alleen de instellingen van deze regelaar tellen (een oudere afstelling had scale0/settle)
+const trkTuneOwn = () => Object.fromEntries(Object.entries(camById(trkCamId)?.track_tune || {}).filter(([k]) => k in TUNE_DEFAULT));
+const trkTune = () => ({ ...trkTuneDef, ...trkTuneOwn() });
 function trkTuneRender() {
   const t = trkTune();
   $$("#trkTune input[data-k]").forEach(i => {
     if (document.activeElement !== i) i.value = t[i.dataset.k];
     $("#" + i.id + "V").textContent = TUNE_FMT[i.dataset.k](i.value);
   });
-  const custom = !!camById(trkCamId)?.track_tune;
+  const custom = Object.keys(trkTuneOwn()).length > 0;
   $("#trkTuneReset").disabled = !custom;
   $("#trkTuneHelp").textContent = custom ? "Eigen afstelling voor deze camera." : "Standaardafstelling.";
 }
@@ -5168,9 +5172,9 @@ const TOUR_STEPS = [
       <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
   { target: ["#btnTrackSet"], title: ic("image") + " Kader en persoon kiezen", text: () => `<p><b>Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>
       <ul><li><b>Klik op een persoon</b> om precies die te volgen; komt iemand anders voorbij, dan blijft de camera bij jouw keuze.</li>
-      <li>Sleep de <b>oranje lijnen</b> voor het kader: binnen het kader staat de camera stil, loopt de persoon eruit, dan draait hij terug naar de <b>witte stippellijn</b>.</li>
+      <li>Sleep de <b>oranje lijnen</b> voor het kader: staat de persoon stil binnen het kader, dan staat de camera ook stil; loopt hij, of komt hij eruit, dan loopt de camera mee en houdt hem op de <b>witte stippellijn</b>.</li>
       <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met de pijlen en klik <i>Grens … = hier</i>).</li>
-      <li><b>Afstelling</b>: slingert de camera heen en weer, zet dan de beginsnelheid lager of de rust na een stop langer; per camera.</li></ul>` },
+      <li><b>Afstelling</b>: te onrustig, zet dan de volgsnelheid lager of <i>Meelopen vanaf</i> hoger; per camera. <b>Meetlog</b> downloadt wat de app zag en deed.</li></ul>` },
   { target: ["#padCard"], small: ["#padBar"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
       <li>D-pad ←/→ = andere camera, ↑/↓ = focus ver/dichtbij (vasthouden), RB = volgen</li><li>View = alles stoppen</li></ul>
