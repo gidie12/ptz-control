@@ -59,6 +59,21 @@ time.sleep(3.5)
 check("stop mislukte 2×, daarna toch aangekomen", fail["n"] == 2 and sent2 and sent2[-1] == "stop")
 t.stop(); t.join(2)
 
+# 2b. move mislukt (time-out), direct daarna volgen uit: de laatste stop gaat toch de deur uit
+sent3 = []
+def send3(a, args):
+    sent3.append(a)
+    if a == "move": raise OSError("time-out")
+t, st3 = mk(send3); t.start(); time.sleep(0.5)
+t.stop(); t.join(3)
+check("volgen uit direct na een mislukt commando: toch een stop", sent3 and sent3[-1] == "stop")
+
+# 2c. besturing blijft mislukken: de fout blijft staan (geen wisselen fout/goed, dus geen volle log)
+t, st4 = mk(lambda a, args: (_ for _ in ()).throw(OSError("401"))); t.start(); time.sleep(3.2)
+t.stop(halt=False); t.join(3)
+flips = sum(1 for x, y in zip(st4, st4[1:]) if x["problem"] != y["problem"])
+check("besturing mislukt steeds: status blijft fout (%d wissels)" % flips, any(x["problem"] for x in st4) and flips <= 1)
+
 # 3. zonder poller: guess-melding
 t, st = mk(lambda a, g: None); t.start(); time.sleep(0.6); t.stop(); t.join(2)
 check("zonder positielezer: guess gevuld", st[-1]["guess"] == "camerapositie lezen staat uit" and st[-1]["meas"]["pos"] is False)
@@ -84,6 +99,9 @@ check("meetlog schuift door als het vol is", os.path.exists(p1) and len(open(p, 
 open(p, "w").write("tijd,camera,x\n1,a,2\n")
 L4 = T.TrackLog(p); L4.write("c", d)
 check("oud formaat (v1.0.40) schuift door, nieuw bestand begint", open(p, encoding="utf-8-sig").readline().strip() == T.TrackLog.COLS and "tijd,camera" in open(p1).read())
+pe = os.path.join(TMP, "e.csv"); open(pe, "w").close(); open(os.path.join(TMP, "e.1.csv"), "w").write("bewaard")
+Le = T.TrackLog(pe); Le.write("c", d)
+check("leeg logbestand overschrijft het vorige niet", open(os.path.join(TMP, "e.1.csv")).read() == "bewaard" and len(open(pe, encoding="utf-8-sig").read().splitlines()) == 2)
 # 6. afstelling: vertraging blijft staan als alleen een andere schuif verandert
 c = T.PanFollower(); c.lat = 0.81
 c.set_tune({"speed": 1.5}); check("set_tune (andere schuif) laat de gemeten vertraging staan", c.lat == 0.81)

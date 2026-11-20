@@ -678,9 +678,13 @@ class PanFollower:
             return
         # tegen de huidige schatting afgezet: omhoog alleen bij duidelijk bewijs (een te hoge vertraging laat de
         # regelaar zelf heen en weer draaien, en dat heen en weer draaien lijkt dan weer op een hoge vertraging)
-        cur = res[min(range(len(cands)), key=lambda i: abs(cands[i] - self.lat))]
-        if cur != float("inf") and res[best] > cur * (0.4 if cands[best] > self.lat else 0.85):
-            return
+        ci = min(range(len(cands)), key=lambda i: abs(cands[i] - self.lat))
+        cur = res[ci]
+        lat_ok = best == ci or cur == float("inf") or res[best] <= cur * (0.4 if cands[best] > self.lat else 0.85)
+        if not lat_ok:
+            if measured or cur == float("inf"):
+                return
+            best = ci       # de vertraging blijft staan; de draaisnelheid is bij de huidige schatting wel te meten
         finite = sorted(r for r in res if r != float("inf"))
         if res[best] >= 0.5 * finite[len(finite) // 2]:
             return          # geen duidelijke winnaar
@@ -693,7 +697,8 @@ class PanFollower:
             return          # het draaien van de camera verklaart het beeld niet (de persoon bewoog zelf)
         self.gain += (g - self.gain) * (0.5 if not self.gain_known else 0.3)
         self.gain_known = True
-        self._lat_to(cands[best])
+        if lat_ok:
+            self._lat_to(cands[best])
 
     def _lat_to(self, seen):
         """Omlaag snel, omhoog voorzichtig: te laag geschat geeft wat achterlopen, te hoog geschat slingeren."""
@@ -850,12 +855,21 @@ class TrackLog:
                 lines = sum(1 for _ in f) if keep else 0
         except OSError:
             pass
-        if os.path.exists(self.path) and (not keep or lines >= self.MAX_LINES):
+        try:
+            empty = os.path.getsize(self.path) == 0
+        except OSError:
+            empty = True
+        if not empty and (not keep or lines >= self.MAX_LINES):
             old = os.path.splitext(self.path)[0] + ".1.csv"
             try:
                 os.replace(self.path, old)
+                keep, lines = False, 0
             except OSError:
-                pass
+                # vorige log staat open (Excel): niets weggooien, in het huidige bestand doorschrijven
+                if not keep:
+                    raise
+                lines = 0         # pas na nog een vol bestand opnieuw proberen
+        elif empty:
             keep, lines = False, 0
         self.f = open(self.path, "a" if keep else "w", encoding="utf-8", newline="")
         if not keep:
@@ -1020,6 +1034,10 @@ class CameraTracker(threading.Thread):
 
     def _status(self, status, force=False, problem=False, detail=""):
         """problem=True → de UI toont dit als fout (rood), niet als gewone voortgang."""
+        if self.sent == "?" and not problem:
+            if not force:
+                return            # besturing mislukt: de fout blijft staan tot een commando weer aankomt
+            status, problem = self.status, self.problem
         if status != self.status or problem != self.problem or force:
             self.status, self.problem = status, problem
             c = self.ctrl
@@ -1036,7 +1054,7 @@ class CameraTracker(threading.Thread):
                             "note": getattr(self.detector, "note", ""), "picked": self.picked,
                             "frame": self.frame_cfg, "guess": guess,
                             "meas": {"lat": round(c.lat, 2), "gain": round(c.gain, 2), "fov": round(c.fov, 1),
-                                     "pos": c.uses_position(), "known": c.gain_known}})
+                                     "pos": c.uses_position() and not guess, "known": c.gain_known}})
 
     def _cmd(self, step):
         """Snelheidsstap met teken (commando-ruimte: positief = rechts) naar de camera; alleen bij verandering."""
@@ -1191,7 +1209,8 @@ class CameraTracker(threading.Thread):
         finally:
             if crashed is not None or self.halt_on_exit:
                 if crashed is not None and self.sent is not None:
-                    self.sent, self.retry_at = "?", 0.0       # hoe dan ook een stop sturen
+                    self.sent = "?"                           # hoe dan ook een stop sturen
+                self.retry_at = 0.0       # de laatste stop wacht niet op de pauze na een mislukt commando
                 try:
                     self._hold()
                 except Exception:  # noqa: BLE001

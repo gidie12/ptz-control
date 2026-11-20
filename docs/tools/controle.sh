@@ -34,7 +34,7 @@ else
 fi
 
 echo "== Geen geheimen of lokale data in git"
-for p in cameras.json thumbs toegang.json workspaces.json activiteit.log; do
+for p in cameras.json thumbs toegang.json workspaces.json activiteit.log volgen.csv volgen.1.csv; do
   if git ls-files --error-unmatch "$p" >/dev/null 2>&1; then echo "FOUT: $p staat in git"; fout=1; fi
 done
 

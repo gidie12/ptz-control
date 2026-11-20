@@ -21,6 +21,7 @@ import datetime
 import hashlib
 import hmac
 import json
+import math
 import os
 import queue
 import re
@@ -1190,8 +1191,8 @@ FOLLOW_TIMERS = {}
 STOPS_TRACKING = {"move", "stop", "home", "preset_call", "preset_set"}
 
 
-# 🧑 Meetlog van het volgen (om af te stellen): één regel per bekeken beeld in DATA_DIR/volgen.csv, begint opnieuw
-# na 20.000 regels. PTZ_TRACK_LOG=0 zet het uit. Download: GET /api/track/log.csv.
+# 🧑 Meetlog van het volgen (om af te stellen): één regel per bekeken beeld in DATA_DIR/volgen.csv; loopt door na een
+# herstart en schuift na 150.000 regels door naar volgen.1.csv (tracker.TrackLog). PTZ_TRACK_LOG=0 zet het uit. Download: GET /api/track/log.csv.
 TRACK_LOG = os.environ.get("PTZ_TRACK_LOG", "1") != "0"
 # Noodrem: PTZ_TRACK_POLL=0 = tijdens volgen de camerapositie en zoom NIET via VISCA lezen (als de camera's slecht
 # tegen de vele inquiries kunnen). De regelaar volgt dan op schatting; met pan-grenzen wordt er toch gelezen.
@@ -1301,7 +1302,7 @@ def start_tracking(cam, pick=None):
                     "pick": pick,
                     # de regelaar leest altijd de positie en zoom (echte draaisnelheid, beeldhoek); lukt dat
                     # niet via VISCA, dan volgt hij op schatting (status-event `note`)
-                    "read_pan": PanReader(cam) if TRACK_POLL or cam.get("track_limits") else None,
+                    "read_pan": PanReader(cam) if TRACK_POLL or _tracker.norm_limits(cam.get("track_limits")) else None,
                     "limits": _tracker.norm_limits(cam.get("track_limits")),
                     "zoom_max": ZOOM_MAX,
                     "log": TRACK_LOG_PATH if TRACK_LOG else None}
@@ -1329,7 +1330,7 @@ def track_look(cam):
     t = TRACKERS.get(cam["id"])
     if t:
         f, ts = t.grabber.latest()
-        if f is not None and time.time() - ts < 1.5:
+        if f is not None and _tracker.clock() - ts < 1.5:
             frame, source = f.copy(), "volgbeeld"
     if frame is None:
         try:
@@ -1521,6 +1522,13 @@ def set_track_frame(cam_id, frame):
     return frame
 
 
+def _is_num(v):
+    try:
+        return v is not None and not isinstance(v, bool) and math.isfinite(float(v))
+    except (TypeError, ValueError):
+        return False
+
+
 def set_track_tune(cam_id, tune, reset=False):
     """Afstelling van de pan-regelaar opslaan (reset = terug naar standaard) en een lopende tracker aanpassen."""
     with LOCK:
@@ -1530,7 +1538,7 @@ def set_track_tune(cam_id, tune, reset=False):
             raise KeyError(f"Camera {cam_id} niet gevonden")
         if reset:
             cam.pop("track_tune", None)
-        elif not isinstance(tune, dict) or not any(k in tune for k in _tracker.TUNE_RANGE):
+        elif not isinstance(tune, dict) or not any(_is_num(tune.get(k)) for k in _tracker.TUNE_RANGE):
             raise ValueError("Geen afstelling meegegeven (speed, lead, walk of fps).")
         else:
             # ongeldige waarden laten de opgeslagen waarde staan (niet terug naar de standaard)

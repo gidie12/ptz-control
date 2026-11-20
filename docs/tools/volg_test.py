@@ -201,8 +201,8 @@ def main():
         b, kw_, afw, omk = (v / n for v in tot["nieuw"])
         ok = b <= CHECK["buiten"] and kw_ <= CHECK["kwijt"] and omk <= CHECK["omk"]
         print("OK: regelaar binnen de drempels" if ok else
-              "MISLUKT: regelaar slechter dan de drempels (buiten ≤ %(buiten)d%%, kwijt ≤ %(kwijt)d%%, "
-              "omkeringen ≤ %(omk)d/min)" % CHECK)
+              "MISLUKT: regelaar slechter dan de drempels (buiten <= %(buiten)d%%, kwijt <= %(kwijt)d%%, "
+              "omkeringen <= %(omk)d/min)" % CHECK)
         sys.exit(0 if ok else 1)
 
 
