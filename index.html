@@ -551,7 +551,10 @@
   .limbar .limnow { position: absolute; top: 4px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--accent); }
   .limbar .limtxt { position: absolute; top: -6px; font-size: 11px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
   .trklim .held { outline: 3px solid var(--accent); }
-  a.icon { text-decoration: none; font: inherit; }
+  .trkmeas { font-size: 12px; color: var(--muted); margin: 8px 0 2px; padding: 6px 10px; border: 1px solid var(--line);
+             border-radius: 9px; background: var(--panel2); }
+  .trkmeas b { color: var(--text); font-weight: 600; }
+  .trkmeas.warn { border-color: var(--warn); color: var(--warntxt); background: var(--warnbg); }
   .tunegrid { display: grid; grid-template-columns: max-content 1fr 4.5em; gap: 8px 12px; align-items: center; margin: 10px 0 4px; }
   .tunegrid label { font-size: 13px; }
   .tunegrid input { width: 100%; }
@@ -1679,6 +1682,7 @@
     <h4><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Afstelling</h4>
     <div class="trkhelp" style="margin-top:4px">De camera loopt mee met de persoon en houdt hem op de witte stippellijn; staat hij stil binnen het kader, dan staat de camera ook stil.
       Te onrustig? Zet de volgsnelheid lager of <i>Meelopen vanaf</i> hoger. Loopt hij achter? Volgsnelheid hoger. Geldt voor deze camera, ook tijdens het volgen.</div>
+    <div class="trkmeas" id="trkMeas" hidden></div>
     <div class="tunegrid">
       <label for="tuSpeed" title="Hoe stevig de camera naar de persoon toe draait. Lager = rustiger beeld, hoger = strakker gevolgd. Standaard 100%.">Volgsnelheid</label><input type="range" id="tuSpeed" data-k="speed" min="0.5" max="2" step="0.1" title="Hoe stevig de camera naar de persoon toe draait. Lager = rustiger beeld, hoger = strakker gevolgd. Standaard 100%."><span id="tuSpeedV"></span>
       <label for="tuLead" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf tijdens het volgen. Standaard 0,45 s.">Vertraging beeld (begin)</label><input type="range" id="tuLead" data-k="lead" min="0.1" max="1.5" step="0.05" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf tijdens het volgen. Standaard 0,45 s."><span id="tuLeadV"></span>
@@ -1686,7 +1690,7 @@
       <label for="tuFps" title="Hoe vaak per seconde de app naar de persoon kijkt. Meer = iets nauwkeuriger, maar kost meer rekenkracht van de computer. Standaard 8.">Detecties per seconde</label><input type="range" id="tuFps" data-k="fps" min="1" max="25" step="1" title="Hoe vaak per seconde de app naar de persoon kijkt. Meer = iets nauwkeuriger, maar kost meer rekenkracht van de computer. Standaard 8."><span id="tuFpsV"></span>
     </div>
     <div class="trkrow"><span class="trkhelp" id="trkTuneHelp" style="margin:0"></span><span style="flex:1"></span>
-      <a class="icon" id="trkLogDl" href="/api/track/log.csv" download title="Meetlog van het volgen (CSV): wat de app zag en deed, om af te stellen"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Meetlog</a>
+      <button class="icon" id="trkLogDl" type="button" title="Meetlog van het volgen (CSV, opent in Excel): wat de app zag en deed, om af te stellen"><svg class="ic" data-i="download" aria-hidden="true"><use href="#i-download"/></svg> Meetlog</button>
       <button class="icon" id="trkTuneReset" title="Afstelling terug naar de standaard"><svg class="ic" data-i="reset" aria-hidden="true"><use href="#i-reset"/></svg> Afstelling standaard</button></div>
   </div>
   <div class="actions"><span></span><button class="icon" id="trkDone">Sluiten</button></div>
@@ -1963,7 +1967,9 @@ function renderSide() {
     : t.on && t.fps ? [
         ({yolo: "YOLO", yolox: "YOLOX"})[t.detector] || "OpenCV (alleen hele personen)",
         `${t.fps} beelden/s`,
-      ].filter(Boolean).join(" · ") + (t.note && t.detector === "hog" ? ` — ${t.note}` : "") : "";
+        t.guess ? "volgt op schatting" : "",
+      ].filter(Boolean).join(" · ") + (t.note && t.detector === "hog" ? ` — ${t.note}` : "")
+        + (t.guess ? ` — ${t.guess}` : "") : "";
 }
 
 /* ================= preset acties ================= */
@@ -2782,6 +2788,7 @@ function trkRender() {
   $("#trkState").title = bad ? (t.detail || "") : "";
   $("#trkState").classList.toggle("on", !!t.on && !bad && /volgt/.test(t.status || ""));
   $("#trkState").classList.toggle("err", bad);
+  trkMeasRender(t);
   $("#trkToggle").innerHTML = t.on ? ic("stop") + " Volgen uit" : ic("track") + " Volgen aan";
   $("#trkAuto").disabled = !t.on || !t.picked;
   const pct = v => (v * 100).toFixed(2) + "%";
@@ -2867,6 +2874,31 @@ async function trkSaveFrame() {
   if (!r.ok) toast(r.error || "Kader niet opgeslagen"); else c.track_frame = r.frame;
   trkRender();
 }
+/* ---- wat de regelaar tijdens het volgen gemeten heeft (SSE-event track: meas, guess), zodat je voor een eerste
+        indruk het meetlog niet hoeft te openen */
+function trkMeasRender(t) {
+  const el = $("#trkMeas"), m = t && t.on && t.meas;
+  el.hidden = !m;
+  if (!m) return;
+  const nl = (v, d) => (+v).toFixed(d).replace(".", ",");
+  el.classList.toggle("warn", !!t.guess);
+  el.innerHTML = (t.guess ? `${ic("alert", "sm")} <b>Volgt op schatting</b> (${esc(t.guess)}): werkt, maar minder strak. ` : "")
+    + `Gemeten: beeld loopt <b>${nl(m.lat, 2)} s</b> achter`
+    + (m.known ? ` · draaisnelheid <b>×${nl(m.gain, 2)}</b>` : " · draaisnelheid nog niet gemeten (begint voorzichtig)")
+    + (m.pos ? ` · beeldhoek <b>${nl(m.fov, 0)}°</b> · positie via VISCA` : "");
+}
+/* Meetlog downloaden: eerst kijken of er al een is (anders een mislukte download zonder uitleg) */
+async function trkLogDownload() {
+  try {
+    const r = await fetch("/api/track/log.csv");
+    if (!r.ok) { let j = {}; try { j = await r.json(); } catch (e) {} return toast(j.error || "Meetlog niet beschikbaar"); }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(await r.blob());
+    a.download = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || "ptz-control-volgen.csv";
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch (e) { toast("Meetlog downloaden mislukt: " + e.message); }
+}
 /* ---- afstelling van de regelaar, per camera in cameras.json (track_tune) */
 const TUNE_DEFAULT = { speed: 1, lead: 0.45, walk: 0.12, fps: 8 };
 let trkTuneDef = { ...TUNE_DEFAULT }, trkTuneT = null;
@@ -2899,6 +2931,7 @@ $$("#trkTune input[data-k]").forEach(i => i.addEventListener("input", () => {
   $("#" + i.id + "V").textContent = TUNE_FMT[i.dataset.k](i.value);
   clearTimeout(trkTuneT); trkTuneT = setTimeout(() => trkTuneSave(false), 400);
 }));
+$("#trkLogDl").onclick = trkLogDownload;
 $("#trkTuneReset").onclick = () => trkTuneSave(true);
 function trkMove(k, v) {
   v = Math.max(0, Math.min(1, v)); trkDirty = true;
@@ -5174,7 +5207,7 @@ const TOUR_STEPS = [
       <ul><li><b>Klik op een persoon</b> om precies die te volgen; komt iemand anders voorbij, dan blijft de camera bij jouw keuze.</li>
       <li>Sleep de <b>oranje lijnen</b> voor het kader: staat de persoon stil binnen het kader, dan staat de camera ook stil; loopt hij, of komt hij eruit, dan loopt de camera mee en houdt hem op de <b>witte stippellijn</b>.</li>
       <li><b>Grenzen links en rechts</b>: hoe ver de camera mag draaien tijdens het volgen (draai met de pijlen en klik <i>Grens … = hier</i>).</li>
-      <li><b>Afstelling</b>: te onrustig, zet dan de volgsnelheid lager of <i>Meelopen vanaf</i> hoger; per camera. <b>Meetlog</b> downloadt wat de app zag en deed.</li></ul>` },
+      <li><b>Afstelling</b>: te onrustig, zet dan de volgsnelheid lager of <i>Meelopen vanaf</i> hoger; per camera. Tijdens het volgen staat erboven wat de app gemeten heeft; een gele regel <b>Volgt op schatting</b> betekent dat hij de positie of zoom van de camera niet kan lezen. <b>Meetlog</b> downloadt wat de app zag en deed.</li></ul>` },
   { target: ["#padCard"], small: ["#padBar"], title: ic("gamepad") + " Xbox-controller", text: () => `<p>Verbind een Xbox-controller via Bluetooth of USB en druk op een knop. Standaard:</p>
       <ul><li>linker stick = bewegen, RT/LT = zoom, rechter stick = focus</li><li>A/B/X/Y = preset 1–4, met LB erbij 5–8</li>
       <li>D-pad ←/→ = andere camera, ↑/↓ = focus ver/dichtbij (vasthouden), RB = volgen</li><li>View = alles stoppen</li></ul>

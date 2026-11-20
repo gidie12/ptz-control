@@ -220,7 +220,7 @@ def broadcast(event):
 # (alle workspaces), in DATA_DIR/activiteit.log. Verzoeken worden gelogd in Handler.do_POST (met apparaat);
 # systeemgebeurtenissen (camera weg/terug, mixer, YouTube, taken, updates) via _observe() op de SSE-events.
 ACTLOG = _actlog.Log(os.path.join(DATA_DIR, "activiteit.log"), lambda e: broadcast({"type": "log", "entry": e}))
-OBSERVED = {"camstatus", "midi", "youtube", "job", "update"}
+OBSERVED = {"camstatus", "midi", "youtube", "job", "update", "track"}
 _OBS = {"cam": {}, "midi": None, "yt": None, "job": False, "upd": None, "track": {}}
 JOB_LABEL = {"capture": "Uitlezen van camera's", "apply": "Terugzetten naar camera's",
              "load": "Presets laden van camera", "captest": "Presetaantal testen"}
@@ -837,7 +837,9 @@ def do_action(cam, action, args, info=None):
         raise ValueError(f"Het OSD-menu staat open op {cam.get('name') or 'deze camera'}. "
                          "Sluit het eerst (Menu → 🖥 OSD-menu camera).")
     if action in STOPS_TRACKING and (cam["id"] in TRACKERS or cam["id"] in FOLLOW_TIMERS):
-        stop_tracking(cam["id"], halt=False)
+        # preset opslaan stuurt zelf geen beweging of stop: dan moet de tracker de camera stilzetten, anders
+        # draait hij door en wordt de preset opgeslagen terwijl hij beweegt
+        stop_tracking(cam["id"], halt=(action == "preset_set"))
     if action in ("move", "stop", "home", "preset_call", "preset_set"):
         moving_cancel(cam["id"])          # een nieuw commando beëindigt de "onderweg"-markering
     old = undo_snapshot(cam, clamp(args.get("n"), 0, 254)) if action == "preset_set" else None
@@ -1191,6 +1193,9 @@ STOPS_TRACKING = {"move", "stop", "home", "preset_call", "preset_set"}
 # 🧑 Meetlog van het volgen (om af te stellen): één regel per bekeken beeld in DATA_DIR/volgen.csv, begint opnieuw
 # na 20.000 regels. PTZ_TRACK_LOG=0 zet het uit. Download: GET /api/track/log.csv.
 TRACK_LOG = os.environ.get("PTZ_TRACK_LOG", "1") != "0"
+# Noodrem: PTZ_TRACK_POLL=0 = tijdens volgen de camerapositie en zoom NIET via VISCA lezen (als de camera's slecht
+# tegen de vele inquiries kunnen). De regelaar volgt dan op schatting; met pan-grenzen wordt er toch gelezen.
+TRACK_POLL = os.environ.get("PTZ_TRACK_POLL", "1") != "0"
 TRACK_LOG_PATH = os.path.join(DATA_DIR, "volgen.csv")
 
 
@@ -1296,7 +1301,7 @@ def start_tracking(cam, pick=None):
                     "pick": pick,
                     # de regelaar leest altijd de positie en zoom (echte draaisnelheid, beeldhoek); lukt dat
                     # niet via VISCA, dan volgt hij op schatting (status-event `note`)
-                    "read_pan": PanReader(cam),
+                    "read_pan": PanReader(cam) if TRACK_POLL or cam.get("track_limits") else None,
                     "limits": _tracker.norm_limits(cam.get("track_limits")),
                     "zoom_max": ZOOM_MAX,
                     "log": TRACK_LOG_PATH if TRACK_LOG else None}
@@ -1525,6 +1530,8 @@ def set_track_tune(cam_id, tune, reset=False):
             raise KeyError(f"Camera {cam_id} niet gevonden")
         if reset:
             cam.pop("track_tune", None)
+        elif not isinstance(tune, dict) or not any(k in tune for k in _tracker.TUNE_RANGE):
+            raise ValueError("Geen afstelling meegegeven (speed, lead, walk of fps).")
         else:
             # ongeldige waarden laten de opgeslagen waarde staan (niet terug naar de standaard)
             cam["track_tune"] = _tracker.norm_tune(tune, _tracker.norm_tune(cam.get("track_tune")))
@@ -1670,6 +1677,8 @@ def _activate(ws_id):
             stop_tracking(cam_id, halt=True, quiet=True)
         except Exception:  # noqa: BLE001
             pass
+    if _tracker:
+        _tracker.GAINS.clear()    # gemeten draaisnelheden horen bij de camera's van de vorige workspace
     with LOCK:
         WS["active"] = ws_id
         CONFIG_PATH, THUMB_DIR = ws_paths(ws_id)
@@ -2315,14 +2324,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, ACTLOG.text(), "text/plain; charset=utf-8",
                               {"Content-Disposition": f'attachment; filename="{name}"'})
         if u.path == "/api/track/log.csv":   # meetlog van het volgen (geen geheimen: posities en snelheden)
+            # ?vorige=1 = het doorgeschoven bestand (het log van vóór de laatste 150.000 regels)
+            vorige = parse_qs(u.query).get("vorige", [""])[0] == "1"
+            pad = os.path.splitext(TRACK_LOG_PATH)[0] + ".1.csv" if vorige else TRACK_LOG_PATH
             try:
-                with open(TRACK_LOG_PATH, "rb") as f:
+                with open(pad, "rb") as f:
                     data = f.read()
             except OSError:
                 data = b""
             if not data:
                 return self._send(404, {"ok": False, "error": "Nog geen meetlog: zet eerst persoon volgen aan."})
-            name = f"ptz-control-volgen-{datetime.date.today().isoformat()}.csv"
+            name = f"ptz-control-volgen-{datetime.date.today().isoformat()}{'-vorige' if vorige else ''}.csv"
             return self._send(200, data, "text/csv; charset=utf-8",
                               {"Content-Disposition": f'attachment; filename="{name}"'})
         if u.path == "/api/zoomscale":   # 🧑 snelheid volgt de zoom: huidige factor van een camera (wacht op een meting)

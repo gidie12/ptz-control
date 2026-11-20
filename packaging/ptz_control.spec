@@ -26,7 +26,9 @@ ICNS = os.path.join(ROOT, "PTZ Control.app", "Contents", "Resources", "AppIcon.i
 a = Analysis(  # noqa: F821
     [os.path.join(ROOT, "ptz_control.py")],
     pathex=[ROOT],
-    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, "."), (MODEL, "models")],
+    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, "."), (MODEL, "models"),
+           # herkomst en licentie van overgenomen werk (Churchfront Video, YOLOX: Apache 2.0) horen bij de app
+           (os.path.join(ROOT, "NOTICE"), "."), (os.path.join(ROOT, "LICENSE-Apache-2.0.txt"), ".")],
     hiddenimports=["backup", "youtube", "updater", "wininstall", "tracker", "midi", "roland_v1hd", "actlog", "oefen", "liederen", "mido", "mido.backends.rtmidi", "rtmidi", "certifi", "pystray", "PIL.Image"]
     + (["pystray._win32"] if sys.platform == "win32" else ["pystray._darwin", "AppKit", "Foundation"] if sys.platform == "darwin" else []),
     # YOLO/torch is te groot voor de losse app: volgen gebruikt daar YOLOX (ONNX) via OpenCV (cv2.dnn)

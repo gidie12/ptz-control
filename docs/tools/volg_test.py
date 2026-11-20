@@ -7,6 +7,8 @@ beeldvertraging, met en zonder positie van de camera. Een minuut volgen kost een
     python docs/tools/volg_test.py                     # tabel met alle situaties
     python docs/tools/volg_test.py --oud /tmp/oud.py   # ernaast: de regelaar uit een oudere tracker.py
                                                        # (git show v1.0.38:tracker.py > /tmp/oud.py)
+    python docs/tools/volg_test.py --check             # alleen de eindregel; exit 1 als het gemiddelde boven de
+                                                       # drempels komt (controle.sh en de bouw-workflow)
 
 Per situatie (gemiddeld over 3 runs van 60 s):
   buiten   = deel van de tijd dat het midden van de persoon buiten het volgkader staat
@@ -33,6 +35,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import tracker  # noqa: E402
 
 NOISE = 0.008        # onrust van de detector (deel van de beeldbreedte)
+# drempels voor --check: ruim boven de huidige uitkomst (buiten ~9%, kwijt ~2%, omkeringen ~7/min), zodat alleen
+# een echte verslechtering van de regelaar de controle laat falen
+CHECK = {"buiten": 14, "kwijt": 5, "omk": 11}
 FRAME = {"l": 0.3, "r": 0.7, "x": 0.5}
 
 
@@ -66,8 +71,9 @@ def scenario(name):
 
 
 def run(sc, fov=58.0, lat=0.45, deg_step=4.0, visca=True, fov_err=1.0, csign=1, secs=60, fps=8, max_speed=6,
-        seed=1, old=None):
-    """Eén run. old = module met een oude `PanController` (anders de huidige `PanFollower`)."""
+        seed=1, old=None, zoom=True, react=0.15):
+    """Eén run. old = module met een oude `PanController` (anders de huidige `PanFollower`).
+    visca=False: de camera geeft geen positie; zoom=False: wel de pan, niet de zoom; react = s tot de camera reageert."""
     random.seed(seed)
     person = scenario(sc)
     cam = vel = 0.0
@@ -112,11 +118,10 @@ def run(sc, fov=58.0, lat=0.45, deg_step=4.0, visca=True, fov_err=1.0, csign=1, 
                     res = ctrl.update(target - FRAME["x"], outside, urgent)
                     step = sent if res is None else 0 if res[0] == "stop" else res[1] if res[0] == "right" else -res[1]
                 else:
-                    zoom = None
                     if visca:
                         est = max(tracker.WIDE_FOV / tracker.ZOOM_RATIO, min(tracker.WIDE_FOV, fov * fov_err))
-                        zoom = 16384 * math.log(tracker.WIDE_FOV / est) / math.log(tracker.ZOOM_RATIO)
-                        ctrl.observe(list(polls), zoom)
+                        z = 16384 * math.log(tracker.WIDE_FOV / est) / math.log(tracker.ZOOM_RATIO)
+                        ctrl.observe(list(polls), z if zoom else None)
                     step = ctrl.steer(now, seen, seen - w / 2, seen + w / 2, FRAME, list(polls) if visca else None)
             elif old:
                 target = None
@@ -133,7 +138,7 @@ def run(sc, fov=58.0, lat=0.45, deg_step=4.0, visca=True, fov_err=1.0, csign=1, 
                     st["rev"] += 1
                 last_dir = d or last_dir
                 sent = step
-                queue.append((t + 0.15, step))        # de camera reageert 0,15 s later
+                queue.append((t + react, step))       # de camera reageert iets later
         t += dt
     n = max(1, st["n"])
     return {"buiten": 100 * st["out"] / n, "kwijt": 100 * st["lost"] / n, "afw": st["err"] / n,
@@ -158,7 +163,13 @@ def main():
         old.time = CLK
     rows = [("beeldhoek %d°, vertraging %.2f s" % (fov, lat), {"fov": fov, "lat": lat})
             for lat in (0.25, 0.45, 0.8) for fov in (58, 30, 15)]
-    rows += [("30°, geen positie van de camera", {"fov": 30, "visca": False}),
+    rows += [("58°, geen positie van de camera", {"fov": 58, "visca": False}),
+             ("30°, geen positie van de camera", {"fov": 30, "visca": False}),
+             ("15°, geen positie van de camera", {"fov": 15, "visca": False}),
+             ("58°, geen positie, beeld direct", {"fov": 58, "visca": False, "lat": 0.05, "react": 0.02, "max_speed": 8}),
+             ("30°, geen positie, beeld direct", {"fov": 30, "visca": False, "lat": 0.05, "react": 0.02, "max_speed": 8}),
+             ("30°, zoom niet te lezen", {"fov": 30, "zoom": False}),
+             ("15°, zoom niet te lezen", {"fov": 15, "zoom": False}),
              ("30°, beeldhoek 40% te smal geschat", {"fov": 30, "fov_err": 0.6}),
              ("30°, beeldhoek 60% te breed geschat", {"fov": 30, "fov_err": 1.6}),
              ("30°, camera telt andersom", {"fov": 30, "csign": -1}),
@@ -181,10 +192,18 @@ def main():
                 for i, key in enumerate(("buiten", "kwijt", "afw", "omk")):
                     tot[k][i] += v[key]
             n += 1
-            print(line)
+            if "--check" not in sys.argv:
+                print(line)
     for k in ("nieuw", "oud") if old else ("nieuw",):
         b, kw_, afw, omk = (v / n for v in tot[k])
         print("GEMIDDELD %-5s buiten %.0f%%  kwijt %.0f%%  afwijking %.3f  omkeringen/min %.1f" % (k, b, kw_, afw, omk))
+    if "--check" in sys.argv:
+        b, kw_, afw, omk = (v / n for v in tot["nieuw"])
+        ok = b <= CHECK["buiten"] and kw_ <= CHECK["kwijt"] and omk <= CHECK["omk"]
+        print("OK: regelaar binnen de drempels" if ok else
+              "MISLUKT: regelaar slechter dan de drempels (buiten ≤ %(buiten)d%%, kwijt ≤ %(kwijt)d%%, "
+              "omkeringen ≤ %(omk)d/min)" % CHECK)
+        sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":
