@@ -338,7 +338,7 @@ def norm_tune(v, base=None):
     """Afstelling {speed, lead, walk, fps}: volgsnelheid (×), vertraging van het beeld (s), loopdrempel
     (beeldbreedte/s: daarboven telt het als lopen), detecties per seconde. Ontbrekend/ongeldig → waarde uit
     `base` (al genormaliseerd), anders de standaard (of omgeving). Onbekende sleutels (de afstelling van de
-    regelaar van vóór v1.0.39: scale0, settle) vallen weg."""
+    regelaar van vóór v1.0.40: scale0, settle) vallen weg."""
     out = dict(base) if base else dict(DEFAULT_TUNE)
     if isinstance(v, dict):
         for k, (lo, hi) in TUNE_RANGE.items():
