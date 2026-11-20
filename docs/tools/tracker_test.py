@@ -26,7 +26,7 @@ def mk(send, read_pan=None, **kw):
     return t, st
 ok = True
 def check(name, cond):
-    global ok; ok &= bool(cond); print(("OK   " if cond else "FOUT ") + name)
+    global ok; ok &= bool(cond); print(("OK   " if cond else "FOUT ") + name, flush=True)
 
 # 1. onverwachte fout in de lus: camera stopt, lezers stoppen, status = fout
 sent = []
@@ -90,16 +90,23 @@ d = {"x": .5, "err": .01, "img_v": .1, "move": .2, "cam": .3, "want": .4, "fov":
 L = T.TrackLog(p); L.write("Cam; 1", d); L.write("Cam; 1", d)
 lines = open(p, encoding="utf-8-sig").read().splitlines()
 check("meetlog: kop + 2 regels, puntkomma en decimale komma, BOM", len(lines) == 3 and lines[0] == T.TrackLog.COLS and open(p, "rb").read(3) == b"\xef\xbb\xbf" and ";1,23;0,45;-3;" in lines[1] and len(lines[1].split(";")) == len(lines[0].split(";")))
+L.f.close()            # Windows: een open bestand kan niet doorgeschoven worden (de app heeft er maar een open)
 L2 = T.TrackLog(p); L2.write("c", d)
 check("meetlog gaat door na een herstart", len(open(p, encoding="utf-8-sig").read().splitlines()) == 4 and L2.lines == 3)
+L2.f.close()
 T.TrackLog.MAX_LINES = 5
 L3 = T.TrackLog(p)
 for _ in range(4): L3.write("c", d)
 check("meetlog schuift door als het vol is", os.path.exists(p1) and len(open(p, encoding="utf-8-sig").read().splitlines()) == 3 and len(open(p1, encoding="utf-8-sig").read().splitlines()) == 6)
-open(p, "w").write("tijd,camera,x\n1,a,2\n")
+L3.f.close()
+with open(p, "w") as fh:
+    fh.write("tijd,camera,x\n1,a,2\n")
 L4 = T.TrackLog(p); L4.write("c", d)
 check("oud formaat (v1.0.40) schuift door, nieuw bestand begint", open(p, encoding="utf-8-sig").readline().strip() == T.TrackLog.COLS and "tijd,camera" in open(p1).read())
-pe = os.path.join(TMP, "e.csv"); open(pe, "w").close(); open(os.path.join(TMP, "e.1.csv"), "w").write("bewaard")
+L4.f.close()
+pe = os.path.join(TMP, "e.csv"); open(pe, "w").close()
+with open(os.path.join(TMP, "e.1.csv"), "w") as fh:
+    fh.write("bewaard")
 Le = T.TrackLog(pe); Le.write("c", d)
 check("leeg logbestand overschrijft het vorige niet", open(os.path.join(TMP, "e.1.csv")).read() == "bewaard" and len(open(pe, encoding="utf-8-sig").read().splitlines()) == 2)
 # 6. afstelling: vertraging blijft staan als alleen een andere schuif verandert
@@ -109,4 +116,5 @@ c.set_tune({"speed": 1.5, "lead": 0.6}); check("set_tune (lead) zet de vertragin
 import shutil
 shutil.rmtree(TMP, ignore_errors=True)
 print("ALLES OK" if ok else "ER ZIJN FOUTEN")
+sys.stdout.flush()      # os._exit schrijft de buffer niet weg (in de workflow was er dan geen uitvoer)
 os._exit(0 if ok else 1)
