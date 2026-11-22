@@ -1248,6 +1248,16 @@
   </div>
 </dialog>
 
+<!-- 🧑 eigen bevestigingsvenster i.p.v. confirm(): Chrome verlaat browser-fullscreen bij confirm()/alert() -->
+<dialog id="dlgAsk">
+  <h3 id="askTitle">Weet je het zeker?</h3>
+  <p class="small" id="askText" style="white-space:pre-line"></p>
+  <div class="actions"><span></span>
+    <span style="display:flex;gap:8px"><button class="icon" id="askNo">Annuleren</button>
+    <button class="primary" id="askYes">Ja</button></span>
+  </div>
+</dialog>
+
 <!-- Camera's -->
 <dialog id="dlg">
   <h3>Camera's</h3>
@@ -1979,7 +1989,7 @@ async function presetClick(camId, n, el, keepSel) {
   if (storeMode) {
     const c = camById(camId);
     const label = c.presets[n] ? `“${c.presets[n]}” (${n})` : `preset ${n}`;
-    if ((c.presets[n] || hasThumb(c, n)) && !confirm(`${label} op ${c.name} overschrijven met de huidige positie?`)) return;
+    if ((c.presets[n] || hasThumb(c, n)) && !(await askConfirm(`${label} op ${c.name} overschrijven met de huidige positie?`, { title: "Preset overschrijven?", yes: "Overschrijven" }))) return;
     el?.classList.add("busy");
     const r = await cmd("preset_set", { n }, camId);
     el?.classList.remove("busy");
@@ -2014,6 +2024,25 @@ function setStore(on) {
   renderPresets();
 }
 $("#btnStore").onclick = () => setStore(!storeMode);
+
+/* 🧑 Bevestigen zonder confirm(): een browser-dialoog laat Chrome uit volledig scherm gaan (gevonden bij preset opslaan op volledig scherm).
+   askConfirm(tekst, {title, yes, danger}) → Promise<boolean>. Esc / Annuleren = false. */
+function askConfirm(text, o = {}) {
+  const d = $("#dlgAsk");
+  $("#askTitle").textContent = o.title || "Weet je het zeker?";
+  $("#askText").textContent = text;
+  const yes = $("#askYes"); yes.textContent = o.yes || "Ja";
+  yes.className = o.danger ? "icon danger" : "primary";
+  return new Promise((res) => {
+    let done = false;
+    const end = (v) => { if (done) return; done = true; if (d.open) d.close(); res(v); };
+    yes.onclick = () => end(true);
+    $("#askNo").onclick = () => end(false);
+    d.addEventListener("close", () => end(false), { once: true });
+    d.showModal();
+    setTimeout(() => yes.focus(), 30);
+  });
+}
 
 /* ---- preset-dialoog ---- */
 let edit = null;
@@ -2068,7 +2097,7 @@ $("#pSave").onclick = async () => {
 };
 $("#pName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#pSave").click(); });
 $("#pStore").onclick = async () => {
-  if (!confirm("Huidige camerapositie op deze preset opslaan?")) return;
+  if (!(await askConfirm("Huidige camerapositie op deze preset opslaan?", { title: "Positie opslaan?", yes: "Opslaan" }))) return;
   const r = await cmd("preset_set", { n: edit.n }, edit.camId);
   if (r?.ok) storedToast("Positie opgeslagen", r, edit.camId, edit.n);
 };
@@ -2077,7 +2106,7 @@ $("#pThumb").onclick = async () => {
   r.ok ? toast("Thumbnail bijgewerkt", true) : toast(r.error || "Mislukt");
 };
 $("#pClear").onclick = async () => {
-  if (!confirm("Naam en thumbnail wissen? (De positie in de camera blijft bestaan.)")) return;
+  if (!(await askConfirm("Naam en thumbnail wissen? (De positie in de camera blijft bestaan.)", { title: "Wissen?", yes: "Wissen", danger: true }))) return;
   delete camById(edit.camId).presets[edit.n];
   await post("/api/thumb", { cam: edit.camId, n: edit.n, delete: true });
   $("#dlgPreset").close(); await saveConfig();
