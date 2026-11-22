@@ -1252,6 +1252,7 @@
 <dialog id="dlgAsk">
   <h3 id="askTitle">Weet je het zeker?</h3>
   <p class="small" id="askText" style="white-space:pre-line"></p>
+  <input type="text" id="askInput" maxlength="40" hidden>
   <div class="actions"><span></span>
     <span style="display:flex;gap:8px"><button class="icon" id="askNo">Annuleren</button>
     <button class="primary" id="askYes">Ja</button></span>
@@ -2028,21 +2029,26 @@ $("#btnStore").onclick = () => setStore(!storeMode);
 /* 🧑 Bevestigen zonder confirm(): een browser-dialoog laat Chrome uit volledig scherm gaan (gevonden bij preset opslaan op volledig scherm).
    askConfirm(tekst, {title, yes, danger}) → Promise<boolean>. Esc / Annuleren = false. */
 function askConfirm(text, o = {}) {
-  const d = $("#dlgAsk");
+  const d = $("#dlgAsk"), inp = $("#askInput"), withInput = "value" in o;
   $("#askTitle").textContent = o.title || "Weet je het zeker?";
   $("#askText").textContent = text;
-  const yes = $("#askYes"); yes.textContent = o.yes || "Ja";
+  inp.hidden = !withInput; if (withInput) inp.value = o.value || "";
+  const yes = $("#askYes"); yes.textContent = o.yes || (withInput ? "OK" : "Ja");
   yes.className = o.danger ? "icon danger" : "primary";
   return new Promise((res) => {
     let done = false;
-    const end = (v) => { if (done) return; done = true; if (d.open) d.close(); res(v); };
-    yes.onclick = () => end(true);
-    $("#askNo").onclick = () => end(false);
-    d.addEventListener("close", () => end(false), { once: true });
+    const end = (v) => { if (done) return; done = true; inp.onkeydown = null; if (d.open) d.close(); res(v); };
+    const ok = () => end(withInput ? inp.value : true);
+    yes.onclick = ok;
+    $("#askNo").onclick = () => end(withInput ? null : false);
+    inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); ok(); } };
+    d.addEventListener("close", () => end(withInput ? null : false), { once: true });
     d.showModal();
-    setTimeout(() => yes.focus(), 30);
+    setTimeout(() => (withInput ? (inp.focus(), inp.select()) : yes.focus()), 30);
   });
 }
+// 🧑 vervanger van prompt(): geeft de tekst, of null bij Annuleren/Esc
+const askPrompt = (text, value = "", o = {}) => askConfirm(text, { ...o, value });
 
 /* ---- preset-dialoog ---- */
 let edit = null;
@@ -3080,7 +3086,7 @@ function padSelectProfile(id) {
 }
 $$(".padprof").forEach(sel => sel.onchange = () => padSelectProfile(sel.value));
 $("#padProfNew").onclick = async () => {
-  const name = (prompt(`Naam van het nieuwe profiel (begint als kopie van "${padProfileName()}"):`) || "").trim().slice(0, 40);
+  const name = (await askPrompt(`Naam van het nieuwe profiel (begint als kopie van "${padProfileName()}"):`, "", { title: "Nieuw profiel", yes: "Maken" }) || "").trim().slice(0, 40);
   if (!name) return;
   if (padProfiles().some(p => p.name.toLowerCase() === name.toLowerCase())) return toast("Er is al een profiel met die naam");
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "profiel";
@@ -3089,7 +3095,7 @@ $("#padProfNew").onclick = async () => {
   await saveConfig(); padSelectProfile(id);
 };
 $("#padProfRen").onclick = async () => {
-  const name = (prompt("Nieuwe naam voor dit profiel:", padProfileName()) || "").trim().slice(0, 40);
+  const name = (await askPrompt("Nieuwe naam voor dit profiel:", padProfileName(), { title: "Profiel hernoemen", yes: "Hernoemen" }) || "").trim().slice(0, 40);
   if (!name || name === padProfileName()) return;
   if (padProfiles().some(p => p.name.toLowerCase() === name.toLowerCase() && p.id !== padProfileId())) return toast("Er is al een profiel met die naam");
   if (padProfileId() === PAD_STD) cfg.pad_std_name = name;
@@ -3098,7 +3104,7 @@ $("#padProfRen").onclick = async () => {
 };
 $("#padProfDel").onclick = async () => {
   const id = padProfileId(); if (id === PAD_STD) return;
-  if (!confirm(`Profiel "${padProfileName()}" verwijderen?\n\nSchermen die dit profiel gebruiken gaan terug naar "${padProfiles()[0].name}".`)) return;
+  if (!await askConfirm(`Profiel "${padProfileName()}" verwijderen?\n\nSchermen die dit profiel gebruiken gaan terug naar "${padProfiles()[0].name}".`, { title: "Profiel verwijderen?", yes: "Verwijderen", danger: true })) return;
   cfg.pad_profiles = (cfg.pad_profiles || []).filter(p => p.id !== id);
   await saveConfig(); padSelectProfile(PAD_STD);
 };
@@ -3159,7 +3165,7 @@ function padHit(k) {
   clearTimeout(sel._hit); sel._hit = setTimeout(() => els.forEach(e => e?.classList.remove("hit")), 700);
 }
 $("#padReset").onclick = async () => {
-  if (!confirm(`Standaard knopindeling terugzetten in profiel "${padProfileName()}"?`)) return;
+  if (!await askConfirm(`Standaard knopindeling terugzetten in profiel "${padProfileName()}"?`)) return;
   padSetRawMap(JSON.parse(JSON.stringify(PAD_DEFAULT))); await saveConfig(); renderPadMap(); toast("Standaard teruggezet", true);
 };
 /* ---- venster Sticks afstellen (#dlgCal) ---- */
@@ -3285,7 +3291,7 @@ $$(".calmode").forEach(b => b.onclick = () => calSet({ curve: b.dataset.curve })
 $("#calDzR").oninput = () => calSet({ dz: +$("#calDzR").value / 100 });
 $("#calMaxR").oninput = () => calSet({ max: +$("#calMaxR").value / 100 });
 $("#calReset").onclick = async () => {
-  if (!confirm("Beide sticks terugzetten op de standaardafstelling? Dit geldt voor alle schermen.")) return;
+  if (!await askConfirm("Beide sticks terugzetten op de standaardafstelling? Dit geldt voor alle schermen.")) return;
   clearTimeout(calSaveT); calDirty = 0;
   const j = await post("/api/pad/cal", { reset: true });
   if (j?.ok) { cfg.pad_cal = j.cal; cfg.pad_cal_set = { left: false, right: false }; calRender(); toast("Standaardafstelling teruggezet", true); } else toast(j?.error || "Mislukt");
@@ -3688,7 +3694,7 @@ async function rsDo(extra) {
   if (r.workspaces) { toast(`Teruggezet: ${r.workspaces.length} workspaces`, true); wsLoad(); }
   else if (r.created) {
     toast(`Teruggezet als workspace "${r.name}"`, true); wsLoad();
-    if (confirm(`Workspace "${r.name}" is gemaakt. Nu openen?`)) post("/api/workspaces", { action: "select", id: r.created });
+    if (await askConfirm(`Workspace "${r.name}" is gemaakt. Nu openen?`)) post("/api/workspaces", { action: "select", id: r.created });
   } else toast(`Teruggezet: ${r.cameras} camera's, ${r.thumbs} thumbnails`, true);
 }
 $("#rsCur").onclick = () => rsDo({ _target: "current" });
@@ -3697,7 +3703,7 @@ $("#rsAll").onclick = () => rsDo({});
 $("#bkCapture").onclick = async () => {
   const cams = bkSelected(), positions = $("#bkPos").checked, image = $("#bkImg").checked;
   if (!cams.length || !(positions || image)) return toast("Kies minstens één camera en wat je wilt lezen");
-  if (positions && !confirm(`Let op: ${cams.length} camera('s) rijden nu langs al hun presets.\nNiet doen tijdens een dienst of livestream. Doorgaan?`)) return;
+  if (positions && !await askConfirm(`Let op: ${cams.length} camera('s) rijden nu langs al hun presets.\nNiet doen tijdens een dienst of livestream. Doorgaan?`)) return;
   const r = await post("/api/backup/capture", { cams, positions, image, presets: $("#bkWhich").value });
   if (!r.ok) toast(r.error || "Mislukt");
 };
@@ -3705,7 +3711,7 @@ $("#bkApply").onclick = async () => {
   const cams = bkSelected(), positions = $("#bkApplyPos").checked, image = $("#bkApplyImg").checked;
   if (!cams.length || !(positions || image)) return toast("Kies minstens één camera en wat je wilt terugzetten");
   const names = cams.map(id => camById(id)?.name).join(", ");
-  if (!confirm(`Naar de camera's terugzetten: ${names}\n\n` +
+  if (!await askConfirm(`Naar de camera's terugzetten: ${names}\n\n` +
     (positions ? "• De bewaarde presets in de camera worden OVERSCHREVEN (camera's bewegen).\n" : "") +
     (image ? "• De beeldinstellingen worden overschreven.\n" : "") + "\nDoorgaan?")) return;
   const r = await post("/api/backup/apply", { cams, positions, image });
@@ -3739,7 +3745,7 @@ $("#ldStart").onclick = async () => {
   const cams = $$("#ldTable input[data-cam]:checked").map(i => i.dataset.cam);
   const upto = Math.max(1, Math.min(89, +$("#ldUpto").value || 12));
   if (!cams.length) return toast("Kies minstens één camera");
-  if (!confirm(`${cams.length} camera('s) roepen nu preset 1 t/m ${upto} op (de camera's bewegen).\nNiet doen tijdens een dienst. Doorgaan?`)) return;
+  if (!await askConfirm(`${cams.length} camera('s) roepen nu preset 1 t/m ${upto} op (de camera's bewegen).\nNiet doen tijdens een dienst. Doorgaan?`)) return;
   const r = await post("/api/presets/load", { cams, upto, thumbs: $("#ldThumbs").checked });
   if (!r.ok) toast(r.error || "Mislukt");
 };
@@ -3804,7 +3810,7 @@ async function osdToggle() {
   const c = camById(osdCamId);
   if (!c) return;
   if (osdIsOpen()) return osdKey("close");
-  if (midiOnAir(c.id) && !confirm(`${c.name} staat IN BEELD op de videomixer. Het OSD-menu komt dan in de livestream. Toch openen?`)) return;
+  if (midiOnAir(c.id) && !await askConfirm(`${c.name} staat IN BEELD op de videomixer. Het OSD-menu komt dan in de livestream. Toch openen?`, { title: "Camera is in beeld", yes: "Toch openen", danger: true })) return;
   const j = await osdKey("open");
   if (j?.ok) { osdOpen[c.id] = true; osdRender(); }
 }
@@ -3846,7 +3852,7 @@ $("#capClose").onclick = () => $("#dlgCap").close();
 $("#capStart").onclick = async () => {
   const cams = $$("#capTable input[data-cam]:checked").map(i => i.dataset.cam);
   if (!cams.length) return toast("Kies minstens één camera");
-  if (!confirm(`${cams.length} camera('s) bewegen nu ongeveer een minuut voor de presettest.\nNiet doen tijdens een dienst. Doorgaan?`)) return;
+  if (!await askConfirm(`${cams.length} camera('s) bewegen nu ongeveer een minuut voor de presettest.\nNiet doen tijdens een dienst. Doorgaan?`)) return;
   const r = await post("/api/presets/captest", { cams });
   if (!r.ok) toast(r.error || "Mislukt");
 };
@@ -4134,7 +4140,7 @@ function openPrefs() {
   $("#dlgPrefs").showModal();
 }
 $("#btnQuit").onclick = async () => {
-  if (!confirm("PTZ Control afsluiten?\n\nDe camera's blijven staan waar ze zijn, maar geen enkel scherm kan ze nog bedienen tot je de app opnieuw start.")) return;
+  if (!await askConfirm("PTZ Control afsluiten?\n\nDe camera's blijven staan waar ze zijn, maar geen enkel scherm kan ze nog bedienen tot je de app opnieuw start.", { title: "Afsluiten?", yes: "Afsluiten", danger: true })) return;
   await post("/api/quit", {}).catch(() => {});
   ytShow(false);
   const d = document.createElement("div");
@@ -4206,7 +4212,7 @@ $("#wsMenu").addEventListener("click", async (e) => {
   if (b.dataset.ws) {
     if (b.dataset.ws === wsData.active) return;
     const name = wsData.list.find(w => w.id === b.dataset.ws)?.name;
-    if (!confirm(`Overschakelen naar workspace "${name}"?\n\nAlle schermen wisselen mee; volgen stopt.`)) return;
+    if (!await askConfirm(`Overschakelen naar workspace "${name}"?\n\nAlle schermen wisselen mee; volgen stopt.`)) return;
     if (await wsPost({ action: "select", id: b.dataset.ws })) toast("Workspace wordt gewisseld…", true);
   } else { wsDlgOpen(b.dataset.wsact === "new"); }
 });
@@ -4254,7 +4260,7 @@ $("#wsList").addEventListener("click", async (e) => {
   const id = b.closest(".wsrow").dataset.id, name = wsData.list.find(w => w.id === id)?.name;
   if (b.dataset.a === "open") { if (await wsPost({ action: "select", id })) toast("Workspace wordt gewisseld…", true); }
   if (b.dataset.a === "del") {
-    if (!confirm(`Workspace "${name}" verwijderen?\n\nDe camera's, presets, foto's en instellingen van deze workspace worden definitief gewist. Maak eerst een back-up als je ze wilt bewaren.`)) return;
+    if (!await askConfirm(`Workspace "${name}" verwijderen?\n\nDe camera's, presets, foto's en instellingen van deze workspace worden definitief gewist. Maak eerst een back-up als je ze wilt bewaren.`, { title: "Workspace verwijderen?", yes: "Verwijderen", danger: true })) return;
     if (await wsPost({ action: "delete", id })) { toast(`Workspace "${name}" verwijderd`, true); wsLoad(); }
   }
 });
@@ -4370,7 +4376,7 @@ function fillGrid(g, c) {
 $("#presetSearch").addEventListener("input", () => renderPresets());
 $("#presetSearch").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.target.value = ""; e.target.blur(); renderPresets(); } });
 $("#btnOrderReset").onclick = async () => {
-  if (!confirm("Eigen volgorde van de tegels weghalen? De tegels staan dan weer op nummer.")) return;
+  if (!await askConfirm("Eigen volgorde van de tegels weghalen? De tegels staan dan weer op nummer.")) return;
   cfg.cameras.forEach(c => delete c.preset_order); renderPresets(); await saveConfig();
 };
 // verslepen (muis): alleen de volgorde op het scherm; het presetnummer in de camera blijft gelijk
@@ -4474,13 +4480,13 @@ $("#acSave").onclick = async () => {
   else toast(r.error || "Opslaan mislukt");
 };
 $("#acRemove").onclick = async () => {
-  if (!confirm("Pincode weghalen? Dan kan iedereen op het netwerk weer bedienen.")) return;
+  if (!await askConfirm("Pincode weghalen? Dan kan iedereen op het netwerk weer bedienen.")) return;
   const r = await post("/api/access/set", { pin: "" });
   if (r.ok) { toast("Pincode weggehaald", true); await accessLoad(); }
 };
 $("#acLock").onclick = async () => { await post("/api/access/lock", {}); $("#dlgAccess").close(); await accessLoad(); toast("Dit apparaat is vergrendeld", true); };
 $("#acLogoutAll").onclick = async () => {
-  if (!confirm("Alle apparaten uitloggen? Iedereen moet daarna de pincode opnieuw invoeren (deze computer niet).")) return;
+  if (!await askConfirm("Alle apparaten uitloggen? Iedereen moet daarna de pincode opnieuw invoeren (deze computer niet).")) return;
   await post("/api/access/logout_all", {}); await accessLoad(); toast("Alle apparaten uitgelogd", true);
 };
 
@@ -4540,8 +4546,8 @@ setInterval(alertCheck, 2000);
 if (PRACTICE) { document.body.classList.add("practice"); $("#practiceBar").classList.add("show"); $("#btnPractice").innerHTML = ic("stop") + " Oefenstand stoppen"; }
 async function practiceSet(on) {
   if (viewOnly()) return pinPrompt();
-  if (on && !confirm("Oefenstand starten?\n\n• Op ALLE schermen gaat PTZ Control naar de oefenstand.\n• De camera's in de kerk bewegen niet; je bedient nagebootste camera's met dezelfde presets.\n• De videomixer wordt losgekoppeld.\n• Wat je verandert (presets, namen) wordt niet bewaard.\n\nNiet doen tijdens een dienst.")) return;
-  if (!on && !confirm("Oefenstand stoppen? Alle schermen gaan terug naar de echte camera's; wijzigingen uit de oefenstand vervallen.")) return;
+  if (on && !await askConfirm("Oefenstand starten?\n\n• Op ALLE schermen gaat PTZ Control naar de oefenstand.\n• De camera's in de kerk bewegen niet; je bedient nagebootste camera's met dezelfde presets.\n• De videomixer wordt losgekoppeld.\n• Wat je verandert (presets, namen) wordt niet bewaard.\n\nNiet doen tijdens een dienst.")) return;
+  if (!on && !await askConfirm("Oefenstand stoppen? Alle schermen gaan terug naar de echte camera's; wijzigingen uit de oefenstand vervallen.")) return;
   const r = await post("/api/practice", { on });
   if (!r.ok) toast(r.error || "Lukt niet");
 }
@@ -4612,7 +4618,7 @@ $("#logDevName").onchange = () => {
   toast(v ? `Dit apparaat heet nu "${v}" in het log` : "Apparaatnaam weggehaald", true);
 };
 $("#logClear").onclick = async () => {
-  if (!confirm("Het hele activiteitenlog wissen? Dit kan niet ongedaan worden.")) return;
+  if (!await askConfirm("Het hele activiteitenlog wissen? Dit kan niet ongedaan worden.", { title: "Log wissen?", yes: "Wissen", danger: true })) return;
   const r = await post("/api/log/clear", {});
   if (r.ok) { logEntries.clear(); await logLoad(); logRender(); toast("Activiteitenlog gewist", true); }
 };
