@@ -45,7 +45,7 @@ def volg_jpeg():    # getekend podium met drie personen (verzonnen) voor het ven
     return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
 VOLG = """(() => { trkCamId = 'midden'; $('#dlgTrack').showModal();
   track.midden = {type:'track', cam:'midden', on:true, status:'volgt gekozen persoon', picked:true, fps:8, detector:'yolox', guess:'',
-    meas:{lat:0.52, gain:1.18, fov:23.4, pos:true, known:true}};
+    meas:{lat:0.52, gain:1.18, fov:23.4, pos:true, known:true, err:0.21, panning:true}};
   cfg.cameras.find(c => c.id === 'midden').track_frame = {l: 0.22, r: 0.62, x: 0.36};
   trkLookData = {source:'volgbeeld', aspect:16/9, people:[
     {i:0, cx:0.3125, cy:0.505, w:0.1, h:0.59, target:true}, {i:1, cx:0.583, cy:0.515, w:0.095, h:0.57, target:false},
@@ -106,9 +106,13 @@ with sync_playwright() as p:
     pg.evaluate("osdOpen = {[osdCamId]: true}; osdRender(); renderTabs(); renderPresets()")
     pg.wait_for_timeout(400); pg.screenshot(path=f"{OUT}/osd-menu.png")
     pg.evaluate("osdOpen = {}; osdRender(); renderTabs(); renderPresets()"); pg.click("#osdDone")
-    pg.set_viewport_size({"width": 1440, "height": 1400})   # venster is hoog: helemaal in beeld
+    pg.set_viewport_size({"width": 1440, "height": 1800})   # venster is hoog: helemaal in beeld
     pg.evaluate(VOLG % volg_jpeg()); pg.wait_for_timeout(500)   # 🎯 Volgen instellen (beeld en personen nagebootst)
-    pg.locator("#dlgTrack").screenshot(path=f"{OUT}/volgen-instellen.png"); pg.evaluate("track = {}; $('#dlgTrack').close(); renderSide()")
+    pg.locator("#dlgTrack").screenshot(path=f"{OUT}/volgen-instellen.png")
+    # 🧑 curve van het terughalen met extra ankerpunten (alleen lokaal getekend, niet opgeslagen)
+    pg.evaluate("tcLocal = {mode:'eigen', pts:[[0.125,0.125],[0.25,0.25],[0.375,0.375],[0.5,0.5],[0.75,0.75],[0.8,1]]}; tcDirty = Date.now() + 1e9; tcRender()")
+    pg.wait_for_timeout(200); pg.locator("#trkTune").screenshot(path=f"{OUT}/volgen-curve.png")
+    pg.evaluate("tcLocal = null; tcDirty = 0; track = {}; $('#dlgTrack').close(); renderSide()")
     pg.set_viewport_size({"width": 1440, "height": 900})
     pg.click("#btnPad"); pg.click("#btnLog"); pg.wait_for_timeout(400); pg.evaluate(LOG); pg.wait_for_timeout(200)
     pg.screenshot(path=f"{OUT}/activiteitenlog.png"); pg.click("#logClose")
