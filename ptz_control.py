@@ -1187,6 +1187,7 @@ TRACKERS = {}
 TRACK_STATUS = {}
 TRACK_LOCK = threading.Lock()
 _DETECTOR = None
+_FACES = None
 FOLLOW_TIMERS = {}
 STOPS_TRACKING = {"move", "stop", "home", "preset_call", "preset_set"}
 
@@ -1227,6 +1228,15 @@ def get_detector():
         if _DETECTOR is None:
             _DETECTOR = _tracker.Detector(person_model_dirs())
         return _DETECTOR
+
+
+def get_faces():
+    """🧑 Gezichten vinden en herkennen (YuNet + SFace), gedeeld door alle camera's; `ok` onwaar zonder modellen."""
+    global _FACES
+    with TRACK_LOCK:
+        if _FACES is None:
+            _FACES = _tracker.Faces(person_model_dirs())
+        return _FACES
 
 
 def track_frame(cam):
@@ -1286,7 +1296,7 @@ def _track_send(cam, action, args):
 
 
 def start_tracking(cam, pick=None):
-    """pick = (cx, kleurhistogram) van een aangeklikte persoon, of None = automatisch de grootste."""
+    """pick = (cx, kleurhistogram[, gezicht]) van een aangeklikte persoon, of None = automatisch de grootste."""
     err = tracking_error()
     if err:
         raise RuntimeError(err)
@@ -1294,8 +1304,10 @@ def start_tracking(cam, pick=None):
         raise RuntimeError("Het OSD-menu staat open op deze camera: sluit het eerst.")
     stop_tracking(cam["id"], halt=True, quiet=True)
     det = get_detector()
+    faces = get_faces()
     with TRACK_LOCK:
         settings = {"max_speed": clamp(cam.get("track_speed") or 6, 1, 24),
+                    "faces": faces if faces.ok else None,
                     "invert": bool(cam.get("track_invert")),
                     "frame": track_frame(cam),
                     "tune": track_tune(cam),
@@ -1317,7 +1329,9 @@ def start_tracking(cam, pick=None):
 
 
 # ---- volgbeeld: één beeld met de gevonden personen, om er een aan te klikken (geen live preview)
-LOOKS = {}   # cam_id -> {"t", "jpeg", "people": [(cx, cy, w, h, score, hist)]}
+LOOKS = {}   # cam_id -> {"t", "jpeg", "people": [(cx, cy, w, h, score, hist, gezicht)]}; gezicht = vingerafdruk of None
+# 🧑 De vingerafdruk van een gezicht staat alleen hier (hooguit 120 s, voor het aanklikken) en in de lopende tracker;
+# hij wordt nooit naar schijf of naar de UI geschreven.
 
 
 def track_look(cam):
@@ -1327,23 +1341,32 @@ def track_look(cam):
         raise RuntimeError(err)
     cv2 = _tracker.cv2
     frame, source = None, "snapshot"
+    faces = get_faces()
     t = TRACKERS.get(cam["id"])
+    tframe = None
     if t:
         f, ts = t.grabber.latest()
         if f is not None and _tracker.clock() - ts < 1.5:
-            frame, source = f.copy(), "volgbeeld"
-    if frame is None:
+            tframe = f.copy()
+    if tframe is not None and not faces.ok:
+        frame, source = tframe, "volgbeeld"
+    else:
+        # 🧑 met gezichten liever de snapshot (hoofdstream, scherper) dan het kleine volgbeeld
         try:
             data, _ = http_get(cam, "/snapshot.jpg", binary=True)
+            frame = cv2.imdecode(_tracker.np.frombuffer(data, _tracker.np.uint8), cv2.IMREAD_COLOR)
+            if frame is None:
+                raise RuntimeError("geen geldige JPEG")
         except Exception as e:  # noqa: BLE001
-            raise RuntimeError(f"Geen beeld van de camera: {e}") from e
-        frame = cv2.imdecode(_tracker.np.frombuffer(data, _tracker.np.uint8), cv2.IMREAD_COLOR)
-        if frame is None:
-            raise RuntimeError("Geen beeld van de camera (geen geldige JPEG)")
+            if tframe is None:
+                raise RuntimeError(f"Geen beeld van de camera: {e}") from e
+            frame, source = tframe, "volgbeeld"
     people = get_detector().detect(frame)
     people = [p for p in people if p[3] > _tracker.CameraTracker.MIN_HEIGHT]
     people.sort(key=lambda p: p[0])
     hists = [_tracker.appearance(frame, p) for p in people]
+    found = [faces.find(frame, p) if faces.ok else None for p in people]
+    feats = [faces.feature(frame, f) if f else None for f in found]
     target = None
     tb = t.target_box() if t else None
     if tb and people:
@@ -1356,11 +1379,16 @@ def track_look(cam):
     ok, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
     now = time.time()
     LOOKS[cam["id"]] = {"t": now, "jpeg": jpg.tobytes() if ok else b"",
-                        "people": [tuple(p[:5]) + (hh,) for p, hh in zip(people, hists)]}
+                        "people": [tuple(p[:5]) + (hh, ff) for p, hh, ff in zip(people, hists, feats)]}
     return {"ok": True, "source": source, "t": now, "aspect": round(w / h, 4) if h else 1.7778,
             "img": f"/api/track/look.jpg?cam={urllib.parse.quote(cam['id'])}&t={int(now * 1000)}",
             "people": [{"i": i, "cx": round(p[0], 4), "cy": round(p[1], 4), "w": round(p[2], 4), "h": round(p[3], 4),
-                        "target": i == target} for i, p in enumerate(people)],
+                        "target": i == target,
+                        # gezicht (alleen de plek, voor de uitsnede in de UI): ok = groot genoeg om te herkennen
+                        "face": ({"x": round(f["box"][0], 4), "y": round(f["box"][1], 4), "w": round(f["box"][2], 4),
+                                  "h": round(f["box"][3], 4), "px": f["px"], "ok": feats[i] is not None} if f else None)}
+                       for i, (p, f) in enumerate(zip(people, found))],
+            "faces": faces.ok, "faces_note": faces.note,
             "frame": track_frame(cam), "tune": track_tune(cam), "tune_default": _tracker.norm_tune(None),
             "tracking": bool(t), "picked": bool(t and t.picked), **track_limit_info(cam)}
 
@@ -1430,10 +1458,11 @@ def track_pick(cam, i=None, auto=False):
         p = look["people"][int(i)]
     except (TypeError, ValueError, IndexError):
         raise ValueError("Onbekende persoon: maak een nieuw beeld.") from None
+    face = p[6] if len(p) > 6 else None
     if t:
-        t.pick(p[0], p[5])
+        t.pick(p[0], p[5], face)
     else:
-        start_tracking(cam, pick=(p[0], p[5]))
+        start_tracking(cam, pick=(p[0], p[5], face))
     _track_status(cam["id"], picked=True)
     return {"ok": True, "on": True}
 

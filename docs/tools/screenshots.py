@@ -39,10 +39,28 @@ def volg_jpeg():    # getekend podium met drie personen (verzonnen) voor het ven
     for x, shirt, s in ((300, (40, 60, 90), 1.0), (560, (150, 50, 40), 0.95), (800, (60, 110, 70), 0.8)):
         top = int(H * .2 + (1 - s) * 120)
         d.ellipse([x - 26*s, top, x + 26*s, top + 56*s], fill=(222, 186, 160))
+        d.chord([x - 27*s, top - 3*s, x + 27*s, top + 30*s], 180, 360, fill=(58, 42, 30))           # haar
+        for ex in (-9, 9):                                                                          # ogen
+            d.ellipse([x + (ex - 2.5)*s, top + 24*s, x + (ex + 2.5)*s, top + 29*s], fill=(40, 30, 25))
+        d.arc([x - 8*s, top + 33*s, x + 8*s, top + 44*s], 20, 160, fill=(140, 70, 60), width=max(1, int(2*s)))   # mond
         d.rounded_rectangle([x - 46*s, top + 60*s, x + 46*s, H * .74 + 10], radius=int(18*s), fill=shirt)
         d.rectangle([x - 34*s, H * .74 + 10, x + 34*s, H - 8], fill=(45, 40, 40))
     b = io.BytesIO(); im.save(b, "JPEG", quality=85)
     return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
+# 🧑 Wie volgen?: gezichten boven de knop (nagebootst beeld: getekende personen, geen echte mensen)
+def wie_volgen_js(img):
+    W, H = 960, 540
+    people, i = [], 0
+    for x, s in ((300, 1.0), (560, 0.95), (800, 0.8)):
+        top = H * .2 + (1 - s) * 120
+        people.append({"i": i, "cx": x / W, "cy": (top + (H * .74 + 10 - top) / 2 + 30) / H, "w": 96 * s / W, "h": (H * .74 + 10 - top + 60) / H,
+                       "target": False, "face": {"x": (x - 27 * s) / W, "y": (top - 2) / H, "w": 54 * s / W, "h": 60 * s / H,
+                                                 "px": int(54 * s * (i == 2 and 0.3 or 1)), "ok": i != 2}})
+        i += 1
+    import json
+    r = {"ok": True, "img": img, "aspect": W / H, "faces": True, "people": people}
+    return ("(() => { faceLooks.midden = {at: Date.now(), r: %s}; faceOpen('midden'); faceHov = 1; faceFrame();"
+            " document.querySelector('#faceFloat .fc[data-i=\"1\"]').classList.add('hov'); })()" % json.dumps(r))
 VOLG = """(() => { trkCamId = 'midden'; $('#dlgTrack').showModal();
   track.midden = {type:'track', cam:'midden', on:true, status:'volgt gekozen persoon', picked:true, fps:8, detector:'yolox', guess:'',
     meas:{lat:0.52, gain:1.18, fov:23.4, pos:true, known:true, err:0.21, panning:true}};
@@ -114,6 +132,8 @@ with sync_playwright() as p:
     pg.wait_for_timeout(200); pg.locator("#trkTune").screenshot(path=f"{OUT}/volgen-curve.png")
     pg.evaluate("tcLocal = null; tcDirty = 0; track = {}; $('#dlgTrack').close(); renderSide()")
     pg.set_viewport_size({"width": 1440, "height": 900})
+    pg.evaluate(wie_volgen_js(volg_jpeg())); pg.wait_for_timeout(500)
+    pg.screenshot(path=f"{OUT}/wie-volgen.png", clip={"x": 0, "y": 0, "width": 1440, "height": 480}); pg.evaluate("faceClose()")
     pg.click("#btnPad"); pg.click("#btnLog"); pg.wait_for_timeout(400); pg.evaluate(LOG); pg.wait_for_timeout(200)
     pg.screenshot(path=f"{OUT}/activiteitenlog.png"); pg.click("#logClose")
     pg.evaluate("camst.rechts = {ok:false, error:'geen verbinding'}; renderTabs(); renderPresets(); alertCheck()"); pg.wait_for_timeout(300)

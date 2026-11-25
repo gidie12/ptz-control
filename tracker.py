@@ -216,6 +216,94 @@ class Detector:
             return out
 
 
+# ---------------------------------------------------------------- gezichten (aanklikken en herkennen)
+# 🧑 Gezicht aanklikken om te volgen + herkennen tijdens het volgen. YuNet (gezicht vinden, MIT) en SFace
+# (vingerafdruk van 128 getallen, Apache 2.0) uit de OpenCV Zoo, via cv2.FaceDetectorYN / cv2.FaceRecognizerSF:
+# geen torch nodig. De vingerafdruk bestaat alleen in het geheugen zolang er gevolgd wordt (nooit opgeslagen).
+FACE_DET_FILE = "face_detection_yunet_2023mar.onnx"
+FACE_REC_FILE = "face_recognition_sface_2021dec_int8.onnx"
+FACE_MIN_PX = 20        # kleinere gezichten (breedte in pixels) zijn niet te herkennen: 'te klein'
+FACE_SAME = 0.40        # cosinus vanaf hier = dezelfde persoon (OpenCV noemt 0,363; iets strenger)
+FACE_OTHER = 0.20       # hieronder = duidelijk iemand anders
+
+
+def find_file(name, dirs, env=None):
+    """Zoek een modelbestand: omgevingsvariabele, daarna <map>/models/ en <map>/ voor elke map."""
+    cands = [os.environ.get(env)] if env and os.environ.get(env) else []
+    for d in dirs or []:
+        if d:
+            cands += [os.path.join(d, "models", name), os.path.join(d, name)]
+    return next((c for c in cands if c and os.path.isfile(c)), None)
+
+
+class Faces:
+    """Gezichten zoeken binnen een persoonsbox en vergelijken. Zonder modellen: `ok` is onwaar en alles geeft
+    None terug; volgen werkt dan zoals altijd op kleding."""
+
+    def __init__(self, model_dirs=None):
+        self.lock = threading.Lock()
+        self.ok, self.note = False, ""
+        if cv2 is None or not hasattr(cv2, "FaceDetectorYN"):
+            self.note = "deze OpenCV-versie kan geen gezichten zoeken"
+            return
+        det = find_file(FACE_DET_FILE, model_dirs, "PTZ_FACE_DET")
+        rec = find_file(FACE_REC_FILE, model_dirs, "PTZ_FACE_REC")
+        if not det or not rec:
+            self.note = "geen gezichtsmodellen gevonden (packaging/haal_model.py): volgen gaat op kleding"
+            return
+        try:
+            self.det = cv2.FaceDetectorYN.create(det, "", (320, 320), 0.6, 0.3, 20)
+            self.rec = cv2.FaceRecognizerSF.create(rec, "")
+            self.ok = True
+        except Exception as e:  # noqa: BLE001
+            self.note = f"gezichtsmodellen niet te laden ({e})"
+
+    def find(self, frame, box):
+        """Het gezicht van de persoon in box (cx, cy, w, h genormaliseerd), of None. Zoekt alleen in het
+        bovenste deel van zijn box; een klein stuk wordt eerst vergroot (YuNet ziet dan kleinere gezichten).
+        Geeft {row: YuNet-rij in beeldpixels (voor de vingerafdruk), box: (x, y, w, h) genormaliseerd, px}."""
+        if not self.ok or frame is None:
+            return None
+        fh, fw = frame.shape[:2]
+        cx, cy, bw, bh = box[:4]
+        top = cy - bh / 2
+        x1, x2 = int(max(0, (cx - bw * 0.6) * fw)), int(min(fw, (cx + bw * 0.6) * fw))
+        y1, y2 = int(max(0, (top - bh * 0.05) * fh)), int(min(fh, (top + bh * 0.55) * fh))
+        if x2 - x1 < 12 or y2 - y1 < 12:
+            return None
+        crop = frame[y1:y2, x1:x2]
+        scale = max(1.0, min(4.0, 240.0 / max(1, x2 - x1)))
+        if scale > 1.0:
+            crop = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+        with self.lock:
+            self.det.setInputSize((crop.shape[1], crop.shape[0]))
+            _, found = self.det.detect(crop)
+        if found is None or not len(found):
+            return None
+        # het grootste gezicht met het midden in de bovenste helft van zijn box
+        best = max(found, key=lambda f: f[2] * f[3] * float(f[-1]))
+        row = best.copy()
+        row[:14] = row[:14] / scale         # x, y, w, h, dan 5 oriëntatiepunten (x, y)
+        row[[0, 4, 6, 8, 10, 12]] += x1
+        row[[1, 5, 7, 9, 11, 13]] += y1
+        x, y, w, h = (float(v) for v in row[:4])
+        return {"row": row, "px": int(round(w)), "box": (x / fw, y / fh, w / fw, h / fh)}
+
+    def feature(self, frame, face):
+        """Vingerafdruk (128 getallen) van een gevonden gezicht, of None als het te klein is."""
+        if not self.ok or not face or face["px"] < FACE_MIN_PX:
+            return None
+        with self.lock:
+            return self.rec.feature(self.rec.alignCrop(frame, face["row"])).copy()
+
+    def match(self, a, b):
+        """Cosinus tussen twee vingerafdrukken (−1 … 1), of None."""
+        if not self.ok or a is None or b is None:
+            return None
+        with self.lock:
+            return float(self.rec.match(a, b, cv2.FaceRecognizerSF_FR_COSINE))
+
+
 # ---------------------------------------------------------------- uiterlijk (om één persoon vast te houden)
 def appearance(frame, box):
     """Kleurhistogram (HSV, tint x verzadiging) van het bovenlijf in box = (cx, cy, w, h, …) genormaliseerd.
@@ -987,6 +1075,9 @@ class CameraTracker(threading.Thread):
     PICK_ANY = 0.38      # … en zo verschillend als hij ergens anders in het beeld staat
     PICK_WAIT = 20.0     # s zoeken naar een aangeklikte persoon voor we het opgeven
     GALLERY = 6          # beelden van het uiterlijk van de gevolgde persoon
+    FACE_EVERY = 0.4     # s tussen gezichtscontroles tijdens het volgen (gezichten zoeken kost wat rekenkracht)
+    FACE_HOLD = 2.5      # s na de laatste herkenning: nog 'gezicht herkend', daarna 'op kleding'
+    FACE_GALLERY = 4     # vingerafdrukken van het gezicht (het aangeklikte blijft, de rest zijn de nieuwste)
     # max. detecties per seconde (per camera): standaard 8, genoeg om een spreker te volgen en scheelt CPU/GPU
     # t.o.v. elk beeld (25/s); instelbaar per camera (tune.fps) of met PTZ_TRACK_FPS
     MAX_FPS = DEFAULT_TUNE["fps"]
@@ -1021,7 +1112,13 @@ class CameraTracker(threading.Thread):
         self.alone_since = None   # sinds wanneer hij de enige in de buurt is (dan is leren veilig)
         self.sure_seen = 0.0      # wanneer zijn uiterlijk het voor het laatst bevestigde
         self.picked = False       # doel is aangeklikt (blijft, ook als hij even weg is)
-        self.pending = None       # (cx, hist, sinds) aangeklikte persoon die we nog moeten vinden
+        self.pending = None       # (cx, hist, sinds, gezicht) aangeklikte persoon die we nog moeten vinden
+        self.faces = settings.get("faces")   # Faces (gedeeld) of None
+        self.face_refs = []       # vingerafdrukken van zijn gezicht; [0] = van het aanklikken. Alleen in het geheugen
+        self.face_seen = 0.0      # wanneer zijn gezicht het voor het laatst bevestigde
+        self.face_at = 0.0        # laatste gezichtscontrole
+        self.face_add = 0.0
+        self.face_state = None    # 'seen' / 'cloth' / None (geen gezicht aangeklikt)
         self.last_seen = 0.0
         self.status = ""
         self.problem = False      # staat de huidige status voor een fout (rood in de UI)?
@@ -1065,10 +1162,10 @@ class CameraTracker(threading.Thread):
                 self.ctrl.hold(clock())
                 self._cmd(0)
 
-    def pick(self, cx, hist):
-        """Volg deze persoon (aangeklikt in een beeld van zojuist)."""
+    def pick(self, cx, hist, face=None):
+        """Volg deze persoon (aangeklikt in een beeld van zojuist); face = vingerafdruk van zijn gezicht."""
         with self.lock:
-            self.pending = (float(cx), hist, clock())
+            self.pending = (float(cx), hist, clock(), face)
             self.picked = True
         self._status("zoekt gekozen persoon", force=True)
 
@@ -1083,6 +1180,7 @@ class CameraTracker(threading.Thread):
     def _drop(self):
         self.target, self.box = None, None
         self.gallery, self.own, self.others, self.alone_since = [], None, None, None
+        self.face_refs, self.face_seen = [], 0.0
 
     def target_box(self):
         """Box van het huidige doel als het net gezien is, anders None."""
@@ -1108,7 +1206,7 @@ class CameraTracker(threading.Thread):
             self.on_status({"status": status, "problem": problem, "detail": detail,
                             "fps": round(self.fps, 1), "detector": self.detector.kind,
                             "note": getattr(self.detector, "note", ""), "picked": self.picked,
-                            "frame": self.frame_cfg, "guess": guess,
+                            "frame": self.frame_cfg, "guess": guess, "face": self.face_state,
                             "meas": {"lat": round(c.lat, 2), "gain": round(c.gain, 2), "fov": round(c.fov, 1),
                                      "pos": c.uses_position() and not guess, "known": c.gain_known,
                                      # afwijking van de doelpositie nu (beeldbreedte), voor de stip in de curve
@@ -1175,14 +1273,37 @@ class CameraTracker(threading.Thread):
         if len(self.gallery) < self.GALLERY:
             self.gallery.append(look)
 
-    def _begin(self, p, look, now, anchor=None):
+    def _begin(self, p, look, now, anchor=None, face=None):
         """Nieuw doel: niets van het vorige meenemen."""
         self._drop()
         self.gallery = [g for g in (anchor, look) if g is not None]
+        if face is not None:
+            self.face_refs, self.face_seen, self.face_add = [face], now, now
         self.anchors = 1
         self.gallery_at = self.sure_seen = now
         self.ctrl.forget()
         return p
+
+    def _face_sims(self, frame, people, idx, refs=None):
+        """Gezicht van persoon idx[k] vergelijken met zijn vingerafdrukken: {index: (cosinus, vingerafdruk)}.
+        Hooguit 4 personen per keer (de dichtstbijzijnde eerst)."""
+        out, refs = {}, refs if refs is not None else self.face_refs
+        if not (self.faces and self.faces.ok and refs):
+            return out
+        for i in idx[:4]:
+            f = self.faces.feature(frame, self.faces.find(frame, people[i]))
+            if f is not None:
+                out[i] = (max(self.faces.match(f, r) for r in refs), f)
+        return out
+
+    def _face_learn(self, f, sim, now):
+        """Een duidelijk herkend gezicht onthouden (andere kant, ander licht); het aangeklikte blijft."""
+        self.face_seen = now
+        if f is not None and sim >= FACE_SAME + 0.1 and now - self.face_add > 2.0:
+            self.face_add = now
+            if len(self.face_refs) >= self.FACE_GALLERY:
+                del self.face_refs[1]
+            self.face_refs.append(f)
 
     def _pick(self, people, frame, now):
         people = [p for p in people if p[3] > self.MIN_HEIGHT]
@@ -1194,7 +1315,17 @@ class CameraTracker(threading.Thread):
         with self.lock:
             pending, fc = self.pending, self.frame_cfg
         if pending:
-            cx, hist, since = pending
+            cx, hist, since, face = pending
+            if face is not None and self.faces and self.faces.ok:
+                # gezicht aangeklikt: wie dat gezicht heeft, waar hij ook staat
+                sims = self._face_sims(frame, people, sorted(range(len(people)), key=lambda k: abs(people[k][0] - cx)),
+                                       refs=[face])
+                if sims:
+                    i = max(sims, key=lambda k: sims[k][0])
+                    if sims[i][0] >= FACE_SAME:
+                        with self.lock:
+                            self.pending = None
+                        return self._begin(people[i], looks[i], now, anchor=hist, face=face)
             # beeld van het aanklikken is van zojuist: plek telt mee, uiterlijk het zwaarst
             ds = [distance(hist, h) for h in looks]
             i = min(range(len(people)), key=lambda k: (0.5 if ds[k] is None else ds[k]) + abs(people[k][0] - cx) * 1.5)
@@ -1204,7 +1335,7 @@ class CameraTracker(threading.Thread):
             if ok:
                 with self.lock:
                     self.pending = None
-                return self._begin(p, looks[i], now, anchor=hist)
+                return self._begin(p, looks[i], now, anchor=hist, face=face)
             if now - since > self.PICK_WAIT:
                 with self.lock:
                     self.pending, self.picked = None, False
@@ -1216,6 +1347,19 @@ class CameraTracker(threading.Thread):
             cands = [(((p[0] - last[0]) ** 2 + (p[1] - last[1]) ** 2) ** 0.5,
                       distance(h, self.gallery) if self.gallery else None) for p, h in zip(people, looks)]
             choice = Identity.choose(cands, reach, gone, self.own, self.others, now - self.sure_seen)
+            # gezicht: sterker bewijs dan kleding. Elke FACE_EVERY s, en meteen als het uiterlijk twijfelt
+            if self.face_refs and (now - self.face_at > self.FACE_EVERY or not choice or not choice[1]):
+                self.face_at = now
+                near = sorted((k for k in range(len(people)) if cands[k][0] < reach * 1.5), key=lambda k: cands[k][0])
+                sims = self._face_sims(frame, people, near)
+                if sims:
+                    k = max(sims, key=lambda j: sims[j][0])
+                    sim, f = sims[k]
+                    if sim >= FACE_SAME:
+                        self._face_learn(f, sim, now)
+                        choice = (k, True)              # zijn gezicht: dat is hem (ook als de kleding iets anders zei)
+                    elif choice and choice[0] in sims and sims[choice[0]][0] <= FACE_OTHER and len(near) > 1:
+                        choice = (choice[0], False)    # duidelijk een ander gezicht: niet van leren
             if choice:
                 i, sure = choice
                 self._learn(looks[i], cands, i, sure, reach, gone, now)
@@ -1329,6 +1473,10 @@ class CameraTracker(threading.Thread):
 
             now = clock()
             hit = self._pick(people, frame, now)
+            fs = None if not self.face_refs else "seen" if now - self.face_seen < self.FACE_HOLD else "cloth"
+            if fs != self.face_state:
+                self.face_state = fs
+                self._status(self.status, force=True)
             if hit:
                 if now - self.last_seen > self.LOST_STOP:
                     self.ctrl.forget()       # even weg geweest: niet doorrekenen met de oude beweging

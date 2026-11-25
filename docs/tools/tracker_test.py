@@ -1,6 +1,6 @@
 """Test van de volgmodule zonder camera, beeld of server: opruimen na een onverwachte fout, een mislukt
 stop-commando opnieuw sturen, de meldingen in de status (guess, meas), het meetlog (formaat, doorgaan,
-doorschuiven) en de afstelling. Draait in ~12 s; exit 1 bij een fout. Zie ook volg_test.py (de regelaar zelf).
+doorschuiven), de afstelling en het volgen op een aangeklikt gezicht. Draait in ~12 s; exit 1 bij een fout. Zie ook volg_test.py (de regelaar zelf).
 
     python docs/tools/tracker_test.py
 """
@@ -110,6 +110,37 @@ with open(os.path.join(TMP, "e.1.csv"), "w") as fh:
 Le = T.TrackLog(pe); Le.write("c", d)
 check("leeg logbestand overschrijft het vorige niet", open(os.path.join(TMP, "e.1.csv")).read() == "bewaard" and len(open(pe, encoding="utf-8-sig").read().splitlines()) == 2)
 # 6. afstelling: vertraging blijft staan als alleen een andere schuif verandert
+# 5. 🧑 gezicht aangeklikt: twee mensen in gelijke kleding wisselen van plek; de camera blijft bij het gekozen gezicht
+class FakeFaces:
+    """Nagebootste gezichtsherkenning: wie op welke plek staat bepaalt de test (scene), niet het beeld."""
+    ok = True
+    def __init__(self): self.scene = {0.3: "A", 0.7: "B"}
+    def find(self, frame, box):
+        who = min(self.scene, key=lambda x: abs(x - box[0]))
+        return {"px": 60, "row": self.scene[who], "box": (box[0], 0.1, 0.05, 0.1)}
+    def feature(self, frame, face): return face["row"] if face else None
+    def match(self, a, b): return 0.9 if a == b else 0.05
+class Det2:
+    kind, note = "test", ""
+    def __init__(self, ff): self.ff = ff
+    def detect(self, f): return [(x, 0.5, 0.09, 0.5, 0.9) for x in sorted(self.ff.scene)]
+ff = FakeFaces()
+st5 = []
+t = T.CameraTracker({"id": "f", "name": "F"}, "x", Det2(ff), lambda a, g: None, st5.append, {"max_speed": 6, "faces": ff})
+t.pick(0.7, None, "B"); t.start(); time.sleep(1.0)
+check("gezicht aangeklikt: volgt B (rechts)", t.box and abs(t.box[0] - 0.7) < 0.05)
+check("status: gezicht herkend", st5 and st5[-1].get("face") == "seen")
+ff.scene = {0.3: "B", 0.7: "A"}         # zelfde kleding, van plek gewisseld: op kleding zou hij bij A blijven
+time.sleep(1.5)
+check("na wisselen van plek: volgt nog steeds B (nu links)", t.box and abs(t.box[0] - 0.3) < 0.05)
+ff.scene = {0.3: "A", 0.7: "C"}         # B weg, onbekend gezicht op zijn plek
+time.sleep(3.2)
+check("gezicht niet meer te zien: status op kleding", st5[-1].get("face") == "cloth")
+t.stop(); t.join(2)
+t, st6 = mk(lambda a, g: None); t.start(); time.sleep(0.6); t.stop(); t.join(2)
+check("zonder gezicht aangeklikt: geen face-status", st6[-1].get("face") is None)
+check("vingerafdruk van het gezicht staat nergens in de status", all("face_refs" not in x for x in st5))
+
 c = T.PanFollower(); c.lat = 0.81
 c.set_tune({"speed": 1.5}); check("set_tune (andere schuif) laat de gemeten vertraging staan", c.lat == 0.81)
 c.set_tune({"speed": 1.5, "lead": 0.6}); check("set_tune (lead) zet de vertraging", c.lat == 0.6)

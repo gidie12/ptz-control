@@ -229,7 +229,15 @@ Zonder `ultralytics` gebruikt de app **YOLOX-tiny** via OpenCV, als het modelbes
 Beide herkennen ook een **half silhouet** (ingezoomd op het bovenlichaam). Alleen als er geen van beide is, valt hij terug op de oude OpenCV-detector, en die ziet alleen **hele** personen van top tot teen: ingezoomd blijft hij dan op *zoekt persoon* staan. Onder de volgknop staat welke detector gebruikt wordt.
 
 Gebruik:
-- **volgen** in de kolomkop (of de knop in de bediening, of toets **T**) zet volgen aan/uit. De status staat erbij: *volgt*, *zoekt persoon*, *gekozen persoon kwijt*, *grens links/rechts bereikt*, of in het rood een fout zoals *geen beeld van de camera*. Fouten tijdens het volgen komen ook in het activiteitenlog.
+- **Wie volgen?** in de kolomkop: ga er met de muis overheen en erboven verschijnen de gezichten uit één beeld van die camera (geen live beeld), met rechts een klein beeld waarin de persoon die je aanwijst omkaderd is. **Klik op een gezicht** en de camera volgt die persoon; het venster zweeft boven de knop, dus de presets eronder blijven vrij. Op een tablet: tik op de knop en dan op een gezicht. Tijdens het volgen staat het gezicht op de knop (*Volgt persoon 2*); klik op de knop om te stoppen.
+  - Ernaast staat **gezicht herkend** (groen) zolang de app zijn gezicht ziet, of **op kleding** (geel) als het gezicht even niet te zien of te klein is: dan houdt hij hem vast aan zijn kleding en plek, tot het gezicht weer herkend wordt. Zo blijft de camera ook bij de goede persoon als twee mensen dezelfde kleding dragen.
+  - *te klein* onder een gezicht = te ver weg om te herkennen (minder dan ~20 pixels breed); *geen gezicht* = hij staat met zijn rug naar de camera. Klikken kan dan nog steeds: hij volgt dan op kleding.
+  - Het gezicht wordt **niet opgeslagen**: de vingerafdruk (128 getallen) staat alleen in het geheugen zolang je volgt en vervalt daarna. Er wordt geen lijst met gezichten bijgehouden.
+  - Gezichten zoeken en herkennen gebeurt met **YuNet** en **SFace** (OpenCV Zoo) via OpenCV, zonder internet. De losse app heeft ze ingebouwd; met de Python-versie haalt `python3 packaging/haal_model.py` ze op in `models/`. Zonder die bestanden werkt *Wie volgen?* nog wel, maar dan op kleding.
+
+<img src="docs/screenshots/wie-volgen.png" width="720" alt="Wie volgen? Gezichten boven de knop in de kolomkop">
+
+- Toets **T** of **Persoon volgen** in de bediening zet volgen aan/uit op de grootste persoon in beeld. De status staat erbij: *volgt*, *zoekt persoon*, *gekozen persoon kwijt*, *grens links/rechts bereikt*, of in het rood een fout zoals *geen beeld van de camera*. Fouten tijdens het volgen komen ook in het activiteitenlog.
 - In het preset-venster (✎): **Na oproepen automatisch volgen**. Bijv. "Preekstoel": camera gaat naar het shot en begint na 2,5 s te volgen.
 - Handbediening, home of een andere preset op die camera zet volgen direct uit. Zoom en focus mogen tijdens het volgen.
 - Bij meerdere mensen in beeld kiest hij de grootste (meestal de spreker vooraan) en blijft daarna bij diezelfde persoon. Hij herkent die persoon aan de **kleur van de kleding** (bovenlijf) en aan waar hij net stond, en onthoudt een paar beelden van hoe hij eruitziet. Loopt iemand anders voorbij of even voor de spreker langs, dan blijft hij bij de spreker; mensen in dezelfde kleur kleding zijn lastiger uit elkaar te houden.
