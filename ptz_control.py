@@ -1538,8 +1538,9 @@ def set_track_tune(cam_id, tune, reset=False):
             raise KeyError(f"Camera {cam_id} niet gevonden")
         if reset:
             cam.pop("track_tune", None)
-        elif not isinstance(tune, dict) or not any(_is_num(tune.get(k)) for k in _tracker.TUNE_RANGE):
-            raise ValueError("Geen afstelling meegegeven (speed, lead, walk of fps).")
+        elif not isinstance(tune, dict) or not (any(_is_num(tune.get(k)) for k in _tracker.TUNE_RANGE)
+                                                or isinstance(tune.get("curve"), dict)):
+            raise ValueError("Geen afstelling meegegeven (speed, lead, walk, fps of curve).")
         else:
             # ongeldige waarden laten de opgeslagen waarde staan (niet terug naar de standaard)
             cam["track_tune"] = _tracker.norm_tune(tune, _tracker.norm_tune(cam.get("track_tune")))

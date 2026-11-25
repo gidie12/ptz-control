@@ -555,6 +555,33 @@
              border-radius: 9px; background: var(--panel2); }
   .trkmeas b { color: var(--text); font-weight: 600; }
   .trkmeas.warn { border-color: var(--warn); color: var(--warntxt); background: var(--warnbg); }
+  /* 🧑 curve van het terughalen (#tcGraph): zelfde beeldtaal als Sticks afstellen (#calGraph) */
+  .tcwrap { margin: 10px 0 4px; }
+  .tchead { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-bottom: 8px; }
+  .tchead .calmodes { margin: 0; }
+  .tchead b { font-size: 13px; font-weight: 600; margin-right: 4px; }
+  #tcGraph { width: 100%; display: block; background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; touch-action: none; }
+  #tcGraph .tc-axis { stroke: var(--line); stroke-width: 1; fill: none; }
+  #tcGraph .tc-grid { stroke: var(--line); stroke-width: .6; stroke-dasharray: 2 3; fill: none; }
+  #tcGraph .tc-dz { fill: var(--warnbg); }
+  #tcGraph .tc-edge { stroke: var(--trkline); stroke-width: 2; }
+  #tcGraph .tc-aim { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  #tcGraph .tc-ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; fill: none; }
+  #tcGraph .tc-curve { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linejoin: round; }
+  #tcGraph .tc-pt { fill: var(--panel); stroke: var(--accent); stroke-width: 2.5; cursor: grab; }
+  #tcGraph .tc-pt.mirror { stroke-dasharray: 2 2; opacity: .8; }
+  #tcGraph .tc-pt:focus { outline: none; stroke-width: 3.5; fill: var(--ring); }
+  #tcGraph .tc-pt.drag { cursor: grabbing; }
+  #tcGraph .tc-live { fill: var(--ok); stroke: var(--panel); stroke-width: 2; }
+  #tcGraph text { fill: var(--muted); font-size: 9px; font-family: inherit; }
+  #tcGraph text.tc-tag { fill: var(--trktxt); font-weight: 700; font-size: 8px; }
+  #tcGraph rect.tc-tagbg { fill: var(--trkline); }
+  #tcGraph text.tc-zone { fill: var(--warntxt); font-weight: 600; }
+  .tcguide { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .tcguide div { border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; font-size: 12px; color: var(--muted); background: var(--panel); }
+  .tcguide b { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+  .tcguide .hit { border-color: var(--warn); background: var(--warnbg); color: var(--warntxt); }
+  @media (max-width: 700px) { .tcguide { grid-template-columns: 1fr; } }
   .tunegrid { display: grid; grid-template-columns: max-content 1fr 4.5em; gap: 8px 12px; align-items: center; margin: 10px 0 4px; }
   .tunegrid label { font-size: 13px; }
   .tunegrid input { width: 100%; }
@@ -1692,8 +1719,22 @@
   <div class="trklim" id="trkTune">
     <h4><svg class="ic" data-i="sliders" aria-hidden="true"><use href="#i-sliders"/></svg> Afstelling</h4>
     <div class="trkhelp" style="margin-top:4px">De camera loopt mee met de persoon en houdt hem op de witte stippellijn; staat hij stil binnen het kader, dan staat de camera ook stil.
-      Te onrustig? Zet de volgsnelheid lager of <i>Meelopen vanaf</i> hoger. Loopt hij achter? Volgsnelheid hoger. Geldt voor deze camera, ook tijdens het volgen.</div>
+      Hoe hard de camera hem terughaalt, zie je in de grafiek: <b>sleep de punten</b> om dat per afstand te bepalen. Geldt voor deze camera, ook tijdens het volgen.</div>
     <div class="trkmeas" id="trkMeas" hidden></div>
+    <div class="tcwrap" id="tcWrap">
+      <div class="tchead"><b>Terughalen naar de stippellijn</b>
+        <div class="calmodes" role="group" aria-label="Curve van het terughalen">
+          <button class="calmode" type="button" data-tc="standaard" data-tipk="tcStd">Standaard</button><button class="calmode" type="button" data-tc="rustig" data-tipk="tcRustig">Rustig</button>
+          <button class="calmode" type="button" data-tc="krachtig" data-tipk="tcKrachtig">Krachtig</button><button class="calmode" type="button" data-tc="eigen" data-tipk="tcEigen">Eigen</button>
+        </div></div>
+      <svg id="tcGraph" viewBox="0 0 460 190" role="img" aria-label="Afstand van de persoon tot de stippellijn naar draaisnelheid van de camera"></svg>
+      <div class="trkhelp" id="tcTxt" style="margin-top:6px"></div>
+      <div class="tcguide" id="tcGuide">
+        <div data-g="swing"><b>Slingert of schiet voorbij?</b>Kies <i>Rustig</i>, of sleep de middelste punten omlaag. Helpt dat niet: <i>Volgsnelheid</i> lager.</div>
+        <div data-g="late"><b>Komt te laat terug / loopt uit beeld?</b>Kies <i>Krachtig</i>, of sleep het rechter punt omhoog. Loopt hij steeds achter: <i>Volgsnelheid</i> hoger.</div>
+        <div data-g="jitter"><b>Schokjes terwijl hij stilstaat?</b>Zet de oranje kaderlijnen verder uit elkaar (geel vlak breder), of <i>Meelopen vanaf</i> hoger.</div>
+      </div>
+    </div>
     <div class="tunegrid">
       <label for="tuSpeed" title="Hoe stevig de camera naar de persoon toe draait. Lager = rustiger beeld, hoger = strakker gevolgd. Standaard 100%.">Volgsnelheid</label><input type="range" id="tuSpeed" data-k="speed" min="0.5" max="2" step="0.1" title="Hoe stevig de camera naar de persoon toe draait. Lager = rustiger beeld, hoger = strakker gevolgd. Standaard 100%."><span id="tuSpeedV"></span>
       <label for="tuLead" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf tijdens het volgen. Standaard 0,45 s.">Vertraging beeld (begin)</label><input type="range" id="tuLead" data-k="lead" min="0.1" max="1.5" step="0.05" title="Hoeveel het camerabeeld achterloopt, als beginwaarde; de app meet het daarna zelf tijdens het volgen. Standaard 0,45 s."><span id="tuLeadV"></span>
@@ -2935,7 +2976,9 @@ async function trkLogDownload() {
   } catch (e) { toast("Meetlog downloaden mislukt: " + e.message); }
 }
 /* ---- afstelling van de regelaar, per camera in cameras.json (track_tune) */
-const TUNE_DEFAULT = { speed: 1, lead: 0.45, walk: 0.12, fps: 8 };
+const TC_PRESETS = { standaard: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]], rustig: [[0.25, 0.08], [0.5, 0.3], [0.75, 0.6]],
+  krachtig: [[0.25, 0.45], [0.5, 0.72], [0.75, 0.9]] };   // zelfde als CURVE_PRESETS in tracker.py
+const TUNE_DEFAULT = { speed: 1, lead: 0.45, walk: 0.12, fps: 8, curve: { mode: "standaard", pts: TC_PRESETS.standaard } };
 let trkTuneDef = { ...TUNE_DEFAULT }, trkTuneT = null;
 const TUNE_FMT = { speed: v => Math.round(v * 100) + "%", lead: v => (+v).toFixed(2).replace(".", ",") + " s", walk: v => Math.round(v * 100) + "%/s", fps: v => Math.round(v) + "/s" };
 // alleen de instellingen van deze regelaar tellen (een oudere afstelling had scale0/settle)
@@ -2949,6 +2992,7 @@ function trkTuneRender() {
   });
   const custom = Object.keys(trkTuneOwn()).length > 0;
   $("#trkTuneReset").disabled = !custom;
+  tcRender();
   $("#trkTuneHelp").textContent = custom ? "Eigen afstelling voor deze camera." : "Standaardafstelling.";
 }
 async function trkTuneSave(reset) {
@@ -2956,16 +3000,132 @@ async function trkTuneSave(reset) {
   if (!c) return;
   const tune = {};
   $$("#trkTune input[data-k]").forEach(i => tune[i.dataset.k] = +i.value);
+  tune.curve = tcCurve();
   const r = await post("/api/track/tune", reset ? { cam: trkCamId, reset: true } : { cam: trkCamId, tune });
   if (!r.ok) return toast(r.error || "Afstelling niet opgeslagen");
-  if (reset) delete c.track_tune; else c.track_tune = r.tune;
+  if (reset) { delete c.track_tune; tcLocal = null; } else c.track_tune = r.tune;
   trkTuneRender();
   if (reset) toast("Afstelling terug naar standaard", true);
 }
 $$("#trkTune input[data-k]").forEach(i => i.addEventListener("input", () => {
   $("#" + i.id + "V").textContent = TUNE_FMT[i.dataset.k](i.value);
+  if (i.dataset.k === "speed" || i.dataset.k === "walk") tcRender();   // volgsnelheid schaalt de curve mee
   clearTimeout(trkTuneT); trkTuneT = setTimeout(() => trkTuneSave(false), 400);
 }));
+/* ---- 🧑 curve van het terughalen (#tcGraph), zoals de grafiek in Sticks afstellen.
+   x = waar de persoon staat t.o.v. de witte stippellijn (−50 … +50 % van de beeldbreedte), y = hoe hard de camera
+   hem terughaalt (beeldbreedte/s) = PanFollower: kp · 0,5 · curve(|afstand| / 0,5), kp = min(1,6; 1,2 × volgsnelheid).
+   Gele vlak tussen de oranje lijnen = het kader: daar blijft de camera stil zolang hij niet loopt (dode zone).
+   Drie ankerpunten rechts (links gespiegeld, ook sleepbaar); slepen maakt er een eigen curve van. */
+const TC = { x0: 34, x1: 446, y0: 150, y1: 16, ymax: 0.8 }, TC_MID = (TC.x0 + TC.x1) / 2, TC_MIN_DEAD = 0.07;
+const tcX = (d) => TC_MID + d / 0.5 * (TC.x1 - TC_MID), tcY = (v) => TC.y0 - Math.min(1.05, v / TC.ymax) * (TC.y0 - TC.y1);
+let tcLocal = null, tcDirty = 0, tcDrag = null, tcSaveT = null;
+function tcCurve() {
+  if (tcLocal && Date.now() - tcDirty < 1500) return tcLocal;   // net zelf gewijzigd: niet terugspringen op een oude config
+  const c = trkTune().curve || TUNE_DEFAULT.curve;
+  return { mode: c.mode, pts: (c.mode === "eigen" ? c.pts : TC_PRESETS[c.mode] || TC_PRESETS.standaard).map(p => p.slice()) };
+}
+const tcKp = () => Math.min(1.6, 1.2 * (+$("#tuSpeed").value || trkTune().speed || 1));
+function tcAt(pts, v) {   // = curve_at in tracker.py
+  if (v >= 1) return v;
+  const P = [[0, 0], ...pts, [1, 1]];
+  for (let i = 1; i < P.length; i++) if (v <= P[i][0]) return P[i - 1][1] + (P[i][1] - P[i - 1][1]) * (v - P[i - 1][0]) / Math.max(1e-6, P[i][0] - P[i - 1][0]);
+  return 1;
+}
+const tcPull = (pts, d) => tcKp() * 0.5 * tcAt(pts, Math.abs(d) / 0.5);
+function tcRender() {
+  const svg = $("#tcGraph"); if (!svg || !$("#dlgTrack").open) return;
+  const cv = tcCurve(), pts = cv.pts, f = trkDrag || trkDirty ? trkF : trkFrame();
+  // breedte van de gevolgde persoon (uit het laatste beeld) maakt het kader effectief smaller: zijn hele box moet erin
+  const w = (trkLookData?.people || []).find(p => p.target)?.w || 0;
+  const dl = Math.max(TC_MIN_DEAD, f.x - f.l - w / 2), dr = Math.max(TC_MIN_DEAD, f.r - f.x - w / 2);
+  const path = (p, from, to) => Array.from({ length: 121 }, (_, i) => { const d = from + (to - from) * i / 120; return `${i ? "L" : "M"}${tcX(d).toFixed(1)} ${tcY(tcPull(p, d)).toFixed(1)}`; }).join("");
+  const pct = (v) => Math.round(v * 100) + "%";
+  let g = "";
+  [0.25, 0.5, 0.75].forEach(v => g += `<path class="tc-grid" d="M${TC.x0} ${tcY(v * TC.ymax).toFixed(1)}H${TC.x1}"/>`);
+  g += `<rect class="tc-dz" x="${tcX(-dl).toFixed(1)}" y="${TC.y1}" width="${(tcX(dr) - tcX(-dl)).toFixed(1)}" height="${TC.y0 - TC.y1}"/>`
+    + `<path class="tc-axis" d="M${TC.x0} ${TC.y1}V${TC.y0}H${TC.x1}"/>`
+    + `<path class="tc-aim" d="M${TC_MID} ${TC.y1}V${TC.y0}"/>`;
+  [[f.l - f.x, "kader"], [f.r - f.x, "kader"]].forEach(([d]) => {
+    if (Math.abs(d) > 0.5) return;
+    const x = tcX(d).toFixed(1);
+    g += `<path class="tc-edge" d="M${x} ${TC.y1}V${TC.y0}"/><rect class="tc-tagbg" x="${(+x - 15).toFixed(1)}" y="${TC.y1 - 1}" width="30" height="11" rx="5.5"/><text class="tc-tag" x="${x}" y="${TC.y1 + 7.5}" text-anchor="middle">kader</text>`;
+  });
+  const zx = ((tcX(-dl) + tcX(dr)) / 2).toFixed(1);
+  g += `<text class="tc-zone" x="${zx}" y="${TC.y1 + 24}" text-anchor="middle">camera stil</text>`
+    + `<text class="tc-zone" x="${zx}" y="${TC.y1 + 35}" text-anchor="middle">als hij stilstaat</text>`;
+  // standaard bij deze volgsnelheid als stippellijn; de curve zelf, binnen het gele vlak flauw (daar draait hij
+  // alleen nog uit als hij al draaide of loopt)
+  g += `<path class="tc-ref" d="${path(TC_PRESETS.standaard, -0.5, 0.5)}"/>`
+    + `<path class="tc-curve" d="${path(pts, -0.5, -dl)}"/><path class="tc-curve" style="opacity:.35" d="${path(pts, -dl, dr)}"/><path class="tc-curve" d="${path(pts, dr, 0.5)}"/>`;
+  // assen
+  g += `<text x="${TC.x0 - 4}" y="${TC.y0 + 3}" text-anchor="end">0</text><text x="${TC.x0 - 4}" y="${TC.y1 + 3}" text-anchor="end">${(TC.ymax * 100).toFixed(0)}</text>`
+    + `<text x="${TC.x0 - 4}" y="${(tcY(TC.ymax / 2) + 3).toFixed(1)}" text-anchor="end">${(TC.ymax * 50).toFixed(0)}</text>`
+    + `<text x="${tcX(-0.5)}" y="${TC.y0 + 13}" text-anchor="middle">−50%</text><text x="${TC_MID}" y="${TC.y0 + 13}" text-anchor="middle">doel</text><text x="${tcX(0.5)}" y="${TC.y0 + 13}" text-anchor="middle">+50%</text>`
+    + `<text x="${tcX(-0.25)}" y="${TC.y0 + 13}" text-anchor="middle">← persoon links</text><text x="${tcX(0.25)}" y="${TC.y0 + 13}" text-anchor="middle">persoon rechts →</text>`
+    + `<text x="${TC.x0 + 4}" y="${TC.y1 + 8}">draaisnelheid (% beeld/s)</text>`;
+  // ankerpunten (rechts) en hun spiegelbeeld (links)
+  pts.forEach((p, i) => [1, -1].forEach(sd => {
+    const d = sd * p[0] * 0.5, v = tcPull(pts, d);
+    g += `<circle class="tc-pt${sd < 0 ? " mirror" : ""}${tcDrag && tcDrag.i === i && tcDrag.sd === sd ? " drag" : ""}" data-pt="${i}" data-sd="${sd}" cx="${tcX(d).toFixed(1)}" cy="${tcY(v).toFixed(1)}" r="6.5"
+      tabindex="${sd < 0 ? -1 : 0}" role="slider" aria-label="Ankerpunt ${i + 1} (pijltjes: verschuiven, Shift = grotere stap)"
+      aria-valuetext="op ${pct(p[0] * 0.5)} van de stippellijn: ${pct(v)} van het beeld per seconde"><title>Ankerpunt ${i + 1}: persoon ${pct(p[0] * 0.5)} naast de stippellijn → camera draait ${pct(v)} van het beeld per seconde (sleep om aan te passen)</title></circle>`;
+  }));
+  // live: waar de gevolgde persoon nu staat (alleen tijdens volgen en als de camera draait)
+  const m = (track[trkCamId] || {}).on && (track[trkCamId] || {}).meas;
+  if (m && m.err != null && m.panning && Math.abs(m.err) <= 0.5) g += `<circle class="tc-live" r="5" cx="${tcX(m.err).toFixed(1)}" cy="${tcY(tcPull(pts, m.err)).toFixed(1)}"><title>Nu</title></circle>`;
+  const fi = document.activeElement?.closest?.("#tcGraph .tc-pt")?.dataset.pt;
+  svg.innerHTML = g;
+  if (fi != null) $(`#tcGraph .tc-pt[data-pt="${fi}"][data-sd="1"]`)?.focus({ preventScroll: true });
+  $$("[data-tc]").forEach(b => { b.classList.toggle("on", b.dataset.tc === cv.mode); b.setAttribute("aria-pressed", b.dataset.tc === cv.mode ? "true" : "false"); });
+  // uitleg en welk advies nu past (in de lijn van wat gekozen is)
+  const pull25 = tcPull(pts, 0.125), std25 = tcPull(TC_PRESETS.standaard, 0.125);
+  $("#tcTxt").innerHTML = `Staat hij <b>${pct(0.125)}</b> naast de stippellijn, dan draait de camera <b>${pct(pull25)}</b> van het beeld per seconde`
+    + (Math.abs(pull25 - std25) > 0.005 ? ` (standaard ${pct(std25)})` : "") + `; loopt hij, dan komt zijn eigen loopsnelheid erbij. `
+    + `Geel = waar zijn midden kan staan terwijl hij helemaal binnen het kader blijft. Stippellijn = standaard bij deze volgsnelheid. Bij de beeldrand haalt de camera hem nog harder terug.`;
+  const dz = Math.min(dl, dr);
+  $$("#tcGuide [data-g]").forEach(el => el.classList.toggle("hit", el.dataset.g === "jitter" && dz <= TC_MIN_DEAD + 0.005));
+}
+function tcSet(cv) {
+  tcLocal = cv; tcDirty = Date.now(); tcRender();
+  clearTimeout(tcSaveT); tcSaveT = setTimeout(() => trkTuneSave(false), 400);
+}
+function tcPtMove(i, x, y) {
+  const pts = tcCurve().pts.map(p => p.slice());
+  const lo = i === 0 ? 0.02 : pts[i - 1][0] + 0.05, hi = i === 2 ? 0.98 : pts[i + 1][0] - 0.05;
+  pts[i][0] = +Math.max(lo, Math.min(hi, x)).toFixed(3);
+  pts[i][1] = +Math.max(i === 0 ? 0 : pts[i - 1][1], Math.min(i === 2 ? 1 : pts[i + 1][1], y)).toFixed(3);   // curve loopt niet terug
+  tcSet({ mode: "eigen", pts });
+}
+(function tcInit() {
+  const svg = $("#tcGraph");
+  const focusPt = (i) => requestAnimationFrame(() => $(`#tcGraph .tc-pt[data-pt="${i}"][data-sd="1"]`)?.focus({ preventScroll: true }));
+  svg.addEventListener("pointerdown", (e) => {
+    const el = e.target.closest?.(".tc-pt"); if (!el) return;
+    e.preventDefault(); tcDrag = { i: +el.dataset.pt, sd: +el.dataset.sd }; svg.setPointerCapture(e.pointerId); focusPt(tcDrag.i);
+  });
+  svg.addEventListener("pointermove", (e) => {
+    if (!tcDrag) return;
+    const m = svg.getScreenCTM(); if (!m) return;
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    const d = (p.x - TC_MID) / (TC.x1 - TC_MID) * 0.5 * tcDrag.sd, v = (TC.y0 - p.y) / (TC.y0 - TC.y1) * TC.ymax;
+    tcPtMove(tcDrag.i, d / 0.5, v / (tcKp() * 0.5));
+  });
+  const up = () => { if (tcDrag) { tcDrag = null; tcRender(); } };
+  svg.addEventListener("pointerup", up); svg.addEventListener("lostpointercapture", up);
+  svg.addEventListener("keydown", (e) => {
+    const el = e.target.closest?.(".tc-pt"); if (!el) return;
+    const i = +el.dataset.pt, st = e.shiftKey ? 0.1 : 0.02, p = tcCurve().pts[i];
+    const k = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] }[e.key];
+    if (!k) return;
+    e.preventDefault(); e.stopPropagation();
+    tcPtMove(i, p[0] + k[0], p[1] + k[1]); focusPt(i);
+  });
+  $$("[data-tc]").forEach(b => b.onclick = () => {
+    const cur = tcCurve();
+    tcSet(b.dataset.tc === "eigen" ? { mode: "eigen", pts: cur.pts } : { mode: b.dataset.tc, pts: TC_PRESETS[b.dataset.tc].map(p => p.slice()) });
+  });
+})();
 $("#trkLogDl").onclick = trkLogDownload;
 $("#trkTuneReset").onclick = () => trkTuneSave(true);
 function trkMove(k, v) {
@@ -3183,7 +3343,7 @@ function calRender() {
   const c = padCal(calSide);
   $$(".caltabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.side === calSide ? "true" : "false"));
   $("#calUse").innerHTML = calUseText();
-  $$(".calmode").forEach(b => { b.classList.toggle("on", b.dataset.curve === c.curve); b.setAttribute("aria-pressed", b.dataset.curve === c.curve ? "true" : "false"); });
+  $$(".calmode[data-curve]").forEach(b => { b.classList.toggle("on", b.dataset.curve === c.curve); b.setAttribute("aria-pressed", b.dataset.curve === c.curve ? "true" : "false"); });
   $("#calDzR").value = Math.round(c.dz * 100); $("#calDzV").textContent = Math.round(c.dz * 100) + "%";
   $("#calMaxR").value = Math.round(c.max * 100); $("#calMaxV").textContent = Math.round(c.max * 100) + "%";
   const h = c.dz * 52; Object.entries({ x: 60 - h, y: 60 - h, width: 2 * h, height: 2 * h }).forEach(([k, v]) => $("#calDz").setAttribute(k, v.toFixed(1)));
@@ -3287,7 +3447,7 @@ $(".caltabs").addEventListener("keydown", (e) => {   // tabs: pijltjes links/rec
   e.preventDefault(); e.stopPropagation(); calSide = calSide === "left" ? "right" : "left"; calMag = null; calRender();
   $(calSide === "left" ? "#calTabL" : "#calTabR").focus();
 });
-$$(".calmode").forEach(b => b.onclick = () => calSet({ curve: b.dataset.curve }));
+$$(".calmode[data-curve]").forEach(b => b.onclick = () => calSet({ curve: b.dataset.curve }));
 $("#calDzR").oninput = () => calSet({ dz: +$("#calDzR").value / 100 });
 $("#calMaxR").oninput = () => calSet({ max: +$("#calMaxR").value / 100 });
 $("#calReset").onclick = async () => {
@@ -5173,6 +5333,10 @@ const TIPS = {
   padProf: { t: "Knoppenprofiel", d: "Welke knoppenindeling deze controller op dit scherm gebruikt. Elk scherm onthoudt zijn eigen keuze." },
   padMap: { t: "Knoppenindeling", d: "Geef elke knop van de controller een eigen functie, per profiel." },
   padCal: { t: "Sticks afstellen", d: "Per stick de dode zone, het maximum en de curve (Standaard, Vertraagd, Direct of een eigen curve) instellen, met de stand van de stick live erbij. Geldt voor alle schermen en knoppenprofielen." },
+  tcStd: { t: "Standaard", d: "Recht evenredig: twee keer zo ver van de stippellijn = twee keer zo hard terughalen. Zo volgde de app altijd." },
+  tcRustig: { t: "Rustig", d: "Dichtbij de stippellijn stuurt de camera maar zacht bij, verder weg wel stevig. Minder slingeren en heen-en-weer, iets meer achterlopen." },
+  tcKrachtig: { t: "Krachtig", d: "Haalt hem al vlak naast de stippellijn stevig terug. Strak in beeld, maar onrustiger en kan voorbij schieten." },
+  tcEigen: { t: "Eigen", d: "Sleep de ankerpunten in de grafiek (of focus een punt en gebruik de pijltjes, Shift = grotere stap). Links en rechts zijn altijd gelijk." },
   calDz: { t: "Dode zone", d: "Zo ver kun je de stick duwen zonder dat de camera beweegt (tegen kruipen van een stick die niet precies in het midden terugveert). Standaard 18%; rechter stick als focus 35% (met <i>Gescheiden sticks</i> = tilt: 18%, zolang je hem niet zelf afstelt)." },
   calMax: { t: "Maximaal", d: "Hoeveel van de maximale snelheid de stick helemaal uitgeduwd geeft. De max. pan/tilt-snelheid in de Xbox-kaart (per scherm) telt daar nog bij." },
 };

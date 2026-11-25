@@ -330,16 +330,66 @@ def _envf(name, default):
 
 # grenzen per instelling: (min, max)
 TUNE_RANGE = {"speed": (0.5, 2.0), "lead": (0.1, 1.5), "walk": (0.05, 0.4), "fps": (1.0, 25.0)}
-DEFAULT_TUNE = {"speed": 1.0, "lead": 0.45, "walk": 0.12, "fps": 8.0}
+DEFAULT_TUNE = {"speed": 1.0, "lead": 0.45, "walk": 0.12, "fps": 8.0}   # + "curve" (zie norm_curve)
 for _k, _e in (("speed", "PTZ_TRACK_SPEED"), ("lead", "PTZ_TRACK_LEAD"), ("walk", "PTZ_TRACK_WALK"),
                ("fps", "PTZ_TRACK_FPS")):
     _lo, _hi = TUNE_RANGE[_k]
     DEFAULT_TUNE[_k] = max(_lo, min(_hi, _envf(_e, DEFAULT_TUNE[_k])))
 
 
+# 🧑 curve van het terughalen: afstand tot de doelpositie (0 … CURVE_SPAN beeldbreedte) → correctie (deel van de
+# rechte lijn kp·afstand bij CURVE_SPAN). Drie ankerpunten (x oplopend, y niet terug) plus (0,0) en (1,1).
+# 'standaard' = recht evenredig (precies de regelaar van vóór de curve), 'rustig' = dichtbij het doel zachter
+# bijsturen, 'krachtig' = eerder en harder terughalen, 'eigen' = punten van de gebruiker.
+CURVE_SPAN = 0.5
+CURVE_PRESETS = {"standaard": [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]],
+                 "rustig": [[0.25, 0.08], [0.5, 0.3], [0.75, 0.6]],
+                 "krachtig": [[0.25, 0.45], [0.5, 0.72], [0.75, 0.9]]}
+DEFAULT_CURVE = {"mode": "standaard", "pts": [p[:] for p in CURVE_PRESETS["standaard"]]}
+
+
+def norm_curve(v, base=None):
+    """Curve {mode, pts}: een voorkeuze geeft altijd zijn eigen punten; 'eigen' = drie punten, x oplopend
+    (0,02–0,98, minstens 0,05 uit elkaar), y 0–1 en niet teruglopend. Ongeldig → `base` (of standaard)."""
+    out = {"mode": base["mode"], "pts": [p[:] for p in base["pts"]]} if isinstance(base, dict) and "pts" in base \
+        else {"mode": DEFAULT_CURVE["mode"], "pts": [p[:] for p in DEFAULT_CURVE["pts"]]}
+    if not isinstance(v, dict):
+        return out
+    mode = v.get("mode")
+    if mode in CURVE_PRESETS:
+        return {"mode": mode, "pts": [p[:] for p in CURVE_PRESETS[mode]]}
+    if mode != "eigen":
+        return out
+    try:
+        pts = [[float(p[0]), float(p[1])] for p in v["pts"]]
+    except (KeyError, TypeError, ValueError, IndexError):
+        return out
+    if len(pts) != 3 or any(a != a or b != b for a, b in pts):
+        return out
+    lo_x, lo_y = 0.0, 0.0
+    for i, p in enumerate(pts):
+        p[0] = max(lo_x + (0.02 if i == 0 else 0.05), min(0.98 - 0.05 * (2 - i), p[0]))
+        p[1] = max(lo_y, min(1.0, p[1]))
+        lo_x, lo_y = p[0], p[1]
+        p[0], p[1] = round(p[0], 3), round(p[1], 3)
+    return {"mode": "eigen", "pts": pts}
+
+
+def curve_at(curve, v):
+    """Curve op v = afstand ÷ CURVE_SPAN (≥ 0) → 0 … 1; voorbij 1 recht door (zelfde helling als de lijn ernaartoe
+    vanaf de oorsprong), zodat een persoon helemaal aan de rand nog steeds harder teruggehaald wordt."""
+    if v >= 1:
+        return v
+    P = [[0.0, 0.0]] + curve["pts"] + [[1.0, 1.0]]
+    for (x0, y0), (x1, y1) in zip(P, P[1:]):
+        if v <= x1:
+            return y0 + (y1 - y0) * (v - x0) / max(1e-6, x1 - x0)
+    return 1.0
+
+
 def norm_tune(v, base=None):
-    """Afstelling {speed, lead, walk, fps}: volgsnelheid (×), vertraging van het beeld (s), loopdrempel
-    (beeldbreedte/s: daarboven telt het als lopen), detecties per seconde. Ontbrekend/ongeldig → waarde uit
+    """Afstelling {speed, lead, walk, fps, curve}: volgsnelheid (×), vertraging van het beeld (s), loopdrempel
+    (beeldbreedte/s: daarboven telt het als lopen), detecties per seconde, curve van het terughalen (norm_curve). Ontbrekend/ongeldig → waarde uit
     `base` (al genormaliseerd), anders de standaard (of omgeving). Onbekende sleutels (de afstelling van de
     regelaar van vóór v1.0.40: scale0, settle) vallen weg."""
     out = dict(base) if base else dict(DEFAULT_TUNE)
@@ -351,6 +401,7 @@ def norm_tune(v, base=None):
                 continue
             if x == x:   # geen NaN
                 out[k] = round(max(lo, min(hi, x)), 2)
+    out["curve"] = norm_curve(v.get("curve") if isinstance(v, dict) else None, out.get("curve"))
     return out
 
 
@@ -527,7 +578,7 @@ class PanFollower:
 
     def set_tune(self, tune):
         t = norm_tune(tune)
-        self.k, self.walk_min = t["speed"], t["walk"]
+        self.k, self.walk_min, self.curve = t["speed"], t["walk"], t["curve"]
         if t["lead"] != self._lead:      # alleen als de beginwaarde zelf verandert: anders blijft de meting staan
             self._lead = self.lat = t["lead"]   # zoveel loopt het beeld achter (s); wordt daarna gemeten
 
@@ -789,7 +840,9 @@ class PanFollower:
         top = self.max_speed if self.gain_known else min(self.max_speed, self.CAREFUL)
         if self.panning:
             kp = min(2.5, min(1.6, self.CORRECTION * k) * (1 + 1.5 * urgency))
-            want = walk + kp * ex
+            # trek naar de doelpositie volgens de curve (standaard = recht evenredig: kp · ex)
+            pull = kp * CURVE_SPAN * curve_at(self.curve, abs(ex) / CURVE_SPAN)
+            want = walk + (pull if ex > 0 else -pull)
             accel = (16.0 if urgency > 0.3 else 8.0 * max(1.0, k)) * dt_frame
             decel = 16.0 * max(1.0, k) * dt_frame
             prev = self.rate
@@ -1054,7 +1107,10 @@ class CameraTracker(threading.Thread):
                             "note": getattr(self.detector, "note", ""), "picked": self.picked,
                             "frame": self.frame_cfg, "guess": guess,
                             "meas": {"lat": round(c.lat, 2), "gain": round(c.gain, 2), "fov": round(c.fov, 1),
-                                     "pos": c.uses_position() and not guess, "known": c.gain_known}})
+                                     "pos": c.uses_position() and not guess, "known": c.gain_known,
+                                     # afwijking van de doelpositie nu (beeldbreedte), voor de stip in de curve
+                                     "err": round(float(c.dbg.get("err", 0.0)), 3),
+                                     "panning": bool(c.dbg.get("panning"))}})
 
     def _cmd(self, step):
         """Snelheidsstap met teken (commando-ruimte: positief = rechts) naar de camera; alleen bij verandering."""
