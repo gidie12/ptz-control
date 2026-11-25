@@ -17,17 +17,20 @@ with open(_VFILE, "w", encoding="utf-8") as _f:
     _f.write(VERSION)
 # Persoonsdetector voor 'persoon volgen' (YOLOX-tiny, Apache 2.0): eerst packaging/haal_model.py draaien.
 # Zonder dit bestand herkent de app alleen hele personen (HOG), dus geen half silhouet bij inzoomen.
-MODEL = os.path.join(ROOT, "models", "yolox_tiny.onnx")
-if not os.path.isfile(MODEL):
-    raise SystemExit("models/yolox_tiny.onnx ontbreekt: draai eerst  python packaging/haal_model.py")
+# 🧑 Plus de gezichtsmodellen (YuNet, MIT; SFace int8, Apache 2.0) voor 'gezicht aanklikken om te volgen'.
+MODELS = [os.path.join(ROOT, "models", n) for n in
+          ("yolox_tiny.onnx", "face_detection_yunet_2023mar.onnx", "face_recognition_sface_2021dec_int8.onnx")]
+for _m in MODELS:
+    if not os.path.isfile(_m):
+        raise SystemExit(f"models/{os.path.basename(_m)} ontbreekt: draai eerst  python packaging/haal_model.py")
 ICO = os.path.join(ROOT, "app", "ptz.ico")
 ICNS = os.path.join(ROOT, "PTZ Control.app", "Contents", "Resources", "AppIcon.icns")
 
 a = Analysis(  # noqa: F821
     [os.path.join(ROOT, "ptz_control.py")],
     pathex=[ROOT],
-    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, "."), (MODEL, "models"),
-           # herkomst en licentie van overgenomen werk (Churchfront Video, YOLOX: Apache 2.0) horen bij de app
+    datas=[(os.path.join(ROOT, "index.html"), "."), (os.path.join(ROOT, "app", "icon.png"), "."), (_VFILE, ".")] + [(m, "models") for m in MODELS] + [
+           # herkomst en licentie van overgenomen werk (Churchfront Video, YOLOX, SFace: Apache 2.0; YuNet: MIT)
            (os.path.join(ROOT, "NOTICE"), "."), (os.path.join(ROOT, "LICENSE-Apache-2.0.txt"), ".")],
     hiddenimports=["backup", "youtube", "updater", "wininstall", "tracker", "midi", "roland_v1hd", "actlog", "oefen", "liederen", "mido", "mido.backends.rtmidi", "rtmidi", "certifi", "pystray", "PIL.Image"]
     + (["pystray._win32"] if sys.platform == "win32" else ["pystray._darwin", "AppKit", "Foundation"] if sys.platform == "darwin" else []),

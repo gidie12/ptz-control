@@ -177,6 +177,49 @@
   .trk.on { background: var(--okbg); border-color: var(--ok); color: var(--oktxt); }
   .trk.wait { border-color: var(--warn); color: var(--warn); }
   .trk.warn { background: var(--warnbg); border-color: var(--warn); color: var(--warntxt); }
+  /* 🧑 Wie volgen? (gezicht aanklikken): knop in de kolomkop + zwevend venster erboven (#faceFloat) */
+  .trk.facebtn { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 3px 4px; border-radius: 999px; font: inherit; font-size: 12px;
+    font-weight: 500; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .trk.facebtn .fa { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--onaccent); flex: none; }
+  .trk.facebtn .fa .ic { width: 13px; height: 13px; }
+  .trk.facebtn .fimg { width: 22px; height: 22px; box-shadow: 0 0 0 2px var(--ok); }
+  .trk.facebtn.on { color: var(--oktxt); }
+  .trk.facebtn.warn .fa { background: var(--warn); }
+  .trk.facebtn.hov, .trk.facebtn:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); outline: none; }
+  .fimg { display: inline-block; border-radius: 50%; background: var(--panel2) no-repeat; flex: none; }
+  .idchip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--oktxt); background: var(--okbg);
+    border: 1px solid var(--okline); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
+  .idchip .ic { width: 11px; height: 11px; }
+  .idchip.cloth { color: var(--warntxt); background: var(--warnbg); border-color: var(--warn); }
+  #faceFloat { position: fixed; z-index: 45; width: 430px; max-width: calc(100vw - 16px); background: var(--hdr); color: var(--tiptxt); border-radius: 14px;
+    padding: 8px 12px 7px; box-shadow: 0 16px 40px rgba(15,18,33,.38); display: grid; grid-template-columns: 1fr 132px; gap: 4px 12px; align-items: center; }
+  #faceFloat::after { content: ""; position: absolute; left: calc(var(--ax, 50%) - 6px); width: 12px; height: 12px; background: var(--hdr); transform: rotate(45deg); }
+  #faceFloat:not(.below)::after { bottom: -6px; }
+  #faceFloat.below::after { top: -6px; }
+  #faceFloat .ffaces { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-around; min-height: 60px; align-items: center; }
+  #faceFloat .fc { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0; padding: 2px; cursor: pointer;
+    font: inherit; color: var(--tiptxt); border-radius: 10px; }
+  #faceFloat .fc .fimg { width: 44px; height: 44px; box-shadow: 0 0 0 2px var(--tipline); transition: box-shadow .12s, transform .12s; }
+  #faceFloat .fc span { font-size: 11.5px; font-weight: 500; padding: 0 6px; border-radius: 999px; white-space: nowrap; }
+  #faceFloat .fc:hover .fimg, #faceFloat .fc.hov .fimg, #faceFloat .fc:focus-visible .fimg { box-shadow: 0 0 0 3px var(--accent); transform: scale(1.08); }
+  #faceFloat .fc:focus-visible { outline: none; }
+  #faceFloat .fc:hover span, #faceFloat .fc.hov span, #faceFloat .fc:focus-visible span { color: var(--tiptxt); background: var(--accent); }
+  #faceFloat .fc.on .fimg { box-shadow: 0 0 0 3px var(--ok); }
+  #faceFloat .fc.on span { background: var(--ok); color: var(--onaccent); }
+  #faceFloat .fc.weak span { color: var(--tipmuted); }
+  #faceFloat .fc.weak .fimg { opacity: .7; }
+  #faceFloat .fframe { grid-column: 2; grid-row: 1 / span 2; position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 16 / 9; background: var(--tipkbd) center / cover; }
+  #faceFloat .fframe i { position: absolute; border: 2px solid var(--accent); border-radius: 4px; box-shadow: 0 0 0 999px rgba(5,6,12,.45); }
+  #faceFloat .fframe u { position: absolute; top: 0; bottom: 0; border-left: 2px dashed #fff; opacity: .8; }
+  #faceFloat .fframe em { position: absolute; left: 4px; bottom: 4px; font-style: normal; font-size: 9.5px; font-weight: 600; background: rgba(5,6,12,.7); color: #fff;
+    padding: 1px 6px; border-radius: 999px; }
+  #faceFloat .ffoot { grid-column: 1; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--tipmuted); }
+  #faceFloat .ffoot b { color: var(--tiptxt); font-weight: 600; }
+  #faceFloat .ffoot button { margin-left: auto; background: none; border: 1px solid var(--tipline); color: var(--tiptxt); border-radius: 7px; width: 24px; height: 22px;
+    display: grid; place-items: center; cursor: pointer; padding: 0; flex: none; }
+  #faceFloat .ffoot button .ic { width: 13px; height: 13px; }
+  #faceFloat .fmsg { grid-column: 1 / -1; font-size: 12.5px; color: var(--tipmuted); display: flex; align-items: center; gap: 8px; min-height: 40px; }
+  @media (max-width: 520px) { #faceFloat { grid-template-columns: 1fr; } #faceFloat .fframe { display: none; } }
   .tile .tb { position: absolute; bottom: 38px; right: 6px; background: var(--okbg); color: var(--oktxt);
     font-size: 11px; padding: 1px 6px; border-radius: 4px; }
   .camrow2 { display: grid; grid-template-columns: 1fr; gap: 6px; margin: -2px 0 12px; padding-bottom: 10px;
@@ -1043,6 +1086,7 @@
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></symbol>
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
   <symbol id="i-link-off" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7"/><path d="M15 7h2a5 5 0 0 1 4 8"/><path d="M8 12h4"/><path d="m2 2 20 20"/></symbol>
+  <symbol id="i-face" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8M9 9.5h.01M15 9.5h.01"/></symbol>
   <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></symbol>
   <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6a1.4 1.4 0 0 1-1 .4H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6M19.4 18.4a9 9 0 0 0 0-12.8"/></symbol>
@@ -1804,7 +1848,8 @@ let lastPreset = {};
 let adjusted = {};          // camId -> true: na de laatst gekozen preset met de hand (of door volgen) bewogen (server: STATE.adjusted)
 let thumbVer = {};          // cache-buster per cam_n
 let serverAddr = location.host;
-let track = {};             // camId -> {on, status, fps, detector}
+let track = {};             // camId -> {on, status, fps, detector, face}
+const prevFaceOf = {};      // camId -> laatst getekende face-status ('seen'/'cloth'/null)
 
 const camById = (id) => cfg.cameras.find(c => c.id === id);
 const ctrl = () => camById(ctrlCam);
@@ -1977,7 +2022,7 @@ function renderPresets() {
         ${presetLocked(c.id) ? `<span class="locktag" title="In beeld en op slot: presets en home zijn geblokkeerd, bewegen met de controller kan wel">${ic("lock")}SLOT</span>` : ""}
         <span class="livename${lst ? " " + lst : ""}">${!ln ? "" : lst === "live" ? "LIVE: " + esc(c.presets[ln] || "preset " + ln) : !tileLabels() ? "" : lst === "adj" ? `Aangepast (was ${esc(c.presets[ln] || "preset " + ln)})` : "Geselecteerd: " + esc(c.presets[ln] || "preset " + ln)}</span>${cfg.midi?.enabled ? `<button class="lockbtn${lockSet(c.id) ? " on" : ""}${midiMapped(c.id) ? "" : " na"}" title="${!midiMapped(c.id) ? "Slot niet mogelijk: deze camera hangt aan geen ingang van de videomixer (koppelen bij Menu → Instellingen → Videomixer)" : lockSet(c.id) ? "Slot aan: zolang deze camera in beeld is (videomixer) kun je geen preset of home kiezen; bewegen met de controller kan wel. Klik = slot uit" : "Slot uit. Klik = presets blokkeren zolang deze camera in beeld is (videomixer); bewegen met de controller blijft mogelijk"}" aria-label="Slot bij in beeld">${ic(lockSet(c.id) ? "lock" : "unlock")}</button>` : ""}${trackBtnHtml(c.id)}</div>`;
       col.querySelector(".colhead").onclick = (e) => {
-        if (e.target.closest(".trk")) { e.stopPropagation(); return toggleTrack(c.id); }
+        if (e.target.closest(".trk")) { e.stopPropagation(); return faceBtnClick(c.id); }
         if (e.target.closest(".lockbtn")) { e.stopPropagation(); return toggleLock(c.id); }
         if (e.target.closest(".padpin")) { e.stopPropagation(); return setPadCam(padFixed() === c.id ? "" : c.id, true); }
         ctrlCam = c.id; renderPresets(); renderSide();
@@ -2839,11 +2884,152 @@ function trackBtnHtml(camId) {
   if (cfg.tracking_error) return "";
   const warn = trackBad(t);
   const cls = !t.on ? "" : warn ? "warn" : /^volgt/.test(t.status || "") ? "on" : "wait";
-  return `<span class="trk ${cls}" title="Persoon volgen (alleen pan)">${ic("track")} ${t.on ? esc(t.status || "aan") : "volgen"}</span>`;
+  // 🧑 Wie volgen?: hover = gezichten boven de knop (faceFloat), klik op een gezicht = volgen, klik op de knop tijdens volgen = stop
+  const fp = facePicked[camId], vgt = /^volgt/.test(t.status || "");
+  const lbl = !t.on ? "Wie volgen?" : warn ? esc(t.status || "fout") : fp && t.picked && vgt ? `Volgt persoon ${fp.n}` : esc(t.status || "aan");
+  const pic = t.on && fp && t.picked && !warn ? faceImgHtml(fp.img, fp.crop, 22) : `<span class="fa">${ic(warn ? "alert" : t.on && !fp ? "track" : "face")}</span>`;
+  const chip = !t.on || warn ? "" : t.face === "seen" ? `<span class="idchip" data-tipk="faceSeen">${ic("check")} gezicht herkend</span>`
+    : t.face === "cloth" ? `<span class="idchip cloth" data-tipk="faceCloth">op kleding</span>` : "";
+  return `<button class="trk facebtn ${cls}" data-cam="${esc(camId)}" aria-haspopup="true" aria-label="${t.on ? "Volgen: " + esc(t.status || "aan") + ". Klik = stop" : "Wie volgen? Kies een gezicht"}">${pic}<span class="ftx">${lbl}</span></button>${chip}`;
 }
 async function toggleTrack(camId) {
   const r = await post("/api/track", { cam: camId, on: "toggle" });
   if (!r.ok) toast(r.error || "Volgen mislukt");
+  else if (!r.on) delete facePicked[camId];
+}
+/* ---- 🧑 Wie volgen?: gezichten in een zwevend venster boven de knop in de kolomkop (presets eronder blijven vrij).
+   Muis: hover opent (na 0,3 s), weg van knop én venster sluit (na 0,35 s). Aanraken/toetsenbord: klik op de knop opent.
+   Eén beeld per keer (/api/track/look, hooguit eens per 15 s opnieuw), geen live preview. De vingerafdruk van een
+   gezicht blijft op de server (alleen in het geheugen); de UI krijgt alleen de plek van het gezicht. */
+const faceLooks = {};      // cam -> {at, r, busy, err}
+const facePicked = {};     // cam -> {n, img, crop} van het aangeklikte gezicht (voor de knop)
+let faceCam = null, faceOpenT = 0, faceCloseT = 0, faceHov = -1, facePinned = false;
+const FACE_FRESH = 15000;
+// uitsnede: vierkant rond het gezicht (of rond het hoofd als er geen gezicht gevonden is), in breedte-eenheden van het beeld
+function faceCrop(p, aspect) {
+  const f = p.face;
+  if (f) { const side = Math.max(f.w, f.h / aspect) * 1.7; return { cx: f.x + f.w / 2, cy: (f.y + f.h / 2) / aspect, side }; }
+  const top = (p.cy - p.h / 2) / aspect, side = Math.max(p.w * 0.55, (p.h / aspect) * 0.28);
+  return { cx: p.cx, cy: top + side * 0.55, side };
+}
+function faceImgHtml(img, c, size) {
+  const k = size / c.side;
+  return `<span class="fimg" style="width:${size}px;height:${size}px;background-image:url('${img}');background-size:${(k).toFixed(1)}px ${(k / c.aspect).toFixed(1)}px;background-position:${(-(c.cx - c.side / 2) * k).toFixed(1)}px ${(-(c.cy - c.side / 2) * k).toFixed(1)}px"></span>`;
+}
+async function faceLoad(camId, force) {
+  const L = faceLooks[camId] || (faceLooks[camId] = {});
+  if (L.busy || (!force && L.r && Date.now() - L.at < FACE_FRESH)) return;
+  L.busy = true; L.err = ""; faceRender();
+  const r = await post("/api/track/look", { cam: camId });
+  L.busy = false;
+  if (r.ok) { L.r = r; L.at = Date.now(); } else L.err = r.error || "Geen beeld van de camera";
+  faceRender();
+}
+function faceOpen(camId, pin) {
+  clearTimeout(faceCloseT); clearTimeout(faceOpenT); faceCloseT = 0;
+  if (viewOnly()) return pinPrompt();
+  if (faceCam !== camId) faceHov = -1;
+  faceCam = camId; facePinned = !!pin || facePinned;
+  let el = $("#faceFloat");
+  if (!el) {
+    el = document.createElement("div"); el.id = "faceFloat"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Wie volgen?");
+    document.body.append(el);
+    el.addEventListener("pointerenter", () => clearTimeout(faceCloseT));
+    el.addEventListener("click", faceClick);
+    el.addEventListener("pointerover", (e) => { const b = e.target.closest?.(".fc"); if (b && +b.dataset.i !== faceHov) { faceHov = +b.dataset.i; faceFrame(); } });
+    el.addEventListener("focusin", (e) => { const b = e.target.closest?.(".fc"); if (b) { faceHov = +b.dataset.i; faceFrame(); } });
+  }
+  faceRender(); faceLoad(camId);
+}
+function faceClose() {
+  clearTimeout(faceCloseT); clearTimeout(faceOpenT); faceCloseT = 0;
+  $("#faceFloat")?.remove(); $$(".facebtn.hov").forEach(b => b.classList.remove("hov"));
+  faceCam = null; facePinned = false; faceHov = -1;
+}
+function faceBtn(camId) { return $(`#presetArea .facebtn[data-cam="${CSS.escape(camId)}"]`); }
+function faceRender() {
+  const el = $("#faceFloat"); if (!el || !faceCam) return;
+  const L = faceLooks[faceCam] || {}, r = L.r, t = track[faceCam] || {};
+  let html;
+  if (!r && L.busy) html = `<div class="fmsg">${ic("loader", "spin")} Beeld ophalen en gezichten zoeken…</div>`;
+  else if (!r) html = `<div class="fmsg">${ic("alert")} ${esc(L.err || "Nog geen beeld")}</div>`;
+  else if (!r.people.length) html = `<div class="fmsg">${ic("face")} Niemand gevonden in het beeld van ${esc(camById(faceCam)?.name || "")}. <button class="icon" data-act="again">${ic("refresh")} Opnieuw</button></div>`;
+  else {
+    const fp = facePicked[faceCam];
+    const faces = r.people.map(p => {
+      const c = { ...faceCrop(p, r.aspect), aspect: r.aspect }, on = t.on && fp && fp.at === L.at && fp.i === p.i;
+      const lbl = on ? ic("check", "sm") + " volgt" : !p.face ? "geen gezicht" : !p.face.ok ? "te klein" : "Volg " + (p.i + 1);
+      const tip = !p.face ? "Geen gezicht te zien: volgt op kleding" : !p.face.ok ? "Gezicht te klein om te herkennen: volgt op kleding" : "Deze persoon volgen (herkend aan gezicht en kleding)";
+      return `<button class="fc${on ? " on" : ""}${!p.face || !p.face.ok ? " weak" : ""}" data-i="${p.i}" aria-label="Persoon ${p.i + 1} volgen. ${tip}">${faceImgHtml(r.img, c, 44)}<span>${lbl}</span></button>`;
+    }).join("");
+    html = `<div class="ffaces">${faces}</div><div class="fframe" style="background-image:url('${r.img}')"></div>
+      <div class="ffoot">${r.faces === false ? "Gezichtsherkenning niet beschikbaar: volgt op kleding" : "Klik op een gezicht om te volgen"}${t.on ? " · <b>klik op de knop = stop</b>" : ""}
+        <button data-act="again" aria-label="Nieuw beeld">${ic(L.busy ? "loader" : "refresh", L.busy ? "spin" : "")}</button></div>`;
+  }
+  el.innerHTML = html;
+  faceFrame(); facePlace();
+}
+function faceFrame() {   // klein beeld rechts: wie je aanwijst (of wie gevolgd wordt), met de witte stippellijn
+  const el = $("#faceFloat .fframe"), r = faceLooks[faceCam]?.r; if (!el || !r) return;
+  const p = r.people[faceHov] || r.people.find(q => q.target) || null, fx = trkFrame(camById(faceCam)).x;
+  el.innerHTML = `<u style="left:${(fx * 100).toFixed(1)}%"></u>` + (p ? `<i style="left:${((p.cx - p.w / 2) * 100).toFixed(1)}%;top:${((p.cy - p.h / 2) * 100).toFixed(1)}%;width:${(p.w * 100).toFixed(1)}%;height:${(p.h * 100).toFixed(1)}%"></i><em>Persoon ${p.i + 1}</em>` : "");
+}
+function facePlace() {   // boven de knop; past dat niet (onder de kop), dan eronder
+  const el = $("#faceFloat"), b = faceBtn(faceCam);
+  if (!el) return;
+  if (!b) return faceClose();
+  b.classList.add("hov");
+  const r = b.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  // 🧑 boven de knop, ook als dat over de kop van de app valt: de presets eronder moeten vrij blijven.
+  // Alleen als er boven in het venster echt geen plek is (knop helemaal bovenaan gescrold) eronder.
+  const minTop = 6;
+  const left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+  const above = r.top - h - 10 >= minTop;
+  el.classList.toggle("below", !above);
+  el.style.left = left + "px"; el.style.top = (above ? r.top - h - 10 : r.bottom + 10) + "px";
+  el.style.setProperty("--ax", Math.max(16, Math.min(w - 16, r.left + r.width / 2 - left)) + "px");
+}
+async function faceClick(e) {
+  const a = e.target.closest?.("[data-act=again]");
+  if (a) return faceLoad(faceCam, true);
+  const b = e.target.closest?.(".fc"); if (!b || !faceCam) return;
+  const camId = faceCam, L = faceLooks[camId], r = L?.r, i = +b.dataset.i, p = r?.people[i];
+  if (!p) return;
+  if (Date.now() - L.at > 110000) { toast("Beeld is te oud, er komt een nieuw"); return faceLoad(camId, true); }
+  const res = await post("/api/track/pick", { cam: camId, i });
+  if (!res.ok) return toast(res.error || "Kiezen mislukt");
+  facePicked[camId] = { n: i + 1, i, at: L.at, img: r.img, crop: { ...faceCrop(p, r.aspect), aspect: r.aspect } };
+  toast(p.face && p.face.ok ? `Volgt persoon ${i + 1} (gezicht en kleding)` : `Volgt persoon ${i + 1} (op kleding)`, true);
+  renderPresets(); faceRender();
+  setTimeout(() => { if (faceCam === camId && !$("#faceFloat")?.matches(":hover")) faceClose(); }, 900);
+}
+(function faceInit() {
+  const area = $("#presetArea");
+  area.addEventListener("pointerover", (e) => {
+    const b = e.target.closest?.(".facebtn"); if (!b || e.pointerType !== "mouse") return;
+    clearTimeout(faceCloseT);
+    if (faceCam === b.dataset.cam) return;
+    clearTimeout(faceOpenT); faceOpenT = setTimeout(() => faceOpen(b.dataset.cam), faceCam ? 0 : 300);
+  });
+  // weg van knop én venster: dicht (ook als de knop intussen opnieuw getekend is)
+  document.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") return;
+    const inside = e.target.closest?.("#faceFloat") || e.target.closest?.(".facebtn");
+    if (inside) { clearTimeout(faceCloseT); faceCloseT = 0; return; }
+    clearTimeout(faceOpenT);
+    if (faceCam && !facePinned && !faceCloseT) faceCloseT = setTimeout(faceClose, 350);
+  }, { passive: true });
+  document.addEventListener("pointerdown", (e) => { if (faceCam && !e.target.closest?.("#faceFloat") && !e.target.closest?.(".facebtn")) faceClose(); }, true);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && faceCam) { e.stopPropagation(); faceClose(); } }, true);
+  addEventListener("resize", () => faceCam && facePlace());
+  addEventListener("scroll", () => faceCam && facePlace(), true);
+})();
+// klik op de knop: volgt hij al, dan stoppen; anders het venster openen (vast, ook zonder muis)
+function faceBtnClick(camId) {
+  const t = track[camId] || {};
+  if (t.on) { faceClose(); return toggleTrack(camId); }
+  if (faceCam === camId && facePinned) return faceClose();
+  faceOpen(camId, true);
 }
 $("#btnTrack").onclick = () => ctrlCam && toggleTrack(ctrlCam);
 
@@ -4503,7 +4689,9 @@ function connectEvents() {
     } else if (ev.type === "track") {
       const prevStatus = track[ev.cam]?.status;
       track[ev.cam] = ev;
-      if (prevStatus !== ev.status || !ev.on) { renderPresets(); renderSide(); } else renderSide();
+      if (prevStatus !== ev.status || !ev.on || ev.face !== prevFaceOf[ev.cam]) { prevFaceOf[ev.cam] = ev.face; renderPresets(); renderSide(); } else renderSide();
+      if (!ev.on) delete facePicked[ev.cam];
+      if (faceCam === ev.cam) faceRender();
       if (ev.cam === trkCamId) trkRender();
     } else if (ev.type === "job") {
       const wasRunning = job.running;
@@ -5377,6 +5565,8 @@ const TIPS = {
   padProf: { t: "Knoppenprofiel", d: "Welke knoppenindeling deze controller op dit scherm gebruikt. Elk scherm onthoudt zijn eigen keuze." },
   padMap: { t: "Knoppenindeling", d: "Geef elke knop van de controller een eigen functie, per profiel." },
   padCal: { t: "Sticks afstellen", d: "Per stick de dode zone, het maximum en de curve (Standaard, Vertraagd, Direct of een eigen curve) instellen, met de stand van de stick live erbij. Geldt voor alle schermen en knoppenprofielen." },
+  faceSeen: { t: "Gezicht herkend", d: "De app ziet het gezicht van de gekozen persoon en weet zeker dat hij de goede volgt. Het gezicht wordt alleen gebruikt zolang je volgt en nergens opgeslagen." },
+  faceCloth: { t: "Op kleding", d: "Het gezicht is nu niet te zien of te klein (te ver weg, omgedraaid). De camera houdt de persoon vast aan zijn kleding en plek, tot het gezicht weer herkend wordt." },
   tcStd: { t: "Standaard", d: "Recht evenredig: twee keer zo ver van de stippellijn = twee keer zo hard terughalen. Zo volgde de app altijd." },
   tcRustig: { t: "Rustig", d: "Dichtbij de stippellijn stuurt de camera maar zacht bij, verder weg wel stevig. Minder slingeren en heen-en-weer, iets meer achterlopen." },
   tcKrachtig: { t: "Krachtig", d: "Haalt hem al vlak naast de stippellijn stevig terug. Strak in beeld, maar onrustiger en kan voorbij schieten." },
@@ -5445,6 +5635,10 @@ const TOUR_STEPS = [
   { target: ["#ctrlCard details > summary", "#ctrlCard"], title: ic("sliders") + " Snelheden", text: () => `<p>Onder <b>Snelheden</b> stel je per scherm in hoe snel de pijlen en toetsen draaien, zoomen en scherpstellen.</p>
       <ul><li><b>Snelheid volgt de zoom</b>: met de pijlen en pijltjestoetsen draait de camera vanzelf langzamer als hij ingezoomd is (helemaal ingezoomd ongeveer een kwart); het percentage staat eronder.</li>
       <li><b>Acceleratie</b>: de camera trekt geleidelijk op in plaats van meteen op snelheid; met het vinkje remt hij bij loslaten ook geleidelijk af. <kbd>${esc(keyLabel(keyOf("stop")))}</kbd> stopt altijd direct.</li></ul>` },
+  { target: ["#presetArea .facebtn"], title: ic("face") + " Wie volgen?", text: () => `<p>Ga met de muis over <b>Wie volgen?</b> in de kolomkop: erboven verschijnen de gezichten uit één beeld van die camera (geen live beeld), met rechts waar die persoon staat. <b>Klik op een gezicht</b> en de camera volgt die persoon; de presets eronder blijven vrij.</p>
+      <ul><li>Tijdens het volgen herkent de app hem aan zijn <b>gezicht</b> (groen: <i>gezicht herkend</i>) en aan zijn kleding (geel: <i>op kleding</i>, als het gezicht even niet te zien is).</li>
+      <li>Klik op de knop zelf om te stoppen. Op een tablet: tik op de knop en dan op een gezicht.</li>
+      <li>Het gezicht wordt alleen gebruikt zolang je volgt en <b>nergens opgeslagen</b>.</li></ul>` },
   { target: ["#btnTrack"], title: ic("track") + " Persoon volgen", text: () => `<p>De camera volgt de persoon die het grootst in beeld is (meestal de spreker) en blijft bij die persoon, herkend aan de kleding. Hij <b>draait alleen links/rechts</b>; tilt en zoom blijven staan.</p>
       <p>Handbediening, home, stop of een andere preset zet volgen weer uit. Toets: <kbd>T</kbd>.</p>` },
   { target: ["#btnTrackSet"], title: ic("image") + " Kader en persoon kiezen", text: () => `<p><b>Kader…</b> opent één beeld van de camera (geen live beeld) met de gevonden personen.</p>
