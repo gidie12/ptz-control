@@ -1726,7 +1726,8 @@
         <div class="calmodes" role="group" aria-label="Curve van het terughalen">
           <button class="calmode" type="button" data-tc="standaard" data-tipk="tcStd">Standaard</button><button class="calmode" type="button" data-tc="rustig" data-tipk="tcRustig">Rustig</button>
           <button class="calmode" type="button" data-tc="krachtig" data-tipk="tcKrachtig">Krachtig</button><button class="calmode" type="button" data-tc="eigen" data-tipk="tcEigen">Eigen</button>
-        </div></div>
+        </div><span style="flex:1"></span>
+        <button class="icon" type="button" id="tcAdd" data-tipk="tcAdd">＋ Ankerpunt</button><span class="small muted" id="tcCount"></span></div>
       <svg id="tcGraph" viewBox="0 0 460 190" role="img" aria-label="Afstand van de persoon tot de stippellijn naar draaisnelheid van de camera"></svg>
       <div class="trkhelp" id="tcTxt" style="margin-top:6px"></div>
       <div class="tcguide" id="tcGuide">
@@ -3068,8 +3069,8 @@ function tcRender() {
   pts.forEach((p, i) => [1, -1].forEach(sd => {
     const d = sd * p[0] * 0.5, v = tcPull(pts, d);
     g += `<circle class="tc-pt${sd < 0 ? " mirror" : ""}${tcDrag && tcDrag.i === i && tcDrag.sd === sd ? " drag" : ""}" data-pt="${i}" data-sd="${sd}" cx="${tcX(d).toFixed(1)}" cy="${tcY(v).toFixed(1)}" r="6.5"
-      tabindex="${sd < 0 ? -1 : 0}" role="slider" aria-label="Ankerpunt ${i + 1} (pijltjes: verschuiven, Shift = grotere stap)"
-      aria-valuetext="op ${pct(p[0] * 0.5)} van de stippellijn: ${pct(v)} van het beeld per seconde"><title>Ankerpunt ${i + 1}: persoon ${pct(p[0] * 0.5)} naast de stippellijn → camera draait ${pct(v)} van het beeld per seconde (sleep om aan te passen)</title></circle>`;
+      tabindex="${sd < 0 ? -1 : 0}" role="slider" aria-label="Ankerpunt ${i + 1} van ${pts.length} (pijltjes: verschuiven, Shift = grotere stap, Delete = weghalen)"
+      aria-valuetext="op ${pct(p[0] * 0.5)} van de stippellijn: ${pct(v)} van het beeld per seconde"><title>Ankerpunt ${i + 1}: persoon ${pct(p[0] * 0.5)} naast de stippellijn → camera draait ${pct(v)} van het beeld per seconde (sleep om aan te passen, dubbelklik = weghalen)</title></circle>`;
   }));
   // live: waar de gevolgde persoon nu staat (alleen tijdens volgen en als de camera draait)
   const m = (track[trkCamId] || {}).on && (track[trkCamId] || {}).meas;
@@ -3077,11 +3078,14 @@ function tcRender() {
   const fi = document.activeElement?.closest?.("#tcGraph .tc-pt")?.dataset.pt;
   svg.innerHTML = g;
   if (fi != null) $(`#tcGraph .tc-pt[data-pt="${fi}"][data-sd="1"]`)?.focus({ preventScroll: true });
+  $("#tcCount").textContent = `${pts.length} van ${TC_MAX_PTS}`;
+  $("#tcAdd").disabled = pts.length >= TC_MAX_PTS;
   $$("[data-tc]").forEach(b => { b.classList.toggle("on", b.dataset.tc === cv.mode); b.setAttribute("aria-pressed", b.dataset.tc === cv.mode ? "true" : "false"); });
   // uitleg en welk advies nu past (in de lijn van wat gekozen is)
   const pull25 = tcPull(pts, 0.125), std25 = tcPull(TC_PRESETS.standaard, 0.125);
   $("#tcTxt").innerHTML = `Staat hij <b>${pct(0.125)}</b> naast de stippellijn, dan draait de camera <b>${pct(pull25)}</b> van het beeld per seconde`
     + (Math.abs(pull25 - std25) > 0.005 ? ` (standaard ${pct(std25)})` : "") + `; loopt hij, dan komt zijn eigen loopsnelheid erbij. `
+    + `<b>Dubbelklik</b> in de grafiek = ankerpunt erbij, dubbelklik op een punt = weghalen. `
     + `Geel = waar zijn midden kan staan terwijl hij helemaal binnen het kader blijft. Stippellijn = standaard bij deze volgsnelheid. Bij de beeldrand haalt de camera hem nog harder terug.`;
   const dz = Math.min(dl, dr);
   $$("#tcGuide [data-g]").forEach(el => el.classList.toggle("hit", el.dataset.g === "jitter" && dz <= TC_MIN_DEAD + 0.005));
@@ -3090,11 +3094,34 @@ function tcSet(cv) {
   tcLocal = cv; tcDirty = Date.now(); tcRender();
   clearTimeout(tcSaveT); tcSaveT = setTimeout(() => trkTuneSave(false), 400);
 }
+const TC_MAX_PTS = 8, TC_GAP = 0.05;   // = CURVE_MAX_PTS in tracker.py; punten minstens 5 % uit elkaar
 function tcPtMove(i, x, y) {
-  const pts = tcCurve().pts.map(p => p.slice());
-  const lo = i === 0 ? 0.02 : pts[i - 1][0] + 0.05, hi = i === 2 ? 0.98 : pts[i + 1][0] - 0.05;
+  const pts = tcCurve().pts.map(p => p.slice()), n = pts.length;
+  const lo = i === 0 ? 0.02 : pts[i - 1][0] + TC_GAP, hi = i === n - 1 ? 0.98 : pts[i + 1][0] - TC_GAP;
   pts[i][0] = +Math.max(lo, Math.min(hi, x)).toFixed(3);
-  pts[i][1] = +Math.max(i === 0 ? 0 : pts[i - 1][1], Math.min(i === 2 ? 1 : pts[i + 1][1], y)).toFixed(3);   // curve loopt niet terug
+  pts[i][1] = +Math.max(i === 0 ? 0 : pts[i - 1][1], Math.min(i === n - 1 ? 1 : pts[i + 1][1], y)).toFixed(3);   // curve loopt niet terug
+  tcSet({ mode: "eigen", pts });
+}
+// 🧑 extra ankerpunt: op afstand v (0…1 van de halve beeldbreedte), op de curve zelf (vorm blijft gelijk tot je sleept)
+function tcPtAdd(v) {
+  const cv = tcCurve(), pts = cv.pts.map(p => p.slice());
+  if (pts.length >= TC_MAX_PTS) { toast(`Maximaal ${TC_MAX_PTS} ankerpunten`); return -1; }
+  if (v == null) {   // knop: midden van het grootste gat (tussen 0, de punten en 1)
+    const xs = [0, ...pts.map(p => p[0]), 1]; let best = 0;
+    for (let i = 1; i < xs.length; i++) if (xs[i] - xs[i - 1] > xs[best + 1] - xs[best]) best = i - 1;
+    v = (xs[best] + xs[best + 1]) / 2;
+  }
+  v = Math.max(0.02, Math.min(0.98, v));
+  if ([0, ...pts.map(p => p[0]), 1].some(x => Math.abs(x - v) < TC_GAP)) { toast("Te dicht bij een ander punt"); return -1; }
+  pts.push([+v.toFixed(3), +tcAt(cv.pts, v).toFixed(3)]);
+  pts.sort((a, b) => a[0] - b[0]);
+  tcSet({ mode: "eigen", pts });
+  return pts.findIndex(p => p[0] === +v.toFixed(3));
+}
+function tcPtDel(i) {
+  const pts = tcCurve().pts.map(p => p.slice());
+  if (pts.length <= 1) { toast("Er moet minstens één ankerpunt blijven"); return; }
+  pts.splice(i, 1);
   tcSet({ mode: "eigen", pts });
 }
 (function tcInit() {
@@ -3109,18 +3136,35 @@ function tcPtMove(i, x, y) {
     const m = svg.getScreenCTM(); if (!m) return;
     const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
     const d = (p.x - TC_MID) / (TC.x1 - TC_MID) * 0.5 * tcDrag.sd, v = (TC.y0 - p.y) / (TC.y0 - TC.y1) * TC.ymax;
+    tcDrag.moved = true;
     tcPtMove(tcDrag.i, d / 0.5, v / (tcKp() * 0.5));
   });
-  const up = () => { if (tcDrag) { tcDrag = null; tcRender(); } };
+  // alleen opnieuw tekenen na echt slepen: anders vervangt een klik het punt en ziet een dubbelklik het niet meer
+  const up = () => { if (tcDrag) { const moved = tcDrag.moved; tcDrag = null; if (moved) tcRender(); } };
   svg.addEventListener("pointerup", up); svg.addEventListener("lostpointercapture", up);
+  // dubbelklik: op een punt = weghalen, ergens anders = punt erbij (op die afstand, links of rechts maakt niet uit)
+  svg.addEventListener("dblclick", (e) => {
+    e.preventDefault();
+    const m = svg.getScreenCTM(); if (!m) return;
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    const el = e.target.closest?.(".tc-pt") || [...svg.querySelectorAll(".tc-pt")].find(c => Math.hypot(+c.getAttribute("cx") - p.x, +c.getAttribute("cy") - p.y) < 9);
+    if (el) return tcPtDel(+el.dataset.pt);
+    const i = tcPtAdd(Math.abs(p.x - TC_MID) / (TC.x1 - TC_MID));
+    if (i >= 0) focusPt(i);
+  });
   svg.addEventListener("keydown", (e) => {
     const el = e.target.closest?.(".tc-pt"); if (!el) return;
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault(); e.stopPropagation();
+      const i = +el.dataset.pt; tcPtDel(i); focusPt(Math.max(0, i - 1)); return;
+    }
     const i = +el.dataset.pt, st = e.shiftKey ? 0.1 : 0.02, p = tcCurve().pts[i];
     const k = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] }[e.key];
     if (!k) return;
     e.preventDefault(); e.stopPropagation();
     tcPtMove(i, p[0] + k[0], p[1] + k[1]); focusPt(i);
   });
+  $("#tcAdd").onclick = () => { const i = tcPtAdd(null); if (i >= 0) focusPt(i); };
   $$("[data-tc]").forEach(b => b.onclick = () => {
     const cur = tcCurve();
     tcSet(b.dataset.tc === "eigen" ? { mode: "eigen", pts: cur.pts } : { mode: b.dataset.tc, pts: TC_PRESETS[b.dataset.tc].map(p => p.slice()) });
@@ -5336,7 +5380,8 @@ const TIPS = {
   tcStd: { t: "Standaard", d: "Recht evenredig: twee keer zo ver van de stippellijn = twee keer zo hard terughalen. Zo volgde de app altijd." },
   tcRustig: { t: "Rustig", d: "Dichtbij de stippellijn stuurt de camera maar zacht bij, verder weg wel stevig. Minder slingeren en heen-en-weer, iets meer achterlopen." },
   tcKrachtig: { t: "Krachtig", d: "Haalt hem al vlak naast de stippellijn stevig terug. Strak in beeld, maar onrustiger en kan voorbij schieten." },
-  tcEigen: { t: "Eigen", d: "Sleep de ankerpunten in de grafiek (of focus een punt en gebruik de pijltjes, Shift = grotere stap). Links en rechts zijn altijd gelijk." },
+  tcEigen: { t: "Eigen", d: "Sleep de ankerpunten in de grafiek (of focus een punt en gebruik de pijltjes, Shift = grotere stap). Dubbelklik in de grafiek = punt erbij, dubbelklik op een punt (of Delete) = weghalen. Links en rechts zijn altijd gelijk." },
+  tcAdd: { t: "Ankerpunt toevoegen", d: "Zet een extra punt op de curve, in het grootste gat (maximaal 8). Of dubbelklik in de grafiek op de plek waar je het wilt. Daarna kun je het verslepen." },
   calDz: { t: "Dode zone", d: "Zo ver kun je de stick duwen zonder dat de camera beweegt (tegen kruipen van een stick die niet precies in het midden terugveert). Standaard 18%; rechter stick als focus 35% (met <i>Gescheiden sticks</i> = tilt: 18%, zolang je hem niet zelf afstelt)." },
   calMax: { t: "Maximaal", d: "Hoeveel van de maximale snelheid de stick helemaal uitgeduwd geeft. De max. pan/tilt-snelheid in de Xbox-kaart (per scherm) telt daar nog bij." },
 };

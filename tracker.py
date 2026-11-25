@@ -340,16 +340,17 @@ for _k, _e in (("speed", "PTZ_TRACK_SPEED"), ("lead", "PTZ_TRACK_LEAD"), ("walk"
 # 🧑 curve van het terughalen: afstand tot de doelpositie (0 … CURVE_SPAN beeldbreedte) → correctie (deel van de
 # rechte lijn kp·afstand bij CURVE_SPAN). Drie ankerpunten (x oplopend, y niet terug) plus (0,0) en (1,1).
 # 'standaard' = recht evenredig (precies de regelaar van vóór de curve), 'rustig' = dichtbij het doel zachter
-# bijsturen, 'krachtig' = eerder en harder terughalen, 'eigen' = punten van de gebruiker.
+# bijsturen, 'krachtig' = eerder en harder terughalen, 'eigen' = punten van de gebruiker (1–8, zelf toe te voegen).
 CURVE_SPAN = 0.5
 CURVE_PRESETS = {"standaard": [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]],
                  "rustig": [[0.25, 0.08], [0.5, 0.3], [0.75, 0.6]],
                  "krachtig": [[0.25, 0.45], [0.5, 0.72], [0.75, 0.9]]}
+CURVE_MIN_PTS, CURVE_MAX_PTS = 1, 8   # 🧑 ankerpunten zelf toevoegen/weghalen (eigen curve)
 DEFAULT_CURVE = {"mode": "standaard", "pts": [p[:] for p in CURVE_PRESETS["standaard"]]}
 
 
 def norm_curve(v, base=None):
-    """Curve {mode, pts}: een voorkeuze geeft altijd zijn eigen punten; 'eigen' = drie punten, x oplopend
+    """Curve {mode, pts}: een voorkeuze geeft altijd zijn eigen punten; 'eigen' = 1–8 punten, x oplopend
     (0,02–0,98, minstens 0,05 uit elkaar), y 0–1 en niet teruglopend. Ongeldig → `base` (of standaard)."""
     out = {"mode": base["mode"], "pts": [p[:] for p in base["pts"]]} if isinstance(base, dict) and "pts" in base \
         else {"mode": DEFAULT_CURVE["mode"], "pts": [p[:] for p in DEFAULT_CURVE["pts"]]}
@@ -364,11 +365,13 @@ def norm_curve(v, base=None):
         pts = [[float(p[0]), float(p[1])] for p in v["pts"]]
     except (KeyError, TypeError, ValueError, IndexError):
         return out
-    if len(pts) != 3 or any(a != a or b != b for a, b in pts):
+    n = len(pts)
+    if not CURVE_MIN_PTS <= n <= CURVE_MAX_PTS or any(a != a or b != b for a, b in pts):
         return out
+    pts.sort(key=lambda p: p[0])
     lo_x, lo_y = 0.0, 0.0
     for i, p in enumerate(pts):
-        p[0] = max(lo_x + (0.02 if i == 0 else 0.05), min(0.98 - 0.05 * (2 - i), p[0]))
+        p[0] = max(lo_x + (0.02 if i == 0 else 0.05), min(0.98 - 0.05 * (n - 1 - i), p[0]))
         p[1] = max(lo_y, min(1.0, p[1]))
         lo_x, lo_y = p[0], p[1]
         p[0], p[1] = round(p[0], 3), round(p[1], 3)
